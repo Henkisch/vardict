@@ -177,3 +177,9 @@ bound ("under 40 s from goal to restart").
   (`embedAllowed: false`).
 - **Khalilzadeh clip needs a human eye:** the CBS footage at 418–443 s shows an Iran goal and celebration, but the
   thumbnails are too small to tell the disallowed goal from Rezaeian's legitimate equaliser.
+- **Error 153 in the Studio.** Henrik opened the deployed Studio on his phone and every preview said "video player
+  configuration error, error 153". YouTube now rejects embeds that send no referrer, and the Studio's page strips
+  it. The fix was one attribute on the iframe (`referrerPolicy="strict-origin-when-cross-origin"`). I proved it
+  with a side-by-side test page (no-referrer → error 153, with the attribute → plays) because the browser tool
+  couldn't reach into the Dashboard's cross-origin Studio iframe. Lesson: I never actually looked at the preview
+  in the deployed Studio before calling it done.

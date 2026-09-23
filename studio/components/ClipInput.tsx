@@ -52,7 +52,7 @@ export function ClipInput(props: ObjectInputProps<ClipValue>) {
   const rangeProblem =
     length === undefined ? undefined : length <= 0 ? 'End is before start' : length > MAX_CLIP_SECONDS ? `Longer than ${MAX_CLIP_SECONDS} s` : undefined
 
-  const params = new URLSearchParams({start: String(start), rel: '0', modestbranding: '1'})
+  const params = new URLSearchParams({start: String(start), rel: '0', playsinline: '1', origin: window.location.origin})
   if (end !== undefined && !rangeProblem) params.set('end', String(end))
   const src = id ? `https://www.youtube-nocookie.com/embed/${id}?${params}` : undefined
 
@@ -66,6 +66,8 @@ export function ClipInput(props: ObjectInputProps<ClipValue>) {
               src={src}
               title="Clip preview"
               allow="encrypted-media; picture-in-picture"
+              // YouTube rejects embeds without a referrer (error 153); the Studio page policy strips it by default.
+              referrerPolicy="strict-origin-when-cross-origin"
               allowFullScreen
               style={{position: 'absolute', inset: 0, width: '100%', height: '100%', border: 0}}
             />

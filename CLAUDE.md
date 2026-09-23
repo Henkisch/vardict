@@ -222,6 +222,8 @@ Clip rules (strict):
 - **FIFA blocks embedding of all its World Cup footage** (IFrame API error 150). When `clip.embedAllowed` is false,
   the frontend shows `fallbackText` plus a link to `youtube.com/watch?v=<id>&t=<startSeconds>`. Test embeddability in a
   real player; oEmbed returning 200 proves nothing.
+- Every YouTube iframe needs `referrerPolicy="strict-origin-when-cross-origin"`. Without a referrer YouTube shows
+  error 153 ("video player configuration error"), and the Studio's page policy strips it by default.
 - Outcry summaries in our own words, with source links. No copied quotes.
 
 ## Milestones
