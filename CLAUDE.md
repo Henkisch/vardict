@@ -215,6 +215,14 @@ the democracy clock still sums each incident's real review time. Facts are being
 
 Reserve: Llorente, Man City v Tottenham, UCL QF 2019 (hip or arm?).
 
+**Open decision (parked by Henrik, session 2): swap some tournament incidents for Premier League ones.** Tournament
+footage can't be embedded (FIFA/UEFA block it), while PL club channels allow embeds. Candidates from the session-2
+research, each with an official club/broadcaster clip (embeddability still to test):
+- Firmino armpit offside, Aston Villa v Liverpool, 2 Nov 2019 (Liverpool FC channel)
+- Maupay penalty after the final whistle, Brighton v Man Utd, 26 Sep 2020 (Man Utd channel)
+- Record 374 s review, West Ham v Nottm Forest, 18 May 2025 (West Ham channel)
+Don't act on this until Henrik picks it up again.
+
 Clip rules (strict):
 - Embed only, using `start` and `end` URL parameters. Never download, cut, convert or re-host footage.
 - Official league, club or broadcaster channels only.
