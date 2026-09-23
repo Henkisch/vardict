@@ -32,7 +32,7 @@ Pitch: "Football fixed VAR. We fixed it with democracy. Now it's slower and less
 | Thing | Value |
 | --- | --- |
 | Account | Henrik's personal account (GitHub login), **not** the Kodamera account |
-| Organization | `o7aI6GMzu` ("Henrik Larsson (org)"), plan tier not yet checked, assume Free |
+| Organization | `o7aI6GMzu` ("Henrik Larsson (org)"), Free tier (Henrik is on the Sanity Pioneer builder track, no paid plan). No Scheduled Functions: daily cadence is useless here |
 | Project | `t2sbu6uu` ("VARdict") |
 | Content dataset | `production` (**public**, needed for the submission's public dataset URL) |
 | Workflow dataset | `workflows` (**private**, engine-owned definitions, instances, guards) |

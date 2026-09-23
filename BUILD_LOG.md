@@ -77,8 +77,8 @@ Honest session notes for the "My Build Process" section of the writeup. Newest s
 - I opted out of Workflows definition sharing (`--no-share-defs`) on the second deploy without asking.
   Harmless (the first deploy shared the smoke definition by default), but it's Henrik's call. Revisit when
   `peoplesVar` is deployed.
-- Plan tier of the personal org isn't checked yet. It only matters if we want an hourly janitor Scheduled
-  Function.
+- Plan tier: Free (Henrik is on the Sanity Pioneer builder track, no paid plan). So no Scheduled Function
+  at all, and `/api/tick` is the only ticker.
 
 ### Versions pinned
 
