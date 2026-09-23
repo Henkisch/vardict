@@ -17,8 +17,8 @@ function App() {
     <div className="app-container">
       <SanityApp config={sanityConfigs} fallback={<div>Loading...</div>}>
         {/* add your own components here! */}
-        <ExampleComponent />
         <SmokeTest />
+        <ExampleComponent />
       </SanityApp>
     </div>
   )

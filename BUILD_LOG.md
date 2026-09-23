@@ -29,8 +29,9 @@ Honest session notes for the "My Build Process" section of the writeup. Newest s
 5. **Workflows smoke test: PASS.** A two-stage `smoke` definition (`varRoom` → `upheld`) deployed to the
    `workflows` dataset; one instance started against a document in `production`; firing `recommend`
    cascaded the instance to `upheld`. Then nuked the smoke state.
-6. **App SDK smoke test:** Control Room shows a live `useQuery` list of the test document inside the
-   Dashboard. *(Pending: Henrik opening it in his browser.)*
+6. **App SDK smoke test: PASS.** Inside the Dashboard the Control Room greeted Henrik by name (auth from
+   the Dashboard session) and listed the test document through `useQuery`. Patching the title over the HTTP
+   API updated the screen in about 3 s with no reload, so live updates work for the big screen.
 
 ### Course corrections (the interesting part)
 
@@ -83,3 +84,11 @@ Honest session notes for the "My Build Process" section of the writeup. Newest s
 
 `@sanity/workflow-engine` / `@sanity/workflow-cli` **0.35.0** (exact), `sanity` 6.16, `@sanity/sdk-react` 2.x,
 Next 16.3.6, Node 24, pnpm 10.15.
+
+### Late snag: "the app just spins"
+
+Henrik first opened the Dashboard dev link on his **phone**. `?dev=http://localhost:3334` makes the
+Dashboard iframe load `localhost` from the device doing the viewing, so on a phone it points at the phone
+and spins forever. Opened on the Mac instead (through Claude in Chrome), it worked. Worth remembering for
+the demo: the Control Room is a laptop/big-screen app; phones only ever use the deployed `/vote` page.
+Also, the smoke list rendered below the fold of the template's welcome card, so it was moved to the top.

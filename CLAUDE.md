@@ -222,7 +222,7 @@ Clip rules (strict):
 
 | Date | Milestone | Done when |
 | --- | --- | --- |
-| Sep 24 | Setup and risk check | ✅ Sep 23: project + datasets created, Workflows proven end to end; App SDK Dashboard check pending Henrik's browser |
+| Sep 24 | Setup and risk check | ✅ Sep 23: project + datasets created, Workflows proven end to end, App SDK reads live in the Dashboard |
 | Sep 25 | Schema + Studio | All six types live; clip input previews a clip; 2 incidents entered |
 | Sep 27 | Workflow + Functions | peoplesVar passes tests for every path |
 | Sep 28 | Bot crowd | Seeded personas move the bars; votes flagged simulated |
