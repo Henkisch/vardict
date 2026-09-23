@@ -219,6 +219,9 @@ Clip rules (strict):
 - Embed only, using `start` and `end` URL parameters. Never download, cut, convert or re-host footage.
 - Official league, club or broadcaster channels only.
 - Every incident gets a `fallbackText`. If no official embeddable clip exists, use the fallback. No fan uploads.
+- **FIFA blocks embedding of all its World Cup footage** (IFrame API error 150). When `clip.embedAllowed` is false,
+  the frontend shows `fallbackText` plus a link to `youtube.com/watch?v=<id>&t=<startSeconds>`. Test embeddability in a
+  real player; oEmbed returning 200 proves nothing.
 - Outcry summaries in our own words, with source links. No copied quotes.
 
 ## Milestones

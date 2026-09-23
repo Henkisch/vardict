@@ -159,3 +159,21 @@ bound ("under 40 s from goal to restart").
   `perspective=raw`.
 - **The dev-mode Dashboard link doesn't work on a phone**, because `localhost` points at the phone. That's why the
   Studio got deployed.
+
+### The clip hunt: FIFA blocks embedding
+
+- **Finding:** oEmbed said all six official clips were fine (HTTP 200), but loading them through the YouTube IFrame
+  API told a different story. Every FIFA, FOX Soccer and SuperSport World Cup/Euro upload returns **error 150: the
+  owner blocks embedding** (or blocks it in Sweden; the error code is the same). Only the Tottenham clip embedded.
+  So an HTTP 200 from oEmbed doesn't mean a video can be embedded. Test it in a real player.
+- **Search:** the fix was broadcaster analysis segments that contain the footage and allow embeds. ESPN FC had the
+  Cucurella replay and the top-down Japan ball-on-the-line still. CBS Sports Golazo had Iran v Egypt footage.
+- **Finding moments without watching:** the agent can't play video. Instead I pulled each video's **storyboard**
+  (the thumbnail sprite sheets YouTube uses for scrubbing), cut them into a labelled contact sheet with PIL, and read
+  the frames. One image per video showed where the incident was. Storyboards work even when a video can't be
+  embedded.
+- **Perišić has no embeddable footage anywhere.** FIFA owns it, and ESPN's segments are all studio talk. Per the
+  brief's fallback rule, the site shows the fallback text and links out to FIFA's highlights at 238–268 s
+  (`embedAllowed: false`).
+- **Khalilzadeh clip needs a human eye:** the CBS footage at 418–443 s shows an Iran goal and celebration, but the
+  thumbnails are too small to tell the disallowed goal from Rezaeian's legitimate equaliser.
