@@ -1,0 +1,11 @@
+{
+  "name": "vardict",
+  "private": true,
+  "packageManager": "pnpm@10.15.0",
+  "scripts": {
+    "dev:studio": "pnpm --filter studio dev",
+    "dev:web": "pnpm --filter web dev",
+    "dev:control-room": "pnpm --filter control-room dev",
+    "build": "pnpm -r build"
+  }
+}

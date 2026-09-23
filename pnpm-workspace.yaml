@@ -1,0 +1,10 @@
+packages:
+  - studio
+  - web
+  - control-room
+  - functions
+  - workflows
+
+ignoredBuiltDependencies:
+  - sharp
+  - unrs-resolver
