@@ -202,15 +202,18 @@ Abuse protection: one vote per round per sessionId; the vote route is rate-limit
 
 ## Incidents
 
-Five slots, one incident each. Henrik picks the incidents; you can help research them.
+Henrik's picks (session 2). The original five slots were a guideline; "longest delay" was dropped on purpose,
+the democracy clock still sums each incident's real review time. Facts are being verified before entry.
 
-| Slot | Look for |
-| --- | --- |
-| 1. Millimetre offside | A goal ruled out by a toe or armpit |
-| 2. Handball | A deflection nobody can explain the law for |
-| 3. Soft penalty | A penalty given after a monitor review |
-| 4. Wrong call anyway | VAR was used and the call was still judged wrong afterward |
-| 5. Longest delay | A review that took famously long |
+| # | Incident | Type | Why it splits people |
+| --- | --- | --- | --- |
+| 1 | Perišić, 2018 World Cup final, France v Croatia | handball → penalty after monitor review | First VAR decision in a World Cup final; arm moving down, barely saw the ball |
+| 2 | Cucurella, Euro 2024 QF, Germany v Spain (extra time) | handball, no penalty | Judged correct at first, UEFA later said it was wrong |
+| 3 | Japan v Spain, 2022 World Cup | ball in/out of play (Law 9), goal allowed | Looked out to the eye; camera said in; Germany went out |
+| 4 | Khalilzadeh, 2026 World Cup, Iran v Egypt | offside, stoppage-time goal ruled out by ~1 mm | Letter of the law v spirit of the game. **Post-knowledge-cutoff: verify every detail** |
+| 5 | Luis Díaz, Tottenham v Liverpool, PL, 30 Sep 2023 | offside, correct goal disallowed | Control case: VAR said "check complete" by mistake (PGMOL admitted). Does the crowd still vote wrong? |
+
+Reserve: Llorente, Man City v Tottenham, UCL QF 2019 (hip or arm?).
 
 Clip rules (strict):
 - Embed only, using `start` and `end` URL parameters. Never download, cut, convert or re-host footage.

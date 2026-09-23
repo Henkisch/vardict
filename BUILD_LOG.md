@@ -92,3 +92,70 @@ Dashboard iframe load `localhost` from the device doing the viewing, so on a pho
 and spins forever. Opened on the Mac instead (through Claude in Chrome), it worked. Worth remembering for
 the demo: the Control Room is a laptop/big-screen app; phones only ever use the deployed `/vote` page.
 Also, the smoke list rendered below the fold of the template's welcome card, so it was moved to the top.
+
+---
+
+## Session 2 — 2026-09-23 (evening) — Schema, Studio, first content
+
+**Goal (milestone Sep 25):** all six types live, clip input previews a clip, 2 incidents entered.
+
+### What we did
+
+1. **Schema:** `incident`, `match`, `team`, `law`, `referendum`, `vote` plus `clip` and `outcry` objects, with
+   the brief's validation (clip end > start and ≤ 30 s, at least one outcry source, no vote after
+   `closesAt`). `referendum` and `vote` are read-only in the Studio under "Live data", because the workflow
+   and the vote route write them. `finalCall` is read-only too, since only the workflow sets it.
+2. **Two fields the brief missed**, both needed by the bot crowd:
+   - `recommendationFavours` (home/away): home and away fans can't take sides without knowing who the VAR
+     call helps.
+   - `crowdSeed`: the "fixed random seed per incident" from the brief needed somewhere to live.
+3. **Clip input:** a custom object input showing a `youtube-nocookie` embed that plays from the chosen start
+   to end, with a replay button and a live length/validation readout. Pasting any YouTube URL keeps only the
+   11-character ID.
+4. **Studio deployed** to https://vardict.sanity.studio so Henrik can review from his phone. It's needed for
+   the submission anyway.
+5. **Content:** 6 Laws of the Game (5, 9, 10, 11, 12, 14) in our own words, 9 teams, 5 matches, and all
+   5 incidents as **drafts** for Henrik to review, via `studio/seed/incidents.py`.
+
+### Incident research: human picks, agent verifies
+
+- I started a background research agent to build a shortlist. Meanwhile Henrik sent his own five picks
+  (in Swedish, from his phone), so the agent was redirected to fact-check them.
+- Results:
+  - Four picks checked out cleanly.
+  - **Khalilzadeh (World Cup 2026)** happened after my knowledge cutoff, so it had to be verified from scratch.
+    It did happen, but "ruled out by a millimetre" is one outlet's phrase. Other sources say "marginal", "the
+    width of a sleeve", or give a different reason for the offside altogether. The incident now says
+    "marginal offside" and presents the millimetre as a claim, not a fact.
+  - The brief's "longest delay" slot had no candidate among Henrik's picks. The research found the Premier
+    League record (West Ham v Forest, 374 s). Henrik chose to keep his five and drop the slot.
+- Every YouTube clip is on an official channel (FIFA, FOX Soccer, SuperSport, Tottenham Hotspur), checked
+  through YouTube's oEmbed API. The agent couldn't play video, so **no start/end times are set**. Henrik sets
+  them with the clip preview input.
+
+### Things left blank on purpose (no invented facts)
+
+| Incident | Missing | Why |
+| --- | --- | --- |
+| Cucurella | minute, realDelaySeconds | ~106' only in search snippets; there was no monitor review to time |
+| Japan v Spain | realDelaySeconds | every source says "lengthy", none gives a number |
+| Khalilzadeh | realDelaySeconds | same |
+| Díaz | minute | not confirmed in the sources we opened |
+
+Perišić's 240 s is "four minutes from corner to decision" (ESPN), not a measured review. Díaz's 40 s is an upper
+bound ("under 40 s from goal to restart").
+
+### Snags
+
+- **The CLI login vanished mid-session.** `sanity schema deploy` said "You must login first". The auth token was
+  gone from `~/.config/sanity/config.json`, though `sanity debug` had shown a login an hour earlier. The cause is
+  unknown; Henrik logged in again.
+- **Sanity UI v4 renamed `Stack space` to `gap`.** `tsc` caught it; `sanity build` didn't.
+- **Port 3333 belongs to another of Henrik's projects**, so the Studio runs on 3335 locally.
+- **python.org Python has no CA certs** (`CERTIFICATE_VERIFY_FAILED`). Fix: `SSL_CERT_FILE=/etc/ssl/cert.pem`,
+  not disabling verification.
+- **Drafts are invisible by default.** API v2025-02-19 queries use the `published` perspective, so the seed
+  script's "already exists?" check couldn't see its own drafts and a rerun would have duplicated them. Fixed with
+  `perspective=raw`.
+- **The dev-mode Dashboard link doesn't work on a phone**, because `localhost` points at the phone. That's why the
+  Studio got deployed.
