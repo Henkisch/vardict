@@ -329,6 +329,32 @@ Never cut the workflow, /vote or /live.
   (clip, situation line, on-field call, "The VAR room is reviewing…") with the Send to the people button, and the
   same scene after an overturn ("Back in the VAR room, loop 2 of 3").
 
+## Cost review session (planned, Henrik session 3)
+
+Goal: nothing in VARdict can cost Henrik money or blow a free quota, even if the link spreads or someone scripts it.
+Output: numbers per quota, hard caps in code, a cleanup routine, and a BUILD_LOG entry.
+
+1. **Check what we're actually on.** Sanity Free plan quotas (API requests, CDN requests, bandwidth, documents,
+   live connections) and whether going over bills or blocks. Vercel team `henrik-larsson`: Hobby or Pro, function
+   invocations, active CPU / duration, and what happens at the limit. Read current pricing pages, not memory.
+2. **Measure one run.** Count the requests and documents one full run creates (start → shootout) and what one
+   open screen costs per hour. Known suspects:
+   - `/live` and `/vote` poll **uncached every 3 s** (~1,200 requests/hour per open screen) on top of the Live
+     Content API. Likely the biggest cost. Candidates: poll only while the event stream is silent, use the CDN
+     between votes, stop polling when the tab is hidden or nothing is live.
+   - About 60 vote documents per round, maybe ~400 per run. At a 10k document limit that's roughly 25 runs.
+   - Workflow instance docs and their history in `workflows`.
+   - Every bot round keeps a Vercel function alive for ~45 s.
+3. **Hard caps, enforced from data rather than in-memory limiters** (serverless instances don't share memory):
+   - Runs per day (e.g. 50) and the existing cooldown between runs, read from the workflows dataset.
+   - Human votes per referendum (e.g. 500) and per IP per hour.
+   - Consider Vercel Firewall rate-limit rules or BotID for `/api/start` and `/api/vote`.
+4. **Retention:** a cleanup script (or `reset.ts` with an age filter) that deletes votes and referendums from old runs
+   and aborted instances. Decide whether to keep aggregated results for the results pages before deleting votes.
+5. **Kill switch:** an env var (e.g. `VARDICT_PAUSED=1`) that makes `/api/start` and `/api/vote` refuse, so Henrik
+   can freeze the demo from the Vercel dashboard without a deploy.
+6. **Alerts:** usage alerts or spend caps in Sanity and Vercel, if the plans have them.
+
 ## Judge testing (decided session 3)
 
 Judges test on their own time and can't log in to the Dashboard, so the VAR Room can't be the only way to start a
