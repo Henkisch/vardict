@@ -6,6 +6,13 @@ export const HUMAN_VOTE_WEIGHT = 20
 
 const team = '{name, shortName, primaryColor}'
 
+const INCIDENT_CARD = `{
+  _id, title, "slug": slug.current, situation, minute, varRecommendation, originalCall, controlCase, fallbackText,
+  realDelaySeconds, finalCall,
+  clip{youtubeId, startSeconds, endSeconds, channel, embedAllowed},
+  match->{competition, homeTeam->${team}, awayTeam->${team}}
+}`
+
 export const LIVE_QUERY = `{
   "referendum": *[_type == "referendum"] | order(windowOpensAt desc)[0]{
     _id, round, loop, windowOpensAt, closesAt, result, workflowInstanceId,
@@ -15,12 +22,12 @@ export const LIVE_QUERY = `{
     "humans": count(*[_type == "vote" && references(^._id)]),
     "shootout": *[_type == "referendum" && workflowInstanceId == ^.workflowInstanceId && loop == ^.loop
       && round match "shootout*" && defined(result)] | order(windowOpensAt asc).result,
-    incident->{
-      title, "slug": slug.current, situation, minute, varRecommendation, originalCall, controlCase, fallbackText,
-      clip{youtubeId, startSeconds, endSeconds, channel, embedAllowed},
-      match->{competition, homeTeam->${team}, awayTeam->${team}}
-    }
+    incident->${INCIDENT_CARD}
   },
+  // Who the VAR room is looking at while nothing is live: next in line, same order as /api/start picks.
+  "next": *[_type == "incident" && !defined(finalCall)]{
+    ..., "last": *[_type == "referendum" && references(^._id)] | order(windowOpensAt desc)[0].windowOpensAt
+  } | order(coalesce(last, "0") asc)[0]${INCIDENT_CARD},
   "democracySeconds": math::sum(*[_type == "incident"].realDelaySeconds)
     + coalesce(math::sum(*[_type == "referendum" && defined(result)]{
         "s": dateTime(closesAt) - dateTime(windowOpensAt)
@@ -42,7 +49,11 @@ export type LiveReferendum = {
   bots: number
   humans: number
   shootout: ('upheld' | 'overturned')[]
-  incident: {
+  incident: IncidentCard
+}
+
+export type IncidentCard = {
+    _id: string
     title: string
     slug: string
     situation?: string
@@ -51,12 +62,13 @@ export type LiveReferendum = {
     originalCall: string
     controlCase?: boolean
     fallbackText: string
+    realDelaySeconds: number
+    finalCall?: string
     clip?: {youtubeId: string; startSeconds: number; endSeconds: number; channel: string; embedAllowed: boolean}
     match: {competition: string; homeTeam: Team; awayTeam: Team}
-  }
 }
 
-export type LiveState = {referendum: LiveReferendum | null; democracySeconds: number}
+export type LiveState = {referendum: LiveReferendum | null; next: IncidentCard | null; democracySeconds: number}
 
 export const CALL_LABELS: Record<string, string> = {
   goal: 'Goal',
@@ -125,7 +137,7 @@ export type IncidentResult = {
   controlCase?: boolean
   realDelaySeconds: number
   fallbackText: string
-  clip?: LiveReferendum['incident']['clip']
+  clip?: IncidentCard['clip']
   outcry: {level: number; summary: string; sources: string[]}
   match: {competition: string; date: string; venue: string; score: {home: number; away: number}; homeTeam: Team; awayTeam: Team}
   rounds: IncidentRound[]

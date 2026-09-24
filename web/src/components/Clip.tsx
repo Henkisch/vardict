@@ -1,6 +1,6 @@
-import type {LiveReferendum} from '@/lib/queries'
+import type {IncidentCard} from '@/lib/queries'
 
-type Props = {clip: LiveReferendum['incident']['clip']; fallbackText: string}
+type Props = {clip: IncidentCard['clip']; fallbackText: string}
 
 // Embed only, at the exact start and end. Without a referrer YouTube refuses the embed (error 153).
 export function Clip({clip, fallbackText}: Props) {

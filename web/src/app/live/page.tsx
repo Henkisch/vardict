@@ -6,6 +6,7 @@ import {useState} from 'react'
 import {Bars} from '@/components/Bars'
 import {Clip} from '@/components/Clip'
 import {QrCode} from '@/components/QrCode'
+import {VarRoomScene} from '@/components/VarRoomScene'
 import {VoteButtons} from '@/components/VoteButtons'
 import {useCloseWhenCounting, useLiveState, useNow} from '@/lib/live'
 import {CALL_LABELS, formatClock, HUMAN_VOTE_WEIGHT, LIVE_QUERY, roundLabel, type LiveState} from '@/lib/queries'
@@ -43,6 +44,13 @@ export default function LivePage() {
     else if (!response.ok) setStartMessage('Something went wrong. Try again.')
   }
 
+  // Between votes the big screen shows the VAR room. A run that was just overturned (and isn't at the loop cap)
+  // is back there for another look; otherwise the next incident in line is on the monitor.
+  const finished = Boolean(ref?.result && ref.result !== 'tooClose')
+  const parked = finished && ref?.result === 'overturned' && ref.loop < 3 && !ref.incident.finalCall
+  const waitingOn = !ref ? state?.next : finished ? (parked ? ref.incident : state?.next) : undefined
+  const start = <StartButton onClick={sendToThePeople} busy={starting} message={startMessage} />
+
   const incident = ref?.incident
   const home = incident?.match.homeTeam
   const away = incident?.match.awayTeam
@@ -58,7 +66,7 @@ export default function LivePage() {
           </h1>
           <p className="text-muted">The VAR room decides. The people confirm. It takes longer.</p>
         </div>
-        <div className="text-right">
+        <div className="sm:text-right">
           <p className="text-xs uppercase tracking-[0.2em] text-muted">Time added by democracy</p>
           <p className="font-display text-4xl font-bold text-var tabular">
             {state ? formatClock(state.democracySeconds) : '--:--'}
@@ -66,7 +74,9 @@ export default function LivePage() {
         </div>
       </header>
 
-      {incident ? (
+      {waitingOn ? (
+        <VarRoomScene incident={waitingOn} loop={parked && ref ? ref.loop + 1 : undefined} last={ref ?? undefined} start={start} />
+      ) : incident && ref ? (
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
           <section className="flex min-w-0 flex-col gap-4">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -137,7 +147,7 @@ export default function LivePage() {
             ) : ref.result === 'tooClose' || counting ? (
               <p className="text-center text-muted">The next round opens in a moment.</p>
             ) : (
-              <StartButton onClick={sendToThePeople} busy={starting} message={startMessage} />
+              start
             )}
             <p className="text-xs text-muted">
               {ref.humans} human and {ref.bots} simulated {ref.bots === 1 ? 'vote' : 'votes'} this round. Humans are
@@ -145,13 +155,13 @@ export default function LivePage() {
             </p>
           </aside>
         </div>
-      ) : (
-        <section className="flex flex-1 flex-col items-center justify-center gap-6 py-16 text-center">
-          <p className="max-w-xl text-2xl">
-            Five real VAR decisions. The VAR room has made its call. Now it goes to the people.
-          </p>
-          <StartButton onClick={sendToThePeople} busy={starting} message={startMessage} />
+      ) : state ? (
+        <section className="flex flex-1 flex-col items-center justify-center gap-4 py-16 text-center">
+          <p className="font-display text-4xl font-extrabold uppercase">Every call has been confirmed</p>
+          <p className="max-w-xl text-muted">The people have upheld all five. Democracy is complete, and slower.</p>
         </section>
+      ) : (
+        <p className="py-16 text-center text-muted">Connecting to the VAR room…</p>
       )}
     </main>
   )
