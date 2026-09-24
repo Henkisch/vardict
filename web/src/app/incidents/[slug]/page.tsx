@@ -5,7 +5,7 @@ import {useParams} from 'next/navigation'
 
 import {Clip} from '@/components/Clip'
 import {useLiveQuery} from '@/lib/live'
-import {CALL_LABELS, formatClock, INCIDENT_QUERY, roundLabel, type IncidentResult, type IncidentRound} from '@/lib/queries'
+import {CALL_LABELS, formatClock, roundLabel, type IncidentResult, type IncidentRound} from '@/lib/queries'
 
 const RESULT = {
   upheld: {label: 'Upheld', tone: 'text-uphold'},
@@ -22,7 +22,9 @@ function groupRuns(rounds: IncidentRound[]) {
 
 export default function IncidentPage() {
   const {slug} = useParams<{slug: string}>()
-  const incident = useLiveQuery<IncidentResult | null>(INCIDENT_QUERY, {slug})
+  const incident = useLiveQuery<IncidentResult | null>(`/api/live?q=incident&slug=${encodeURIComponent(slug)}`, {
+    intervalMs: 30_000,
+  })
 
   if (incident === undefined) return <main className="p-8 text-muted">Loading the verdict…</main>
   if (incident === null) return <main className="p-8">No incident called “{slug}”.</main>

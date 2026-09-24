@@ -8,12 +8,12 @@ import {QrCode} from '@/components/QrCode'
 import {VarRoomScene} from '@/components/VarRoomScene'
 import {VoteButtons} from '@/components/VoteButtons'
 import {useCloseWhenCounting, useLiveState, useNow} from '@/lib/live'
-import {CALL_LABELS, formatClock, HUMAN_VOTE_WEIGHT, LIVE_QUERY, roundLabel, type LiveState} from '@/lib/queries'
+import {CALL_LABELS, formatClock, HUMAN_VOTE_WEIGHT, roundLabel, type LiveState} from '@/lib/queries'
 import {runPhase} from '@/lib/run-status'
 
 export default function LivePage() {
   const now = useNow()
-  const {state, boost} = useLiveState<LiveState>(LIVE_QUERY, (s) => runPhase(s?.referendum, now))
+  const {state, boost} = useLiveState<LiveState>('/api/live?q=live', (s) => runPhase(s?.referendum, now))
   const ref = state?.referendum
   const closesAt = ref ? Date.parse(ref.closesAt) : 0
   const secondsLeft = ref && !ref.result ? Math.max(0, (closesAt - now) / 1000) : 0
