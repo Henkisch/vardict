@@ -4,16 +4,6 @@ import {Clip} from '@/components/Clip'
 import {Monitor} from '@/components/Monitor'
 import type {IncidentCard} from '@/lib/queries'
 
-// What the VAR is checking, broadcast-style. Keyed by incident.incidentType.
-const CHECK: Record<string, string> = {
-  offside: 'Checking goal · possible offside',
-  handball: 'Checking penalty · possible handball',
-  penalty: 'Checking penalty',
-  redCard: 'Checking possible red card',
-  mistakenIdentity: 'Checking player identity',
-  goalLine: 'Checking goal-line',
-}
-
 // The VAR room's wall of screens: the clip at normal speed on the main monitor, and three operator views of the
 // same official clip: slow motion, the key moment on a rewind loop, and a zoomed crop. Phones get the main monitor.
 export const WALL_RATIO = 64 / 27
@@ -34,9 +24,6 @@ export function MonitorWall({incident}: {incident: IncidentCard}) {
     <div className="grid w-full gap-2 sm:grid-cols-[minmax(0,3fr)_minmax(0,1fr)]">
       <div className="relative aspect-video sm:row-span-3 sm:aspect-auto">
         <Monitor youtubeId={youtubeId} from={start} to={end} label="Cam 1 · Live" />
-        <p className="pointer-events-none absolute inset-x-0 top-10 mx-auto w-fit bg-var px-4 py-1.5 font-display text-lg font-extrabold uppercase tracking-[0.12em] text-ink motion-safe:animate-pulse sm:text-2xl">
-          VAR check · {CHECK[incident.incidentType ?? ''] ?? 'Reviewing the decision'}
-        </p>
       </div>
       <div className="hidden aspect-video sm:block">
         <Monitor youtubeId={youtubeId} from={start} to={end} rate={0.25} label="Slow-mo · 0.25×" />

@@ -12,6 +12,16 @@ type Props = {
   start: React.ReactNode
 }
 
+// What the VAR is checking, shown small in the monitor bar. Keyed by incident.incidentType.
+const CHECK: Record<string, string> = {
+  offside: 'Checking goal · possible offside',
+  handball: 'Checking penalty · possible handball',
+  penalty: 'Checking penalty',
+  redCard: 'Checking possible red card',
+  mistakenIdentity: 'Checking player identity',
+  goalLine: 'Checking goal-line',
+}
+
 const LAST_COPY = {
   upheld: {label: 'Upheld', tone: 'text-uphold'},
   overturned: {label: 'Overturned', tone: 'text-overturn'},
@@ -29,7 +39,7 @@ export function VarRoomScene({incident, loop, last, start}: Props) {
         <div className="flex items-center justify-between gap-3 border-b border-line bg-pitch px-4 py-2 font-display text-sm font-bold uppercase tracking-[0.2em]">
           <span className="flex items-center gap-2">
             <span className="h-2.5 w-2.5 rounded-full bg-overturn motion-safe:animate-pulse" aria-hidden />
-            VAR · Review
+            VAR · {CHECK[incident.incidentType ?? ''] ?? 'Review'}
           </span>
           <span className="hidden text-muted sm:inline">
             {home.shortName} v {away.shortName} · {incident.minute}&apos;
