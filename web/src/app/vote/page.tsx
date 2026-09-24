@@ -3,7 +3,7 @@
 import {useState} from 'react'
 
 import {Bars} from '@/components/Bars'
-import {useLiveQuery, useNow} from '@/lib/live'
+import {useCloseWhenCounting, useLiveQuery, useNow} from '@/lib/live'
 import {CALL_LABELS, HUMAN_VOTE_WEIGHT, LIVE_QUERY, roundLabel, type LiveState} from '@/lib/queries'
 
 type Choice = 'uphold' | 'overturn'
@@ -26,6 +26,7 @@ export default function VotePage() {
   const ref = state?.referendum
   const secondsLeft = ref && !ref.result ? Math.max(0, (Date.parse(ref.closesAt) - now) / 1000) : 0
   const open = Boolean(ref && secondsLeft > 0)
+  useCloseWhenCounting(Boolean(ref && !ref.result && secondsLeft === 0))
 
   // Votes by referendum id, so a new round shows fresh buttons.
   const [votes, setVotes] = useState<Record<string, Choice>>({})

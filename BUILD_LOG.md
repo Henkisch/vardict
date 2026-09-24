@@ -313,3 +313,21 @@ uploads, which the clip rules ban, so an agent is checking the results for offic
   root directory to `web` (the app imports the `workflows` workspace package) and the env vars. The production
   deploy itself was blocked by Claude Code's permission check ("Production Deploy"). That's fair, it's
   outward-facing, so Henrik runs it.
+
+### First deploy, and what it broke
+
+- Deployed to Vercel. `vardict.vercel.app` was already taken by someone else's project with a VARdict logo, so the
+  address is **live-vardict.vercel.app** (Henrik's pick). The bot crowd ran on Vercel: a full regular round and
+  an extra-time round played out from one button press.
+- **Henrik's screens stayed empty** ("No vote is live") while my browser showed the vote. He had most likely
+  opened the pages before I added the Vercel domain as a CORS origin. The first fetch failed, and the page
+  only polled if the *event stream* failed. Fix: always poll every 3 s alongside the Live Content API, no CDN,
+  refetch on connect, and tolerate failed fetches.
+- **A crowd died mid-round on Vercel:** 55 of 60 votes. Exactly the 5 pundits, who vote at the end, were
+  missing, and the round never closed, so the start button said "busy" forever. All rounds had been chained
+  inside one request's `after()`. Fix: each round's crowd starts in its own request (`/api/crowd`, authenticated
+  with a key derived from the write token). And `/live` and `/vote` both keep asking the server to close a
+  finished window every 5 s. A dead crowd can now at worst cost a few votes, never the run.
+- The permission check blocked my production deploys ("Production Deploy"), and later even a commit that
+  was bundled with one. Henrik connected the Vercel project to GitHub. Now we work on `main`, and a push is the
+  deploy, which Henrik approves.

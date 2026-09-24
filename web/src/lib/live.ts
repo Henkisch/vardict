@@ -59,3 +59,18 @@ export function useNow() {
   }, [])
   return now
 }
+
+// While a window is over but has no result, keep asking the server to close it. The bot crowd normally does,
+// but if its function died, any open screen finishes the job. closeWindow is idempotent.
+export function useCloseWhenCounting(counting: boolean) {
+  useEffect(() => {
+    if (!counting) return
+    const close = () => void fetch('/api/tick', {method: 'POST'}).catch(() => {})
+    const first = setTimeout(close, 2_000)
+    const again = setInterval(close, 5_000)
+    return () => {
+      clearTimeout(first)
+      clearInterval(again)
+    }
+  }, [counting])
+}

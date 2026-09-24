@@ -1,11 +1,11 @@
 'use client'
 
-import {useEffect, useRef, useState} from 'react'
+import {useState} from 'react'
 
 import {Bars} from '@/components/Bars'
 import {Clip} from '@/components/Clip'
 import {QrCode} from '@/components/QrCode'
-import {useLiveQuery, useNow} from '@/lib/live'
+import {useCloseWhenCounting, useLiveQuery, useNow} from '@/lib/live'
 import {CALL_LABELS, formatClock, HUMAN_VOTE_WEIGHT, LIVE_QUERY, roundLabel, type LiveState} from '@/lib/queries'
 
 const RESULT_COPY = {
@@ -23,14 +23,7 @@ export default function LivePage() {
   const voting = Boolean(ref && !ref.result && secondsLeft > 0)
   const counting = Boolean(ref && !ref.result && secondsLeft === 0)
 
-  // When the countdown hits zero, ask the server to close the window (the bot crowd does too; twice is fine).
-  const tickedFor = useRef<string>(undefined)
-  useEffect(() => {
-    if (!counting || !ref || tickedFor.current === ref._id) return
-    tickedFor.current = ref._id
-    const id = setTimeout(() => void fetch('/api/tick', {method: 'POST'}), 1500)
-    return () => clearTimeout(id)
-  }, [counting, ref])
+  useCloseWhenCounting(counting)
 
   const [startMessage, setStartMessage] = useState<string>()
   const [starting, setStarting] = useState(false)

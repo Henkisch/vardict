@@ -16,6 +16,9 @@ export type RuntimeConfig = {
   tag?: string
   // Runs background work (the bot crowd) past the current request. Next.js passes `after`; scripts await it.
   background?: (task: () => Promise<void>) => void
+  // How a newly opened referendum gets its crowd. Default: run it in the background here. The web app instead
+  // starts each round's crowd in its own request, so one dying function can't take the rest of the run with it.
+  startCrowd?: (referendumId: string) => void
 }
 
 export type Runtime = {
@@ -92,6 +95,7 @@ export function createRuntime({
   workflowsDataset = 'workflows',
   tag = 'dev',
   background = (task) => void task().catch((error) => console.error('background task failed', error)),
+  startCrowd,
 }: RuntimeConfig): Runtime {
   const base = createClient({projectId, token, apiVersion: '2025-02-19', useCdn: false})
   const content = base.withConfig({dataset: contentDataset})
@@ -104,7 +108,11 @@ export function createRuntime({
     resourceClients: (gdr) =>
       gdr.scheme === 'dataset' && gdr.projectId === projectId && gdr.dataset === contentDataset ? content : undefined,
     // The crowd needs the finished runtime, which doesn't exist yet while the engine is being built.
-    effects: {handlers: handlers(content, (referendumId) => background(() => runCrowd(runtime, referendumId)))},
+    effects: {
+      handlers: handlers(content, (referendumId) =>
+        startCrowd ? startCrowd(referendumId) : background(() => runCrowd(runtime, referendumId)),
+      ),
+    },
   })
   const runtime: Runtime = {engine, content, workflows, projectId, contentDataset, tag, background}
   return runtime
