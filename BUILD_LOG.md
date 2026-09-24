@@ -440,3 +440,14 @@ Collected in `plans/README.md` for the walkthrough: season reset vs results page
 hasn't seen the VAR Room yet (local only, deploy is plan 013); a clean-slate reset before launch (`reset.ts` exists
 but leaves finished workflow instances counting toward the 40-runs/24 h cap); check that `/api/live` is actually
 cached (`x-vercel-cache: HIT`) after the next deploy.
+
+### Later in session 4: 010 and 011 merged
+
+- **010** (results overview, outcomes derived from rounds) and **011** merged. 011 brought `CLAUDE.md` in line with the
+  code, moved shared rules into `workflows/shared.ts`, added a root README and `web/.env.example`, and removed dead
+  parts. It was reviewed after one revision: its first `CLAUDE.md` pass claimed 007–010 were "deployed", but they
+  aren't pushed yet.
+- The lockfile problem again: linking `var-room` to the shared module rewrote unrelated lockfile entries, so the VAR Room
+  keeps its own copies with "must match" comments.
+- Plans 001–011 are all on `main`; 007–011 go live with the next push. After it: redeploy the Studio schema (the vote
+  type changed) and check that `/api/live` is cached.
