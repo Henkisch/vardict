@@ -125,7 +125,12 @@ function voteStage(stage: VoteStage, title: string, tooClose: string) {
               defineEffect({
                 name: EFFECTS.open[stage],
                 // Bindings are GROQ, resolved when the effect is queued.
-                bindings: {incidentId: '$fields.subject._id', round: ROUND[stage], windowSeconds: String(WINDOW_SECONDS[stage])},
+                bindings: {
+                  incidentId: '$fields.subject._id',
+                  round: ROUND[stage],
+                  windowSeconds: String(WINDOW_SECONDS[stage]),
+                  loop: VAR_ROOM_VISITS,
+                },
               }),
             ],
           }),
@@ -174,6 +179,9 @@ function voteStage(stage: VoteStage, title: string, tooClose: string) {
   })
 }
 
+// Stage visits live in the raw instance snapshot. 1 on the first run through, 2 after one overturn, ...
+const VAR_ROOM_VISITS = 'count(*[_id == $self][0].stages[name == "varRoom"])'
+
 export const peoplesVar = defineWorkflow({
   name: 'peoples-var',
   title: "People's VAR",
@@ -185,8 +193,8 @@ export const peoplesVar = defineWorkflow({
     requirements: [{type: 'singleSubject', name: 'one-run-per-incident', title: 'This incident is already live'}],
   },
   predicates: {
-    // Stage visits live in the raw instance snapshot; the first visit isn't a loop.
-    loopCapReached: `count(*[_id == $self][0].stages[name == "varRoom"]) > ${RULES.loopCap}`,
+    // The first visit isn't a loop.
+    loopCapReached: `${VAR_ROOM_VISITS} > ${RULES.loopCap}`,
   },
   fields: [
     defineField({

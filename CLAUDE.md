@@ -73,6 +73,7 @@ pnpm workspace (`pnpm-workspace.yaml`), Node 24 (`.nvmrc`).
 /workflows       peoplesVar definition, sanity.workflow.ts, tests, scripts/
 CLAUDE.md        this file
 BUILD_LOG.md     session log for the writeup
+SUBMISSION.md    DEV post draft (Path Two template), filled in from BUILD_LOG.md
 ```
 
 `web/AGENTS.md` is Next.js's own agent note: Next 16 differs from training data, read
@@ -218,7 +219,12 @@ How it maps to Workflows (learned the hard way, see BUILD_LOG session 3):
   `POST /api/tick` in `/web` (server token) counts the votes and fires the close action. Callers: `/live` when its
   countdown hits 0, the VAR Room, and the bot crowd after its final wave. It must be idempotent: skip if the stage
   already has a result.
-- Subjects must be **published** incidents (the seed makes drafts): publish before a real run.
+- Subjects must be **published** incidents (published session 3).
+- **Runtime:** `workflows/runtime.ts` exports `createRuntime`, `sendToThePeople(incidentId)` (start + `recommend` +
+  drain) and `closeWindow(instanceId)` (tally, pick the action, idempotency key per referendum, drain). `/api/start`
+  and `/api/tick` should be thin wrappers around these. Live check: `pnpm tsx --env-file=../.env.local
+  scripts/live-run.ts <incidentId> 50,50,70,30,70,70` (cleans up after itself). The bot crowd hook is a TODO in
+  the `open` handler.
 - Deploy shares definitions with Sanity by default (`--no-share-defs` to opt out). Nothing secret in ours.
 
 ## Simulated crowd
@@ -288,7 +294,7 @@ Clip rules (strict):
 | --- | --- | --- |
 | Sep 24 | Setup and risk check | ✅ Sep 23: project + datasets created, Workflows proven end to end, App SDK reads live in the Dashboard |
 | Sep 25 | Schema + Studio | All six types live; clip input previews a clip; 2 incidents entered |
-| Sep 27 | Workflow + Functions | ✅ Sep 24: peoplesVar passes tests for every path, deployed. Effect handlers + /api/tick still to do |
+| Sep 27 | Workflow + Functions | ✅ Sep 24: peoplesVar passes tests for every path; v2 deployed; runtime (`workflows/runtime.ts`) ran a full live shootout on `t2sbu6uu`. Routes /api/start + /api/tick still to do |
 | Sep 28 | Bot crowd | Seeded personas move the bars; votes flagged simulated |
 | Sep 30 | VAR Room + /vote + /live | Operator starts a referendum in the VAR Room; phone votes via /api/vote show up live on /live |
 | Oct 1 | Content + results | All 5 incidents in; results pages and democracy clock done |

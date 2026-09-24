@@ -276,3 +276,14 @@ uploads, which the clip rules ban, so an agent is checking the results for offic
   the subject as a global reference, not a bare id. The handler will need to strip it.
 - `sanity-workflows deploy --check` passed, then `peoples-var v1` was deployed. It printed that definition sharing
   with Sanity is on by default.
+
+### First real run
+
+- Published the five incidents (a subject must be published). Wrote `workflows/runtime.ts`: engine with effect
+  handlers (create referendum, extend, write the final call) and `closeWindow`, which tallies votes with GROQ and
+  fires the right action with an idempotency key, so two callers closing the same window can't double-count.
+- `scripts/live-run.ts` on the Díaz incident against the real project: regular 50% → extra time 50% → shootout
+  70/30/70/70 → **upheld**, `finalCall: noGoal` written by the effect. 150 test votes and 6 referendum docs, all
+  cleaned up after. The whole run worked the first time. The bench tests had already flushed out the
+  mistakes.
+- Also saved Henrik's DEV post template as `SUBMISSION.md`, with notes on where each section's content comes from.

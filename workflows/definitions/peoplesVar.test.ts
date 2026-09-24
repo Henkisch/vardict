@@ -40,7 +40,7 @@ describe('peoplesVar', () => {
     expect(await stage()).toBe('referendum')
     expect(await pendingEffects()).toEqual(['open-referendum'])
     const [effect] = await bench.listPendingEffects({instanceId: id})
-    expect(effect.params).toMatchObject({incidentId: expect.stringMatching(/:incident-diaz$/), round: 'regular', windowSeconds: 30})
+    expect(effect.params).toMatchObject({incidentId: expect.stringMatching(/:incident-diaz$/), round: 'regular', windowSeconds: 30, loop: 1})
   })
 
   test('over 55% upholds in regular time and finalizes the call', async () => {
