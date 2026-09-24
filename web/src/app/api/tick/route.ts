@@ -11,11 +11,16 @@ export async function POST(request: Request) {
   if (rateLimited(`tick:${clientKey(request)}`, 30, 60_000)) {
     return Response.json({status: 'rateLimited'}, {status: 429, headers: CORS})
   }
-  const runtime = getRuntime()
-  const [live] = await liveInstances(runtime)
-  if (!live) return Response.json({status: 'idle'}, {headers: CORS})
-  const result = await closeWindow(runtime, live._id)
-  return Response.json({instanceId: live._id, ...result}, {headers: CORS})
+  try {
+    const runtime = getRuntime()
+    const [live] = await liveInstances(runtime)
+    if (!live) return Response.json({status: 'idle'}, {headers: CORS})
+    const result = await closeWindow(runtime, live._id)
+    return Response.json({instanceId: live._id, ...result}, {headers: CORS})
+  } catch (error) {
+    console.error('tick failed', error)
+    return Response.json({status: 'error'}, {status: 500, headers: CORS})
+  }
 }
 
 export const OPTIONS = preflight
