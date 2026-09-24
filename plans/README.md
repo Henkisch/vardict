@@ -21,7 +21,7 @@ real Sanity project and the public site — don't run them without the operator'
 | 007 | All screens share one cached read (quota) | P1 | M | 006 | DONE (branch `advisor/007-shared-live-read` @ 912894c; reviewed after 1 revision; step 5 cache check pending deploy; not merged) |
 | 008 | Public API routes reject cross-site/oversized/malformed requests | P2 | S | 005 | DONE (branch `advisor/008-api-hardening` @ 9601749; reviewed after 1 revision; not merged) |
 | 009 | All confirmed → new season instead of a 500 | P1 | S | 005, 006 | DONE (branch `advisor/009-seasons` @ 9462572; reviewed; not merged) |
-| 010 | `/incidents` results overview + "Abandoned" | P2 | S | 007 | TODO |
+| 010 | `/incidents` results overview + "Abandoned" | P2 | S | 007 | DONE (branch `advisor/010-results-index` @ ec68e73; reviewed; not merged) |
 | 011 | Brief matches code; shared rules in one place | P2 | S | 001–010 | TODO |
 | 012 | Spike: "Watch a shootout" replay | P3 | M | 006, 010 | TODO |
 | 013 | VAR Room in the Dashboard + operator controls | P2 | S–M | 005, 009 | TODO |
@@ -67,6 +67,9 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED (one-line reason) | REJECTED 
   instances stay in the `workflows` dataset and still count toward the 40-runs/24 h cap; the start-lock doc stays.
   Decide whether it should also `nuke` the workflows dataset (then redeploy the definition) and run it on a schedule
   or by hand right before judging.
+- **Results wording (from 010):** the control-case line on the incident page counts "back in the VAR room" as
+  refusing; the overview only judges upheld/abandoned. Pick one. An operator-aborted latest run shows "Still being
+  decided".
 - **Is `/api/live` actually cached on Vercel (from 007)?** Check `x-vercel-cache: HIT` after the next deploy.
 
 ## Findings considered and rejected
