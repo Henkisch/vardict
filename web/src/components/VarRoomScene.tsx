@@ -35,48 +35,48 @@ export function VarRoomScene({incident, loop, last, start}: Props) {
   return (
     <div className="flex flex-col gap-3 lg:min-h-0 lg:flex-1">
       {/* The wall gets all the room there is: this is the show. */}
-      <section className="flex min-w-0 flex-col overflow-hidden rounded-xl border border-line bg-black lg:min-h-0 lg:flex-1">
+      <section className="flex min-w-0 flex-col overflow-hidden rounded-xl border border-line bg-pitch lg:min-h-0 lg:flex-1">
         <div className="flex items-center justify-between gap-3 border-b border-line bg-pitch px-4 py-2 font-display text-sm font-bold uppercase tracking-[0.2em]">
           <span className="flex items-center gap-2">
             <span className="h-2.5 w-2.5 rounded-full bg-overturn motion-safe:animate-pulse" aria-hidden />
             VAR · {CHECK[incident.incidentType ?? ''] ?? 'Review'}
-          </span>
-          <span className="hidden text-muted sm:inline">
-            {home.shortName} v {away.shortName} · {incident.minute}&apos;
           </span>
           <span className="tabular text-muted">
             <span className="hidden sm:inline">Real VAR check took </span>
             {formatClock(incident.realDelaySeconds)}
           </span>
         </div>
-        <FitBox ratio={WALL_RATIO} className="p-2 lg:flex-1">
-          <MonitorWall incident={incident} />
-        </FitBox>
+        {/* Context beside the footage on desktop (the wall is height-limited, so the side has room); above it on phones. */}
+        <div className="flex flex-col lg:min-h-0 lg:flex-1 lg:flex-row">
+          <div className="flex shrink-0 flex-col justify-center gap-2 p-4 lg:w-80 xl:w-96">
+            <p className="text-xs uppercase tracking-[0.2em] text-muted">
+              {loop ? `Back in the VAR room · loop ${loop} of 3` : 'In the VAR room'}
+            </p>
+            <h2 className="font-display text-3xl font-extrabold uppercase leading-tight text-balance xl:text-4xl">{incident.title}</h2>
+            <p className="font-display text-lg font-bold uppercase tracking-wide">
+              <span style={{color: home.primaryColor}}>■</span> {home.name} v {away.name}{' '}
+              <span style={{color: away.primaryColor}}>■</span> <span className="text-muted">{incident.minute}&apos;</span>
+            </p>
+            <p className="text-sm text-muted">{incident.match.competition}</p>
+            {incident.situation && <p className="text-lg leading-snug">{incident.situation}</p>}
+          </div>
+          <FitBox ratio={WALL_RATIO} className="p-2 lg:flex-1">
+            <MonitorWall incident={incident} />
+          </FitBox>
+        </div>
       </section>
 
-      {/* One strip under the wall: what happened, the two calls, the button. */}
-      <section className="grid shrink-0 items-center gap-4 rounded-xl border border-line bg-pitch p-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,0.9fr)] lg:gap-6">
-        <div>
-          <p className="text-xs uppercase tracking-[0.2em] text-muted">
-            {loop ? `Back in the VAR room · loop ${loop} of 3` : 'In the VAR room'} · {incident.match.competition}
-          </p>
-          <h2 className="font-display text-3xl font-extrabold uppercase leading-tight text-balance">{incident.title}</h2>
-          {incident.situation && <p className="mt-1 text-lg leading-snug lg:line-clamp-2">{incident.situation}</p>}
+      {/* The decision as a story, left to right: what the referee said, what the VAR says, and your call. */}
+      <section className="grid shrink-0 items-stretch gap-3 rounded-xl border border-line bg-pitch p-3 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_auto_minmax(0,1.2fr)] sm:items-center">
+        <Step label="The referee said" value={CALL_LABELS[incident.originalCall] ?? incident.originalCall} />
+        <span className="hidden font-display text-3xl text-muted sm:block" aria-hidden>→</span>
+        <Step label="The VAR says" value={recommendation} highlight />
+        <span className="hidden font-display text-3xl text-muted sm:block" aria-hidden>→</span>
+        <div className="flex flex-col gap-1.5">
+          <p className="text-xs uppercase tracking-[0.2em] text-muted">Your call · keep it or overturn it?</p>
+          {start}
+          <p className="text-xs text-muted">Over 55% keeps it · under 45% overturns · in between: extra time</p>
         </div>
-        <dl className="grid grid-cols-2 gap-3">
-          <div className="rounded-lg border border-line p-3">
-            <dt className="text-xs uppercase tracking-[0.2em] text-muted">On the pitch</dt>
-            <dd className="font-display text-3xl font-extrabold uppercase">
-              {CALL_LABELS[incident.originalCall] ?? incident.originalCall}
-            </dd>
-          </div>
-          <div className="rounded-lg border border-var/60 p-3">
-            <dt className="text-xs uppercase tracking-[0.2em] text-var">VAR recommends</dt>
-            <dd className="font-display text-3xl font-extrabold uppercase text-var">{recommendation}</dd>
-          </div>
-          <p className="col-span-2 text-sm text-muted">It only stands if the people confirm it: over 55% upholds, under 45% sends it back.</p>
-        </dl>
-        {start}
       </section>
 
       {last && (
@@ -93,6 +93,15 @@ export function VarRoomScene({incident, loop, last, start}: Props) {
           </Link>
         </p>
       )}
+    </div>
+  )
+}
+
+function Step({label, value, highlight = false}: {label: string; value: string; highlight?: boolean}) {
+  return (
+    <div className={`rounded-lg border p-3 ${highlight ? 'border-var/60' : 'border-line'}`}>
+      <p className={`text-xs uppercase tracking-[0.2em] ${highlight ? 'text-var' : 'text-muted'}`}>{label}</p>
+      <p className={`font-display text-3xl font-extrabold uppercase leading-none ${highlight ? 'text-var' : ''}`}>{value}</p>
     </div>
   )
 }
