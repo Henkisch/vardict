@@ -24,6 +24,9 @@ export async function closeWindow() {
   return response.json().catch(() => ({status: `http ${response.status}`}))
 }
 
+// Must match workflows/shared.ts CALL_LABELS. Not imported: adding a `workflows` workspace dependency here
+// widened the pnpm lockfile diff well beyond that one link (next/styled-jsx/eslint-config-next peer
+// resolution churn, plan 011), so this stays a copy until that's worth untangling.
 export const CALL_LABELS: Record<string, string> = {
   goal: 'Goal',
   noGoal: 'No goal',
@@ -34,4 +37,5 @@ export const CALL_LABELS: Record<string, string> = {
   noFoul: 'No foul',
 }
 
+// Must match workflows/shared.ts HUMAN_VOTE_WEIGHT (see comment on CALL_LABELS above for why this isn't an import).
 export const HUMAN_VOTE_WEIGHT = 20

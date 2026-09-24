@@ -70,10 +70,11 @@ pnpm workspace (`pnpm-workspace.yaml`), Node 24 (`.nvmrc`).
 
 ```
 /studio          Sanity Studio (sanity 6.x): schemas + custom clip input
-/web             Next.js 16: /vote, /live, /incidents/[slug], /api/vote, /api/tick, /api/start
+/web             Next.js 16: /vote, /live, /incidents, /incidents/[slug],
+                 /api/vote, /api/tick, /api/start, /api/crowd, /api/live
 /var-room        App SDK app (sanity dev → Dashboard): Henrik's private operator console
-/functions       Sanity Functions: effect drainer + bot crowd (Blueprints)
-/workflows       peoplesVar definition, sanity.workflow.ts, tests, scripts/
+/functions       Not used (see functions/README.md) - the bot crowd runs from /web's /api/crowd instead
+/workflows       peoplesVar definition, shared constants, runtime, tests, scripts/
 CLAUDE.md        this file
 BUILD_LOG.md     session log for the writeup
 SUBMISSION.md    DEV post draft (Path Two template), filled in from BUILD_LOG.md
@@ -91,34 +92,45 @@ organization dashboard, not on a public URL. So:
 | Part | Built with | Audience | Job |
 | --- | --- | --- | --- |
 | VAR Room | App SDK | Henrik only (org member) | Pick an incident, start a referendum, perform the human `recommend` transition, watch votes and bot waves live, restart a referendum |
-| /vote | Next.js | Public, phones | Two huge buttons (Uphold / Overturn), the situation line, round and seconds left |
+| /vote | Next.js | Public, phones | Redirects to `/live` - voting happens there (Henrik, session 3: one page is both the big screen and where you vote) |
 | /live | Next.js | Public, big screen | "Send to the people" button (starts a referendum, see Judge testing), clip with the situation line under it, VAR recommendation, live bars, countdown, round, democracy clock, QR code to /vote |
+| /incidents | Next.js | Public | Results overview: every incident's fixture, VAR call and outcome, plus the shared democracy clock (plan 010) |
 | /incidents/[slug] | Next.js | Public | Final call, every round's split, total delay added, control-case headline |
 | /api/vote | Next.js server route | Called by /vote | Validates and writes votes with a server-only token |
-| /api/start | Next.js server route | Called by /live's button | Starts the next incident's referendum (engine API + `recommend`), one at a time, with a cooldown |
-| /api/tick | Next.js server route | Called by /live, VAR Room, bot crowd | Calls `engine.tick()` so vote windows close on time |
-| Functions | Sanity Functions | Backend | Effect drainer, bot crowd |
+| /api/start | Next.js server route | Called by /live's "Send to the people" button and the VAR Room | Starts the next incident's referendum (engine API + `recommend`), one at a time, with a cooldown; only an operator (shared secret) may pick a specific incident |
+| /api/tick | Next.js server route | Called by /live, the VAR Room and the bot crowd | Calls `closeWindow` (wraps `engine.fireAction` + `drainEffects`) so vote windows close on time; idempotent |
+| /api/crowd | Next.js server route | Called by the server itself when a round opens (`workflows/runtime.ts`'s `open` effect) | Runs one referendum's bot crowd (`runCrowd`) in the background, guarded by an HMAC key derived from the write token |
+| /api/live | Next.js server route | Polled by /live, /incidents and /incidents/[slug] | The one GROQ read every public screen shares, cached at Vercel's CDN (`?q=live\|incident\|incidents`) |
 | Studio | Sanity Studio | Henrik | Edit incidents, laws, matches; custom clip input |
 
-All writes go through the Content Lake. The VAR Room and /live both listen in real time, so every vote
-shows up on both immediately. The VAR Room still covers the challenge bonus for the App SDK with real-time
-data; it is shown to judges through the demo video and screenshots, since they can't log in.
+All writes go through the Content Lake. Every public screen reads through `/api/live` (see below), not a
+live subscription; the VAR Room reads the Content Lake directly with `useQuery`, which is real time. The VAR
+Room still covers the challenge bonus for the App SDK with real-time data; it is shown to judges through the
+demo video and screenshots, since they can't log in.
 
 ### How a vote travels
 
 1. The phone taps Uphold and POSTs to `/api/vote` with `referendumId`, `choice` and a `sessionId`
-   (random ID stored in a cookie on first visit).
+   (random ID the browser generates once and keeps in `localStorage`).
 2. The route checks that the referendum is open (`now < closesAt`), that this `sessionId` hasn't voted in
-   this round, and rate-limits by IP and session.
+   this round (`_id = vote-<referendum>-<session>` is the lock), and rate-limits by IP and by per-round /
+   per-day vote caps.
 3. The route creates the `vote` document using the write token (server-only env var).
-4. `/live` and the VAR Room see it immediately through their real-time listeners.
-5. Bot votes are created by a Function and enter the Content Lake the same way, so the workflow can't tell
-   real from simulated votes.
+4. `/live`, `/incidents` and `/incidents/[slug]` pick it up on their next poll of `/api/live` (3 s while a round
+   is live, slower otherwise - see "Still to verify" below). `/vote` itself just redirects to `/live`. The VAR
+   Room, which reads the Content Lake directly, sees it immediately.
+5. Bot votes never become `vote` documents: they're atomic increments on the referendum's `botVotes`
+   counters, applied by the same server (`/api/crowd` → `runCrowd`). The workflow's vote count adds the two
+   sources together (`workflows/shared.ts`'s `weightedCount`), so a human vote and a bot wave both move the
+   same number.
 
 ### Still to verify
 
-- **Real-time on /live:** how a public Next.js page listens for new votes (e.g. `next-sanity` with the Live
-  Content API, or a client listener) and what it needs from the dataset. Read the current docs.
+- ~~Real-time on /live~~: tried a Live Content API subscription, dropped it (session 3) - its events matched
+  our sync tags but arrived 5-20 s late, most of a 30 s window. Every public screen instead polls `/api/live`
+  (plan 007): 3 s while a round is voting/counting/between, 8 s idle, up to 60 s after 5 minutes with no
+  input, hidden tabs don't poll. Not yet fully verified: a phone view once showed a stale round after two
+  newer ones existed (see "Investigate next"); watch for a repeat.
 - **Dataset visibility:** `production` is public, so anyone can read votes (fine, they're anonymous). Confirm
   that writes still require the token.
 - ~~App SDK auth~~: verified session 1, the VAR Room reads live data from the Dashboard.
@@ -134,7 +146,8 @@ data; it is shown to judges through the demo video and screenshots, since they c
 - **Cross-dataset:** the subject (incident) lives in `production`, state in `workflows`. The engine only
   accepts refs into `production` if `createEngine({resourceClients})` returns a client for it.
   The CLI has no way to do this, so `sanity-workflows start` with a production subject is rejected.
-  Drive instances through the engine API (see `workflows/scripts/smoke.ts` for the working pattern).
+  Drive instances through the engine API (see `workflows/runtime.ts`, or `workflows/scripts/live-run.ts` for
+  a script that drives a full run).
 - Subject value shape: `{id: 'dataset:t2sbu6uu:production:<docId>', type: '<_type>'}` (published id only).
 - Nothing moves on its own: time-based transitions need something to call `engine.tick({instanceId})`;
   queued effects need something to call `engine.drainEffects()`.
@@ -167,8 +180,8 @@ Derived, never stored:
 Validation:
 - clip.endSeconds > startSeconds, and the clip is max 30 seconds
 - outcry.sources needs at least one URL
-- No vote can be created after its referendum's closesAt (enforced in `/api/vote` and the bot Function; Studio
-  validation is advisory)
+- No vote can be created after its referendum's closesAt (enforced in `/api/vote`; Studio validation is
+  advisory). Bots never create vote documents at all - see "Simulated crowd" below.
 
 Note: `production` is public, so vote documents (incl. random `sessionId`s) are publicly readable. Never store
 anything identifying in a vote.
@@ -197,9 +210,16 @@ Rules (defaults, may change after the first test):
 | Human vote weight | 1 human vote = 20 bot votes (Henrik, session 3: few real voters; one human = 25% of a 60-bot round). Quorum counts heads; the split counts weight. Shown on /live and /vote |
 | Loop cap | 3 trips to VarRoom, then Abandoned |
 
+Human vote weight, shootout-rounds-to-win and loop cap live in one place, `workflows/shared.ts` (plan 011): a
+dependency-free module so browser-imported code (`web/src/lib/queries.ts`, `run-status.ts`, `outcome.ts`) can
+use the same numbers as `RULES` in `peoplesVar.ts` without pulling `@sanity/workflow-engine/define` into the
+client bundle.
+
 Built and bench-tested in session 3: `workflows/definitions/peoplesVar.ts` (deployed name **`peoples-var`**, names
-must be lowercase-dash), tests in `peoplesVar.test.ts` (`pnpm --filter workflows test`, 14 paths incl. loop,
-shootout, second shootout, loop cap, quorum extension, single run per incident). v1 deployed to `dev`.
+must be lowercase-dash). 52 tests across three files (`pnpm --filter workflows test`): `peoplesVar.test.ts`
+(every routing path incl. loop, shootout, second shootout, loop cap, quorum extension, single run per
+incident), `crowd.test.ts` (persona shares and choices) and `runtime.test.ts` (effect handlers, closing,
+idempotency). v1 deployed to `dev`.
 
 How it maps to Workflows (learned the hard way, see BUILD_LOG session 3):
 - **Conditions can't read vote documents.** They only see the instance snapshot (instance + subject). So the tick
@@ -225,11 +245,19 @@ How it maps to Workflows (learned the hard way, see BUILD_LOG session 3):
   already has a result.
 - Subjects must be **published** incidents (published session 3).
 - **Runtime:** `workflows/runtime.ts` exports `createRuntime`, `sendToThePeople(incidentId)` (start + `recommend` +
-  drain) and `closeWindow(instanceId)` (tally, pick the action, idempotency key per referendum, drain). `/api/start`
-  and `/api/tick` should be thin wrappers around these. Live check: `pnpm tsx --env-file=../.env.local
-  scripts/live-run.ts <incidentId> 50,50,70,30,70,70` (cleans up after itself). The bot crowd hook is a TODO in
-  the `open` handler.
+  drain), `startNext(runtime, pick?)` ("Send to the people": next-in-line or a parked run, with a start lock,
+  cooldown and daily cap) and `closeWindow(instanceId)` (tally, pick the action, idempotency key per referendum,
+  drain). `/api/start` and `/api/tick` are thin wrappers around these. Live check: `pnpm tsx --env-file=../.env.local
+  scripts/live-run.ts <incidentId> 50,50,70,30,70,70` (cleans up after itself). The `open` effect handler's
+  `onOpened` callback starts the bot crowd: in production it POSTs to `/web`'s own `/api/crowd` (one request
+  per round, so one dying function can't strand the rest of the run), guarded by an HMAC key derived from the
+  write token; scripts run it in-process instead.
 - Deploy shares definitions with Sanity by default (`--no-share-defs` to opt out). Nothing secret in ours.
+- **New season (plan 009):** when every published incident already has a `finalCall`, the next "Send to the
+  people" press clears every incident's `finalCall` and starts again (`startNext`'s `newSeason` branch). Round
+  history is never deleted, so `/incidents` and `/incidents/[slug]` derive the current outcome from an
+  incident's rounds instead of trusting `finalCall` directly (`web/src/lib/outcome.ts`'s `incidentOutcome`,
+  reusing `run-status.ts`'s `runPhase`) - otherwise a new season would make every past verdict look undecided.
 
 ## Simulated crowd
 
@@ -243,21 +271,23 @@ Crowd personas (fixed, not tunable):
 | Pundits | 9% | Vote in one bloc in the last 5 seconds |
 | Chaos voter | 1 bot | Always votes with the current minority |
 
-How it runs:
-1. A referendum opens and a Document Function fires.
-2. The Function releases about 60 bot votes in waves across the window.
+How it runs (decided in the bot crowd milestone: not a Sanity Function - Free plan's 10 s default timeout and
+16-deep function chains don't fit a 30 s window well, and a Next.js route defaults to 300 s):
+1. A referendum opens; the workflow's `open` effect handler starts the crowd by calling `/web`'s own
+   `/api/crowd` (in production) or running it in-process (scripts).
+2. `runCrowd` (`workflows/runtime.ts`) plans and releases about 60 bot votes (`workflows/crowd.ts`'s
+   `planCrowd`) in waves across the window.
 3. Each wave is one atomic `inc` on `referendum.botVotes` (totals + per persona), guarded by a wave counter and
-   `ifRevisionId`. **Changed session 3 (Henrik):** bots used to be one document each (~60 per round); counters
-   cost 1 document per round and let screens read a number instead of counting documents. Trade-off: bots no
-   longer go through the same path as human votes.
+   `ifRevisionId`, retried up to 3 times. **Changed session 3 (Henrik):** bots used to be one document each
+   (~60 per round); counters cost 1 document per round and let screens read a number instead of counting
+   documents. Trade-off: bots are never `vote` documents, so they don't go through `/api/vote` at all - the
+   workflow only sees a weighted total (`workflows/shared.ts`'s `weightedCount`), never real vs. simulated.
 4. A fixed random seed per incident makes demo runs repeatable. At least one incident must reach the shootout.
+5. After its last wave, the crowd calls `closeWindow` itself (`closeUntilDone`, retried) so the round closes
+   even if no screen is open to poll `/api/tick`.
 
-Function limits to design around: default timeout 10 s (raise it in the Blueprint; the crowd must outlive a
-30 s window), and function chains stop at depth 16, so vote writes must never trigger a function that
-writes votes. If a Function can't hold a 30 s window, run the crowd from a Next.js route instead
-(Vercel default timeout 300 s). Decide this in the bot crowd milestone.
-
-Abuse protection: one vote per round per sessionId; the vote route is rate-limited.
+Abuse protection: one human vote per round per sessionId; `/api/vote` is rate-limited and capped per round
+(`RULES.maxHumanVotesPerRound`) and per day (`RULES.maxHumanVotesPerDay`).
 
 ## Incidents
 
@@ -325,18 +355,25 @@ Never cut the workflow, /vote or /live.
 | Clips unavailable | Open | fallbackText plus a link out |
 | Vote spam | Open | One vote per round per sessionId; rate-limited /api/vote |
 
-## Next steps (Henrik, end of session 3)
+## Next steps (updated session 4)
 
-1. **Continue the improve plans**: next is `/improve execute 007` (shared cached read), then 008–011, then the
-   direction plans 012–015. Status lives in `plans/README.md`. 001–006 are merged and deployed.
-2. **Then a full walkthrough together, before the dress rehearsal.** Henrik feels the project has drifted and doesn't
+Plans 001–011 are merged to `main`. 001–006 are deployed; 007–011 go live with the next push to `main`
+(Henrik's call). After that push: redeploy the Studio schema (vote type changed, plan 011) and check
+`/api/live` returns `x-vercel-cache: HIT`. Status lives in `plans/README.md`.
+
+1. **A full walkthrough together, before the dress rehearsal.** Henrik feels the project has drifted and doesn't
    fully work the way he expects. Walk through every real flow end to end on the deployed site, with Henrik:
    judge on `/live` alone, phone voting, a full run (regular → extra time → shootout → loop → abandoned/upheld),
    the VAR Room console, results pages, the new-season case, and what happens when two people use it at once.
-   Compare each against this brief and write down gaps.
-3. **Plan how the jury previews and tests it:** what judges see first, the testing notes in the post, whether they
+   Compare each against this brief and write down gaps. Start from the known ones already listed in
+   `plans/README.md` under "Loose ends for the walkthrough" (season reset vs. results pages, the VAR Room
+   Henrik hasn't seen yet, a clean-slate/reset story before judging, results wording, and whether `/api/live` is
+   actually cached).
+2. **Plan how the jury previews and tests it:** what judges see first, the testing notes in the post, whether they
    can reach a shootout on their own, what state the demo is in when they arrive (reset/seasons), and what they
-   can't see (the VAR Room → video and screenshots).
+   can't see (the VAR Room → video and screenshots). Not decided yet - depends on what the walkthrough finds.
+3. **If time allows after 1 and 2:** the remaining direction plans 012–015. Status and scope live in
+   `plans/README.md`; nothing decided here yet.
 
 ## UI backlog (Henrik, session 3)
 
@@ -353,11 +390,19 @@ connections per dataset, 100 GB bandwidth. **Vercel team `henrik-larsson` is on 
 where money can go.
 
 In code:
-- **Screens** read through the API CDN and the Live Content API. They poll only while the tab is visible and the event
-  stream has been quiet for 10 s: every 3 s while a round has no result, otherwise every 20 s.
+- **Screens** read through `/api/live` (plan 007), the one GROQ read every screen shares, cached at Vercel's CDN:
+  `s-maxage` 1 s for the live round while voting/counting/between, 5 s otherwise, 10 s for the incident and
+  incidents-overview reads. A Live Content API subscription was tried and dropped (see "Still to verify"): its
+  events matched our sync tags but arrived 5-20 s late. Clients poll while the tab is visible only: 3 s fast,
+  8 s idle, up to 60 s after 5 minutes with no input.
 - **Bots are counters**, one document per round instead of ~60.
-- **Caps read from data:** 40 runs per rolling 24 h (`dailyLimit`), 300 human votes per round (`full`), one live run,
-  a 10 s cooldown. There's also an in-memory per-IP limit (weak on serverless, kept as a speed bump).
+- **Caps read from data (`RULES` in `workflows/definitions/peoplesVar.ts`):** 40 runs per rolling 24 h
+  (`maxRunsPerDay`), 300 human votes per round (`maxHumanVotesPerRound`), 3000 human votes per rolling 24 h
+  (`maxHumanVotesPerDay`, kept far from the Free plan's 10k document cap), one live run, a 10 s cooldown.
+  There's also an in-memory per-IP limit (weak on serverless, kept as a speed bump).
+- **Request bodies (plan 008):** `readJson` (`web/src/lib/runtime.ts`) rejects anything over 1 KB or not
+  declared `application/json` before it's parsed; `/api/start` allows an empty body too (the /live button's
+  POST sends neither). Errors come back as clean JSON with CORS headers, not a stack trace.
 - **Kill switch:** `VARDICT_PAUSED=1` in Vercel env makes `/api/start`, `/api/vote` and `/api/crowd` answer 503. Ticks
   still close open windows.
 - A round costs roughly 30 server-side API requests (11 waves × read + patch, plus closing).
@@ -377,11 +422,12 @@ Henrik to do in dashboards (can't be done from code):
 
 Collect Henrik's list first. Known so far:
 - **Screens miss new rounds.** Measured: Live Content API events *do* match our sync tags, but arrive 5–20 s late
-  (the CDN lags too). The stream-based "skip polling" logic from the cost review therefore left `/live` blind. New
-  strategy (uncommitted when parked, in `web/src/lib/live.ts`): uncached reads, poll 3 s during a vote, 8 s idle,
-  visible tabs only, and a 30 s fast boost after pressing Send to the people. **Not verified yet**: in the last test the
-  phone view still showed an older "last verdict" (Maupay) while two newer Gordon rounds existed. Could be stale dev
-  HMR or a query problem.
+  (the CDN lags too). The stream-based "skip polling" logic from the cost review therefore left `/live` blind. The
+  fix (now committed, `/api/live` route + `web/src/lib/live.ts`, plan 007): a short-`s-maxage` CDN read instead of
+  a subscription, polled 3 s during a vote, 8 s idle, visible tabs only, and a 30 s fast boost after pressing Send
+  to the people. **Not fully verified**: whether `/api/live` is actually served `x-vercel-cache: HIT` in
+  production (check after the next deploy - see `plans/README.md` "Loose ends"), and the specific stale-phone-view
+  report (an older "last verdict" showing while newer rounds existed) hasn't been reproduced since.
 - **A start through a redirected page** (`/vote` → `/live` mid-request) left a fresh instance parked in `varRoom`
   without `recommend`, and the next press recommended it. Check whether an aborted client request can cut a route short.
 - Gordon has now been overturned twice (loop 3 is next). A third overturn abandons it: expected, but check the

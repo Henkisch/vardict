@@ -4,6 +4,7 @@
 
 import {runPhase, type RunRef} from '@/lib/run-status'
 import type {IncidentRound} from '@/lib/queries'
+import {SHOOTOUT_ROUNDS_TO_WIN} from 'workflows/shared'
 
 export type Outcome = 'upheld' | 'abandoned' | 'parked' | 'open' | 'notVoted'
 
@@ -51,10 +52,10 @@ export function runOutcome(run: IncidentRound[]): Outcome {
   if (phase === 'parked') return 'parked'
   if (phase !== 'decided') return 'open'
 
-  // runPhase already used SHOOTOUT_ROUNDS_TO_WIN (3, not exported) to decide 'decided' vs 'parked' here, so a
-  // shootout that reaches this line has one side at 3 wins/losses, never both - safe to re-check the same way.
+  // runPhase already used SHOOTOUT_ROUNDS_TO_WIN to decide 'decided' vs 'parked' here, so a shootout that
+  // reaches this line has one side at SHOOTOUT_ROUNDS_TO_WIN wins/losses, never both - safe to re-check the same way.
   const overturned = last.round.startsWith('shootout')
-    ? shootout.filter((r) => r === 'overturned').length >= 3
+    ? shootout.filter((r) => r === 'overturned').length >= SHOOTOUT_ROUNDS_TO_WIN
     : last.result === 'overturned'
   return overturned ? 'abandoned' : 'upheld'
 }

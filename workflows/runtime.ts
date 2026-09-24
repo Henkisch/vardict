@@ -5,6 +5,7 @@ import {createEngine, type EffectHandler, type Engine} from '@sanity/workflow-en
 
 import {chaosChoice, planCrowd, type PlannedVote, waves} from './crowd'
 import {EFFECTS, RULES} from './definitions/peoplesVar'
+import {PERSONAS} from './shared'
 
 export const DEFINITION = 'peoples-var'
 
@@ -319,8 +320,6 @@ export async function closeWindow(
   await engine.drainEffects({instanceId})
   return {status: 'closed', stage, upholdPct, votes: tally.bots + tally.humans}
 }
-
-export const PERSONAS = ['homeFan', 'awayFan', 'neutral', 'pundit', 'chaos'] as const
 
 // Bots aren't documents: each wave is one atomic `inc` on the referendum's counters (1 document per round instead
 // of ~60, and screens read the counters instead of counting documents). Humans stay documents: the document id is

@@ -22,6 +22,7 @@
   },
   "exports": {
     "./runtime": "./runtime.ts",
-    "./rules": "./definitions/peoplesVar.ts"
+    "./rules": "./definitions/peoplesVar.ts",
+    "./shared": "./shared.ts"
   }
 }

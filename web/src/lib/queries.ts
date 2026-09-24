@@ -1,8 +1,11 @@
 // GROQ for the public screens. The vote split and the democracy clock are always derived, never stored.
 
-// Weighted split: a human vote counts this many times. Bots are counters on the referendum (botVotes), humans
-// are vote documents. Keep in sync with RULES.humanVoteWeight (workflows).
-export const HUMAN_VOTE_WEIGHT = 20
+// Shared with the workflow definition and the VAR Room - see workflows/shared.ts. Dependency-free on purpose:
+// importing workflows/rules (definitions/peoplesVar.ts) here would pull @sanity/workflow-engine/define into
+// this client-imported module's bundle.
+import {CALL_LABELS, HUMAN_VOTE_WEIGHT, weightedCount} from 'workflows/shared'
+
+export {CALL_LABELS, HUMAN_VOTE_WEIGHT}
 
 const team = '{name, shortName, primaryColor}'
 
@@ -16,8 +19,8 @@ const INCIDENT_CARD = `{
 export const LIVE_QUERY = `{
   "referendum": *[_type == "referendum"] | order(windowOpensAt desc)[0]{
     _id, round, loop, windowOpensAt, closesAt, result, workflowInstanceId,
-    "uphold": coalesce(botVotes.uphold, 0) + ${HUMAN_VOTE_WEIGHT} * count(*[_type == "vote" && references(^._id) && choice == "uphold"]),
-    "overturn": coalesce(botVotes.overturn, 0) + ${HUMAN_VOTE_WEIGHT} * count(*[_type == "vote" && references(^._id) && choice == "overturn"]),
+    "uphold": ${weightedCount('uphold')},
+    "overturn": ${weightedCount('overturn')},
     "bots": coalesce(botVotes.uphold, 0) + coalesce(botVotes.overturn, 0),
     "humans": count(*[_type == "vote" && references(^._id)]),
     "shootout": *[_type == "referendum" && workflowInstanceId == ^.workflowInstanceId && loop == ^.loop
@@ -70,16 +73,6 @@ export type IncidentCard = {
 
 export type LiveState = {referendum: LiveReferendum | null; next: IncidentCard | null; democracySeconds: number}
 
-export const CALL_LABELS: Record<string, string> = {
-  goal: 'Goal',
-  noGoal: 'No goal',
-  penalty: 'Penalty',
-  noPenalty: 'No penalty',
-  redCard: 'Red card',
-  yellowCard: 'Yellow card',
-  noFoul: 'No foul',
-}
-
 export function roundLabel(round: string) {
   if (round === 'regular') return 'Regular time'
   if (round === 'extraTime') return 'Extra time'
@@ -95,17 +88,13 @@ export function formatClock(totalSeconds: number) {
   return h ? `${h}:${pad(m)}:${pad(sec)}` : `${pad(m)}:${pad(sec)}`
 }
 
-// Bots are counters on the referendum; humans are vote documents, weighted.
-const weighted = (choice: 'uphold' | 'overturn') =>
-  `coalesce(botVotes.${choice}, 0) + ${HUMAN_VOTE_WEIGHT} * count(*[_type == "vote" && references(^._id) && choice == "${choice}"])`
-
 // Shared by INCIDENT_QUERY and INCIDENTS_QUERY: every round with its weighted split, used to derive an
 // incident's outcome (see lib/outcome.ts) and to render each round's bar.
 const ROUNDS = `*[_type == "referendum" && references(^._id)] | order(windowOpensAt asc){
     _id, round, loop, result, windowOpensAt, workflowInstanceId,
     "seconds": dateTime(closesAt) - dateTime(windowOpensAt),
-    "uphold": ${weighted('uphold')},
-    "overturn": ${weighted('overturn')},
+    "uphold": ${weightedCount('uphold')},
+    "overturn": ${weightedCount('overturn')},
     "humans": count(*[_type == "vote" && references(^._id)])
   }`
 

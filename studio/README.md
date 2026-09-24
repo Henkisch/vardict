@@ -1,9 +1,7 @@
-# Sanity Clean Content Studio
+# studio
 
-Congratulations, you have now installed the Sanity Content Studio, an open-source real-time content editing environment connected to the Sanity backend.
+The Sanity Studio: schemas for incidents, matches, teams, laws, referendums and votes, plus a custom clip
+input that previews a YouTube clip at its chosen start and end.
 
-Now you can do the following things:
-
-- [Read “getting started” in the docs](https://www.sanity.io/docs/introduction/getting-started?utm_source=readme)
-- [Join the Sanity community](https://www.sanity.io/community/join?utm_source=readme)
-- [Extend and build plugins](https://www.sanity.io/docs/content-studio/extending?utm_source=readme)
+See the root [`README.md`](../README.md) for how to run this alongside the rest of the workspace, and
+[`CLAUDE.md`](../CLAUDE.md) for the content model.
