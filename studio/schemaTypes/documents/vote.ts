@@ -1,8 +1,9 @@
 import {defineField, defineType} from 'sanity'
 import {ThumbsUpIcon} from '@sanity/icons/ThumbsUp'
-import {CHOICES, PERSONAS, titleFor} from '../constants'
+import {CHOICES, titleFor} from '../constants'
 
-// Written by /api/vote (humans) and the bot crowd (simulated), never by hand.
+// Written by /api/vote, never by hand. Human votes only (session 3): the simulated crowd is counters on the
+// referendum (botVotes), not vote documents - see CLAUDE.md "Simulated crowd".
 // The production dataset is public: never store anything identifying here.
 export const vote = defineType({
   name: 'vote',
@@ -44,23 +45,11 @@ export const vote = defineType({
       name: 'simulated',
       title: 'Simulated',
       type: 'boolean',
-      description: 'True for bot crowd votes. Always shown openly.',
+      description:
+        'Always false: the simulated crowd is counters on the referendum (botVotes), not vote documents. ' +
+        'Kept on the schema (optional, hidden) because /api/vote still writes it and queries still filter on it.',
       initialValue: false,
-      validation: (rule) => rule.required(),
-    }),
-    defineField({
-      name: 'persona',
-      title: 'Persona',
-      type: 'string',
-      options: {list: PERSONAS},
-      hidden: ({document}) => !document?.simulated,
-      validation: (rule) =>
-        rule.custom((persona, context) => {
-          const simulated = context.document?.simulated
-          if (simulated && !persona) return 'Simulated votes need a persona'
-          if (!simulated && persona) return 'Only simulated votes have a persona'
-          return true
-        }),
+      hidden: true,
     }),
     defineField({
       name: 'castAt',
@@ -71,10 +60,10 @@ export const vote = defineType({
   ],
   orderings: [{title: 'Newest first', name: 'castDesc', by: [{field: 'castAt', direction: 'desc'}]}],
   preview: {
-    select: {choice: 'choice', simulated: 'simulated', persona: 'persona', castAt: 'castAt'},
-    prepare: ({choice, simulated, persona, castAt}) => ({
+    select: {choice: 'choice', castAt: 'castAt'},
+    prepare: ({choice, castAt}) => ({
       title: titleFor(CHOICES, choice) ?? 'Vote',
-      subtitle: [simulated ? `Bot · ${titleFor(PERSONAS, persona)}` : 'Human', castAt].filter(Boolean).join(' · '),
+      subtitle: castAt,
     }),
   },
 })
