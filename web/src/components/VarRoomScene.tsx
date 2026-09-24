@@ -48,17 +48,20 @@ export function VarRoomScene({incident, loop, last, start}: Props) {
         </div>
         {/* Context beside the footage on desktop (the wall is height-limited, so the side has room); above it on phones. */}
         <div className="flex flex-col lg:min-h-0 lg:flex-1 lg:flex-row">
-          <div className="flex shrink-0 flex-col justify-center gap-2 p-4 lg:w-80 xl:w-96">
-            <p className="text-xs uppercase tracking-[0.2em] text-muted">
-              {loop ? `Back in the VAR room · loop ${loop} of 3` : 'In the VAR room'}
-            </p>
-            <h2 className="font-display text-3xl font-extrabold uppercase leading-tight text-balance xl:text-4xl">{incident.title}</h2>
-            <p className="font-display text-lg font-bold uppercase tracking-wide">
-              <span style={{color: home.primaryColor}}>■</span> {home.name} v {away.name}{' '}
-              <span style={{color: away.primaryColor}}>■</span> <span className="text-muted">{incident.minute}&apos;</span>
-            </p>
-            <p className="text-sm text-muted">{incident.match.competition}</p>
-            {incident.situation && <p className="text-lg leading-snug">{incident.situation}</p>}
+          <div className="flex shrink-0 flex-col justify-between gap-4 p-4 lg:w-80 xl:w-96">
+            <div>
+              <p className="font-display text-lg font-bold uppercase tracking-wide">
+                {home.name} v {away.name} <span className="text-muted">{incident.minute}&apos;</span>
+              </p>
+              <p className="text-sm text-muted">{incident.match.competition}</p>
+            </div>
+            <div className="flex flex-col gap-2">
+              {loop && loop > 1 && <SecondLook loop={loop} />}
+              <h2 className="font-display text-3xl font-extrabold uppercase leading-tight text-balance xl:text-4xl">
+                {incident.title}
+              </h2>
+              {incident.situation && <p className="text-lg leading-snug">{incident.situation}</p>}
+            </div>
           </div>
           <FitBox ratio={WALL_RATIO} className="p-2 lg:flex-1">
             <MonitorWall incident={incident} />
@@ -102,6 +105,26 @@ function Step({label, value, highlight = false}: {label: string; value: string; 
     <div className={`rounded-lg border p-3 ${highlight ? 'border-var/60' : 'border-line'}`}>
       <p className={`text-xs uppercase tracking-[0.2em] ${highlight ? 'text-var' : 'text-muted'}`}>{label}</p>
       <p className={`font-display text-3xl font-extrabold uppercase leading-none ${highlight ? 'text-var' : ''}`}>{value}</p>
+    </div>
+  )
+}
+
+const ORDINAL = ['', 'First', 'Second', 'Third']
+
+// After an overturn the same incident comes back for another look. Three strikes (overturns) abandon the match.
+function SecondLook({loop}: {loop: number}) {
+  const overturns = loop - 1
+  return (
+    <div className="flex flex-col gap-1">
+      <p className="flex items-center gap-2 font-display text-sm font-bold uppercase tracking-[0.15em] text-var">
+        <span className="flex gap-1" aria-hidden>
+          {[1, 2, 3].map((n) => (
+            <span key={n} className={`h-2.5 w-2.5 rounded-full ${n <= overturns ? 'bg-overturn' : 'border border-line'}`} />
+          ))}
+        </span>
+        {ORDINAL[loop] ?? `Look ${loop}`} look · overturned {overturns === 1 ? 'once' : `${overturns} times`}
+      </p>
+      <p className="text-xs text-muted">Three overturns and the match is abandoned.</p>
     </div>
   )
 }
