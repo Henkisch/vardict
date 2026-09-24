@@ -1,6 +1,13 @@
 import {createClient} from '@sanity/client'
 
-import {INCIDENT_QUERY, LIVE_QUERY, type IncidentResult, type LiveState} from '@/lib/queries'
+import {
+  INCIDENT_QUERY,
+  INCIDENTS_QUERY,
+  LIVE_QUERY,
+  type IncidentResult,
+  type IncidentsOverview,
+  type LiveState,
+} from '@/lib/queries'
 import {runPhase} from '@/lib/run-status'
 
 // One token-free client per server instance, reused across requests (the dataset is public, so no write
@@ -51,6 +58,17 @@ export async function GET(request: Request) {
       return Response.json(null, {status: 502, headers: {'Cache-Control': 'no-store'}})
     }
     // A slug that matches nothing is a valid answer (the page shows "No incident called ..."), not an error.
+    return Response.json(result, {headers: {'Cache-Control': 'public, s-maxage=10, stale-while-revalidate=30'}})
+  }
+
+  if (q === 'incidents') {
+    let result: IncidentsOverview
+    try {
+      result = await client.fetch<IncidentsOverview>(INCIDENTS_QUERY)
+    } catch (error) {
+      console.error('incidents fetch failed', error)
+      return Response.json(null, {status: 502, headers: {'Cache-Control': 'no-store'}})
+    }
     return Response.json(result, {headers: {'Cache-Control': 'public, s-maxage=10, stale-while-revalidate=30'}})
   }
 

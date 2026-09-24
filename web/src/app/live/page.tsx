@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import {useState} from 'react'
 
 import {Bars} from '@/components/Bars'
@@ -67,6 +68,9 @@ export default function LivePage() {
           <p className="font-display text-4xl font-bold text-var tabular">
             {state ? formatClock(state.democracySeconds) : '--:--'}
           </p>
+          <Link href="/incidents" className="text-sm text-muted underline">
+            Results
+          </Link>
         </div>
       </header>
 
