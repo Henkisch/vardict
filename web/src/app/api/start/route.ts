@@ -1,12 +1,18 @@
 import {startNext} from 'workflows/runtime'
 
-import {clientKey, CORS, getRuntime, paused, preflight, rateLimited} from '@/lib/runtime'
+import {clientKey, CORS, getRuntime, isOperator, paused, preflight, rateLimited} from '@/lib/runtime'
 
 // The bot crowd keeps running after the response: a full run (regular, extra time, 5 shootout rounds) is ~2 min.
 export const maxDuration = 300
 
+// Loose enough for a Sanity document id, tight enough to keep this out of a GROQ query as anything but a
+// literal string match (startNext parameterizes the query anyway, but this is cheap and catches typos fast).
+const INCIDENT_ID_PATTERN = /^[a-zA-Z0-9._-]{1,64}$/
+
 // "Send to the people": starts the next incident's referendum, or sends a run that was overturned back to the
-// people. One live vote at a time. Public on purpose, so judges can test without a Sanity login.
+// people. One live vote at a time. Public on purpose, so judges can test without a Sanity login - but only an
+// operator (the VAR Room, carrying the shared secret) may pick which incident. A public caller always gets
+// "next in line", so it can't abort a run in progress by naming a different incident.
 export async function POST(request: Request) {
   const off = paused()
   if (off) return off
@@ -14,10 +20,20 @@ export async function POST(request: Request) {
     return Response.json({status: 'rateLimited'}, {status: 429, headers: CORS})
   }
   const body = (await request.json().catch(() => ({}))) as {incidentId?: unknown}
-  const pick = typeof body.incidentId === 'string' ? body.incidentId : undefined
+  const requested = isOperator(request) && typeof body.incidentId === 'string' ? body.incidentId : undefined
+  if (requested !== undefined && !INCIDENT_ID_PATTERN.test(requested)) {
+    return Response.json({status: 'invalid'}, {status: 400, headers: CORS})
+  }
 
-  const result = await startNext(getRuntime(), pick)
-  const status = result.status === 'busy' ? 409 : result.status === 'coolingDown' || result.status === 'dailyLimit' ? 429 : 200
+  const result = await startNext(getRuntime(), requested)
+  const status =
+    result.status === 'busy'
+      ? 409
+      : result.status === 'coolingDown' || result.status === 'dailyLimit'
+        ? 429
+        : result.status === 'unknownIncident'
+          ? 400
+          : 200
   return Response.json(result, {status, headers: CORS})
 }
 

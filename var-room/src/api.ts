@@ -3,10 +3,17 @@ const WEB_URL = process.env.SANITY_APP_WEB_URL ?? 'https://live-vardict.vercel.a
 
 export type StartResult = {status: string; instanceId?: string; stage?: string; retryInSeconds?: number}
 
+// Proves this request comes from the VAR Room, so /api/start will honor a picked incidentId instead of
+// silently falling back to "next in line". Shared with the web app via VARDICT_OPERATOR_KEY.
+const OPERATOR_KEY = process.env.SANITY_APP_OPERATOR_KEY
+
 export async function sendToThePeople(incidentId?: string): Promise<StartResult> {
   const response = await fetch(`${WEB_URL}/api/start`, {
     method: 'POST',
-    headers: {'content-type': 'application/json'},
+    headers: {
+      'content-type': 'application/json',
+      ...(OPERATOR_KEY ? {'x-operator-key': OPERATOR_KEY} : {}),
+    },
     body: JSON.stringify(incidentId ? {incidentId} : {}),
   })
   return response.json().catch(() => ({status: `http ${response.status}`}))
