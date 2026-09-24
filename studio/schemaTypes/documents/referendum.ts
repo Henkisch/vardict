@@ -56,6 +56,13 @@ export const referendum = defineType({
         }),
     }),
     defineField({
+      name: 'workflowInstanceId',
+      title: 'Workflow instance',
+      type: 'string',
+      description: 'The peoples-var run that opened this referendum. Written by the workflow.',
+      readOnly: true,
+    }),
+    defineField({
       name: 'result',
       title: 'Result',
       type: 'string',

@@ -15,7 +15,14 @@ export type RuntimeConfig = {
   tag?: string
 }
 
-export type Runtime = {engine: Engine; content: SanityClient; projectId: string; contentDataset: string}
+export type Runtime = {
+  engine: Engine
+  content: SanityClient
+  workflows: SanityClient
+  projectId: string
+  contentDataset: string
+  tag: string
+}
 
 // Effect params carry documents as global references: dataset:<project>:<dataset>:<id>.
 const docId = (gdr: unknown) => String(gdr).split(':').at(-1)!
@@ -35,6 +42,8 @@ function handlers(content: SanityClient) {
     const doc = await content.createIfNotExists({
       _id: referendumId,
       _type: 'referendum',
+      // Lets /live and /api/tick find the run from the referendum alone.
+      workflowInstanceId: ctx.instanceId,
       incident: {_type: 'reference', _ref: docId(params.incidentId)},
       round: params.round,
       loop: Number(params.loop),
@@ -81,8 +90,9 @@ export function createRuntime({
 }: RuntimeConfig): Runtime {
   const base = createClient({projectId, token, apiVersion: '2025-02-19', useCdn: false})
   const content = base.withConfig({dataset: contentDataset})
+  const workflows = base.withConfig({dataset: workflowsDataset})
   const engine = createEngine({
-    client: base.withConfig({dataset: workflowsDataset}),
+    client: workflows,
     tag,
     workflowResource: {type: 'dataset', id: `${projectId}.${workflowsDataset}`},
     // The subject (incident) lives in the content dataset; the engine only accepts refs it can resolve.
@@ -90,10 +100,10 @@ export function createRuntime({
       gdr.scheme === 'dataset' && gdr.projectId === projectId && gdr.dataset === contentDataset ? content : undefined,
     effects: {handlers: handlers(content)},
   })
-  return {engine, content, projectId, contentDataset}
+  return {engine, content, workflows, projectId, contentDataset, tag}
 }
 
-// Start a run for an incident and send it straight to the people (the judges' "Send to the people" button).
+// Start a run for an incident and send it straight to the people.
 export async function sendToThePeople({engine, projectId, contentDataset}: Runtime, incidentId: string) {
   const {instance} = await engine.startInstance({
     definition: DEFINITION,
@@ -158,4 +168,54 @@ export async function closeWindow({engine, content}: Runtime, instanceId: string
   // Opens the next round's referendum, or writes the final call.
   await engine.drainEffects({instanceId})
   return {status: 'closed', stage, upholdPct, votes: tally.total}
+}
+
+type InstanceRow = {_id: string; currentStage: string; subjectId: string; completedAt?: string; startedAt: string}
+
+// Unfinished runs under our tag, newest first. Instances are engine-owned documents; reading them is fine.
+export async function liveInstances({workflows, tag}: Runtime) {
+  return workflows.fetch<InstanceRow[]>(
+    `*[_type == "sanity.workflow.instance" && tag == $wfTag && !defined(completedAt)] | order(startedAt desc){
+      _id, currentStage, startedAt, "subjectId": fields[name == "subject"][0].value.id}`,
+    {wfTag: tag},
+  )
+}
+
+export const START_COOLDOWN_SECONDS = 10
+
+export type StartResult =
+  | {status: 'started' | 'recommended'; instanceId: string; incidentId: string}
+  | {status: 'busy'; instanceId: string; stage: string}
+  | {status: 'coolingDown'; retryInSeconds: number}
+
+// The "Send to the people" button: one live vote at a time. A run parked in the VAR room (after an overturn)
+// is sent back to the people; otherwise the next incident in line starts a fresh run.
+export async function startNext(runtime: Runtime, pick?: string): Promise<StartResult> {
+  const {engine, content, workflows, tag} = runtime
+  const [live] = await liveInstances(runtime)
+  if (live && live.currentStage !== 'varRoom') return {status: 'busy', instanceId: live._id, stage: live.currentStage}
+  if (live) {
+    await engine.fireAction({instanceId: live._id, activity: 'review', action: 'recommend'})
+    await engine.drainEffects({instanceId: live._id})
+    return {status: 'recommended', instanceId: live._id, incidentId: docId(live.subjectId)}
+  }
+
+  const last = await workflows.fetch<{completedAt: string} | null>(
+    `*[_type == "sanity.workflow.instance" && tag == $wfTag && defined(completedAt)] | order(completedAt desc)[0]{completedAt}`,
+    {wfTag: tag},
+  )
+  const since = last ? (Date.now() - Date.parse(last.completedAt)) / 1000 : Infinity
+  if (since < START_COOLDOWN_SECONDS) return {status: 'coolingDown', retryInSeconds: Math.ceil(START_COOLDOWN_SECONDS - since)}
+
+  // Next in line: the incident whose last referendum is oldest (never-voted first). Upheld incidents are done.
+  const incidentId =
+    pick ??
+    (await content.fetch<string | null>(
+      `*[_type == "incident" && !defined(finalCall) && !(_id in path("drafts.**"))]{
+        _id, "last": *[_type == "referendum" && references(^._id)] | order(windowOpensAt desc)[0].windowOpensAt
+      } | order(coalesce(last, "0") asc)[0]._id`,
+    ))
+  if (!incidentId) throw new Error('Every incident has a final call. Reset them to run again.')
+  const instanceId = await sendToThePeople(runtime, incidentId)
+  return {status: 'started', instanceId, incidentId}
 }
