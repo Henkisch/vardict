@@ -307,7 +307,7 @@ uploads, which the clip rules ban, so an agent is checking the results for offic
   could reach localhost. A scripted tap in the real page returned 200 and "Your vote". Lesson: the phone test
   has to happen on a public URL.
 - **Henrik's idea: human votes weigh more.** At a demo there are a handful of humans against 60 bots, so a real
-  vote would be noise. Now one human vote counts as ten, in both the server tally and the live bars, and the
+  vote would be noise. Now one human vote counts as twenty (first ten, then raised: one phone should decide any close round), in both the server tally and the live bars, and the
   screens say so. It suits the premise: democracy, but some votes count more.
 - **Vercel:** the first `vercel link` hit a 403 in the wrong team scope. Linked to Henrik's personal team, set the
   root directory to `web` (the app imports the `workflows` workspace package) and the env vars. The production

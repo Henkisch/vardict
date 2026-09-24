@@ -191,7 +191,7 @@ Rules (defaults, may change after the first test):
 | Extra-time window | 15 s |
 | Shootout | 5 rounds of 10 s, best of 5 |
 | Quorum | 20 votes per round, else the window extends once by 15 s |
-| Human vote weight | 1 human vote = 10 bot votes (Henrik, session 3: few real voters). Quorum counts heads; the split counts weight. Shown on /live and /vote |
+| Human vote weight | 1 human vote = 20 bot votes (Henrik, session 3: few real voters; one human = 25% of a 60-bot round). Quorum counts heads; the split counts weight. Shown on /live and /vote |
 | Loop cap | 3 trips to VarRoom, then Abandoned |
 
 Built and bench-tested in session 3: `workflows/definitions/peoplesVar.ts` (deployed name **`peoples-var`**, names

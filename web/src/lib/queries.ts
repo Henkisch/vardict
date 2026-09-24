@@ -1,7 +1,7 @@
 // GROQ for the public screens. The vote split and the democracy clock are always derived, never stored.
 
 // Weighted split: a human vote counts this many times. Keep in sync with RULES.humanVoteWeight (workflows).
-export const HUMAN_VOTE_WEIGHT = 10
+export const HUMAN_VOTE_WEIGHT = 20
 
 const team = '{name, shortName, primaryColor}'
 
