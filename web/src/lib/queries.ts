@@ -99,18 +99,22 @@ export function formatClock(totalSeconds: number) {
 const weighted = (choice: 'uphold' | 'overturn') =>
   `coalesce(botVotes.${choice}, 0) + ${HUMAN_VOTE_WEIGHT} * count(*[_type == "vote" && references(^._id) && choice == "${choice}"])`
 
-export const INCIDENT_QUERY = `*[_type == "incident" && slug.current == $slug][0]{
-  title, situation, minute, originalCall, varRecommendation, finalCall, controlCase, realDelaySeconds, fallbackText,
-  clip{youtubeId, startSeconds, endSeconds, channel, embedAllowed},
-  outcry{level, summary, sources},
-  match->{competition, date, venue, score, homeTeam->${team}, awayTeam->${team}},
-  "rounds": *[_type == "referendum" && references(^._id)] | order(windowOpensAt asc){
+// Shared by INCIDENT_QUERY and INCIDENTS_QUERY: every round with its weighted split, used to derive an
+// incident's outcome (see lib/outcome.ts) and to render each round's bar.
+const ROUNDS = `*[_type == "referendum" && references(^._id)] | order(windowOpensAt asc){
     _id, round, loop, result, windowOpensAt, workflowInstanceId,
     "seconds": dateTime(closesAt) - dateTime(windowOpensAt),
     "uphold": ${weighted('uphold')},
     "overturn": ${weighted('overturn')},
     "humans": count(*[_type == "vote" && references(^._id)])
-  },
+  }`
+
+export const INCIDENT_QUERY = `*[_type == "incident" && slug.current == $slug][0]{
+  title, situation, minute, originalCall, varRecommendation, finalCall, controlCase, realDelaySeconds, fallbackText,
+  clip{youtubeId, startSeconds, endSeconds, channel, embedAllowed},
+  outcry{level, summary, sources},
+  match->{competition, date, venue, score, homeTeam->${team}, awayTeam->${team}},
+  "rounds": ${ROUNDS},
   "others": *[_type == "incident" && slug.current != $slug] | order(title asc){title, "slug": slug.current}
 }`
 
@@ -143,3 +147,30 @@ export type IncidentResult = {
   rounds: IncidentRound[]
   others: {title: string; slug: string}[]
 }
+
+// The overview page: every incident's fixture, VAR call and rounds, plus the same global democracy clock
+// LIVE_QUERY computes, so the page can show one incident-independent total at the top.
+export const INCIDENTS_QUERY = `{
+  "incidents": *[_type == "incident"] | order(match->date asc){
+    title, "slug": slug.current, controlCase, varRecommendation, finalCall, realDelaySeconds,
+    match->{date, homeTeam->${team}, awayTeam->${team}},
+    "rounds": ${ROUNDS}
+  },
+  "democracySeconds": math::sum(*[_type == "incident"].realDelaySeconds)
+    + coalesce(math::sum(*[_type == "referendum" && defined(result)]{
+        "s": dateTime(closesAt) - dateTime(windowOpensAt)
+      }.s), 0)
+}`
+
+export type IncidentOverviewRow = {
+  title: string
+  slug: string
+  controlCase?: boolean
+  varRecommendation: string
+  finalCall?: string
+  realDelaySeconds: number
+  match: {date: string; homeTeam: Team; awayTeam: Team}
+  rounds: IncidentRound[]
+}
+
+export type IncidentsOverview = {incidents: IncidentOverviewRow[]; democracySeconds: number}
