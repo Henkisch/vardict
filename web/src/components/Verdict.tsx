@@ -1,6 +1,6 @@
 import {Bars} from '@/components/Bars'
 import {WorkflowPath} from '@/components/WorkflowPath'
-import type {LiveReferendum} from '@/lib/queries'
+import {formatClock, type LiveReferendum} from '@/lib/queries'
 import type {Phase} from '@/lib/run-status'
 import {LOOP_CAP, SHOOTOUT_ROUNDS_TO_WIN} from 'workflows/shared'
 
@@ -51,6 +51,7 @@ export function Verdict({round: ref, phase, action}: {round: LiveReferendum; pha
           <p className="text-sm text-muted">
             {ref.humans} human and {ref.bots} simulated votes. Each human vote counts ×20.
           </p>
+          <SlowerClock realSeconds={ref.incident.realDelaySeconds} votedSeconds={votedSeconds(ref)} />
         </div>
         <aside className="flex flex-col justify-center gap-4 rounded-xl border border-line bg-pitch p-6">{action}</aside>
       </div>
@@ -76,5 +77,23 @@ function Penalties({results}: {results: ('upheld' | 'overturned')[]}) {
         <span className="text-uphold">●</span> scored · <span className="text-overturn">●</span> saved
       </span>
     </div>
+  )
+}
+
+// The pitch in one line: the real VAR took this long; with the fans it takes longer. Only closed rounds count.
+const votedSeconds = (ref: LiveReferendum) => ref.run.filter((r) => r.result).reduce((n, r) => n + r.seconds, 0)
+
+function SlowerClock({realSeconds, votedSeconds}: {realSeconds: number; votedSeconds: number}) {
+  return (
+    <p className="flex flex-wrap items-baseline gap-x-6 gap-y-1 border-t border-line pt-3 font-display text-2xl font-bold uppercase">
+      <span>
+        <span className="text-muted">The real VAR took </span>
+        <span className="tabular">{formatClock(realSeconds)}</span>
+      </span>
+      <span>
+        <span className="text-muted">With the fans </span>
+        <span className="tabular text-var">{formatClock(realSeconds + votedSeconds)}</span>
+      </span>
+    </p>
   )
 }

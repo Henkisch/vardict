@@ -26,7 +26,9 @@ export const LIVE_QUERY = `{
     "shootout": *[_type == "referendum" && workflowInstanceId == ^.workflowInstanceId && loop == ^.loop
       && round match "shootout*" && defined(result)] | order(windowOpensAt asc).result,
     // Every round of this run, for the workflow path on the verdict screen.
-    "run": *[_type == "referendum" && workflowInstanceId == ^.workflowInstanceId] | order(windowOpensAt asc){round, loop, result},
+    "run": *[_type == "referendum" && workflowInstanceId == ^.workflowInstanceId] | order(windowOpensAt asc){
+      round, loop, result, "seconds": dateTime(closesAt) - dateTime(windowOpensAt)
+    },
     incident->${INCIDENT_CARD}
   },
   // Who the VAR room is looking at while nothing is live: next in line, same order as /api/start picks.
@@ -58,7 +60,7 @@ export type LiveReferendum = {
   incident: IncidentCard
 }
 
-export type RunRound = {round: string; loop: number; result?: 'upheld' | 'overturned' | 'tooClose'}
+export type RunRound = {round: string; loop: number; result?: 'upheld' | 'overturned' | 'tooClose'; seconds: number}
 
 export type IncidentCard = {
     _id: string

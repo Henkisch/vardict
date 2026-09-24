@@ -35,7 +35,7 @@ export function VarRoomScene({incident, loop, last, start}: Props) {
             {home.shortName} v {away.shortName} · {incident.minute}&apos;
           </span>
           <span className="tabular text-muted">
-            <span className="hidden sm:inline">Real check </span>
+            <span className="hidden sm:inline">Real VAR check took </span>
             {formatClock(incident.realDelaySeconds)}
           </span>
         </div>

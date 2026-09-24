@@ -12,7 +12,7 @@ import {VarRoomScene} from '@/components/VarRoomScene'
 import {Verdict} from '@/components/Verdict'
 import {VoteButtons} from '@/components/VoteButtons'
 import {useCloseWhenCounting, useLiveState, useNow} from '@/lib/live'
-import {CALL_LABELS, formatClock, HUMAN_VOTE_WEIGHT, roundLabel, type LiveState} from '@/lib/queries'
+import {CALL_LABELS, HUMAN_VOTE_WEIGHT, roundLabel, type LiveState} from '@/lib/queries'
 import {runPhase} from '@/lib/run-status'
 
 export default function LivePage() {
@@ -28,7 +28,7 @@ export default function LivePage() {
 
   useCloseWhenCounting(counting)
 
-  // Experience v3: nothing moves on by itself. Every press (Send to the people, Go to extra time, Take the next
+  // Experience v3: nothing moves on by itself. Every press (Let the fans decide, Go to extra time, Take the next
   // penalty, Start a new season) runs the 3-2-1 kick-off, then asks the server to open the next vote.
   const [startMessage, setStartMessage] = useState<string>()
   const [kickingOff, setKickingOff] = useState<{from?: string} | null>(null)
@@ -98,22 +98,16 @@ export default function LivePage() {
 
   return (
     <main className="mx-auto flex w-full max-w-[1920px] flex-1 flex-col gap-3 px-4 py-3 sm:px-6 lg:h-dvh lg:overflow-hidden">
-      <header className="flex shrink-0 flex-wrap items-center justify-between gap-4 border-b border-line pb-2">
-        <div>
+      <header className="flex shrink-0 flex-wrap items-baseline justify-between gap-x-6 gap-y-1 border-b border-line pb-2">
+        <div className="flex flex-wrap items-baseline gap-x-4">
           <h1 className="font-display text-3xl font-extrabold uppercase tracking-wide">
             VAR<span className="text-var">dict</span>
           </h1>
-          <p className="text-muted">The VAR room decides. The people confirm. It takes longer.</p>
+          <p className="text-lg text-muted">VAR, finally in the fans&apos; hands.</p>
         </div>
-        <div className="sm:text-right">
-          <p className="text-xs uppercase tracking-[0.2em] text-muted">Time added by democracy</p>
-          <p className="font-display text-4xl font-bold text-var tabular">
-            {state ? formatClock(state.democracySeconds) : '--:--'}
-          </p>
-          <Link href="/incidents" className="text-sm text-muted underline">
-            Results
-          </Link>
-        </div>
+        <Link href="/incidents" className="font-display text-lg font-bold uppercase tracking-[0.15em] text-muted hover:text-chalk">
+          Results →
+        </Link>
       </header>
 
       {kickingOff && <KickOff onWhistle={whistle} />}
@@ -206,7 +200,7 @@ function StartButton({
   onClick,
   busy,
   message,
-  label = 'Send to the people',
+  label = 'Let the fans decide',
 }: {
   onClick: () => void
   busy: boolean
