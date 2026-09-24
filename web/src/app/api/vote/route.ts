@@ -1,6 +1,6 @@
 import {RULES} from 'workflows/rules'
 
-import {clientKey, getRuntime, paused, rateLimited} from '@/lib/runtime'
+import {clientKey, getRuntime, paused, rateLimited, readJson} from '@/lib/runtime'
 
 const SESSION = /^[a-zA-Z0-9-]{16,64}$/
 
@@ -12,8 +12,9 @@ export async function POST(request: Request) {
   if (rateLimited(`vote:${clientKey(request)}`, 20, 60_000)) {
     return Response.json({status: 'rateLimited'}, {status: 429})
   }
-  const body = (await request.json().catch(() => ({}))) as Record<string, unknown>
-  const {referendumId, choice, sessionId} = body
+  const parsed = await readJson(request)
+  if ('error' in parsed) return parsed.error
+  const {referendumId, choice, sessionId} = parsed.body
   if (typeof referendumId !== 'string' || !referendumId.startsWith('referendum-')) {
     return Response.json({status: 'invalid', field: 'referendumId'}, {status: 400})
   }
@@ -23,9 +24,10 @@ export async function POST(request: Request) {
   }
 
   const {content} = getRuntime()
-  const referendum = await content.fetch<{closesAt: string; result?: string; humans: number} | null>(
+  const referendum = await content.fetch<{closesAt: string; result?: string; humans: number; humansToday: number} | null>(
     `*[_type == "referendum" && _id == $id][0]{closesAt, result,
-      "humans": count(*[_type == "vote" && referendum._ref == $id && simulated != true])}`,
+      "humans": count(*[_type == "vote" && referendum._ref == $id && simulated != true]),
+      "humansToday": count(*[_type == "vote" && simulated != true && dateTime(castAt) > dateTime(now()) - 60*60*24])}`,
     {id: referendumId},
   )
   if (!referendum) return Response.json({status: 'notFound'}, {status: 404})
@@ -33,21 +35,26 @@ export async function POST(request: Request) {
     return Response.json({status: 'closed'}, {status: 409})
   }
 
-  // Caps the documents one round can create; fresh session ids would otherwise be unlimited.
+  // Caps the documents one round, and one day across all rounds, can create; fresh session ids would
+  // otherwise be unlimited, and the Free plan's document count is a hard cap.
   if (referendum.humans >= RULES.maxHumanVotesPerRound) return Response.json({status: 'full'}, {status: 429})
+  if (referendum.humansToday >= RULES.maxHumanVotesPerDay) return Response.json({status: 'full'}, {status: 429})
 
   // The id is the lock: a second vote from the same session in the same round hits the same document.
+  // createIfNotExists resolves to the existing document, unchanged, when one is already there (confirmed
+  // against the Sanity docs for @sanity/client), so comparing castAt tells voted from alreadyVoted without
+  // a second read.
   const id = `vote-${referendumId}-${sessionId}`
-  const existing = await content.getDocument(id)
-  if (existing) return Response.json({status: 'alreadyVoted', choice: existing.choice}, {status: 409})
-  await content.createIfNotExists({
+  const castAt = new Date().toISOString()
+  const doc = await content.createIfNotExists({
     _id: id,
     _type: 'vote',
     referendum: {_type: 'reference', _ref: referendumId},
     choice,
     sessionId,
     simulated: false,
-    castAt: new Date().toISOString(),
+    castAt,
   })
+  if (doc.castAt !== castAt) return Response.json({status: 'alreadyVoted', choice: doc.choice}, {status: 409})
   return Response.json({status: 'voted', choice})
 }

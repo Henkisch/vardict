@@ -1,7 +1,8 @@
+import {timingSafeEqual} from 'node:crypto'
 import {after} from 'next/server'
 import {runCrowd} from 'workflows/runtime'
 
-import {crowdKey, getRuntime, paused} from '@/lib/runtime'
+import {crowdKey, getRuntime, paused, readJson} from '@/lib/runtime'
 
 // A round is at most 45 s (30 s + one 15 s extension) plus closing.
 export const maxDuration = 90
@@ -11,8 +12,16 @@ export const maxDuration = 90
 export async function POST(request: Request) {
   const off = paused()
   if (off) return off
-  if (request.headers.get('x-crowd-key') !== crowdKey()) return Response.json({status: 'forbidden'}, {status: 403})
-  const {referendumId} = (await request.json().catch(() => ({}))) as {referendumId?: unknown}
+  const expected = crowdKey()
+  if (!expected) return Response.json({status: 'unavailable'}, {status: 503})
+  // timingSafeEqual needs equal-length buffers, so the length check (and a missing header) is checked first.
+  const provided = request.headers.get('x-crowd-key') ?? ''
+  const a = Buffer.from(provided)
+  const b = Buffer.from(expected)
+  if (a.length !== b.length || !timingSafeEqual(a, b)) return Response.json({status: 'forbidden'}, {status: 403})
+  const parsed = await readJson<{referendumId?: unknown}>(request)
+  if ('error' in parsed) return parsed.error
+  const {referendumId} = parsed.body
   if (typeof referendumId !== 'string' || !referendumId.startsWith('referendum-')) {
     return Response.json({status: 'invalid'}, {status: 400})
   }

@@ -1,6 +1,6 @@
 import {startNext} from 'workflows/runtime'
 
-import {clientKey, CORS, getRuntime, isOperator, paused, preflight, rateLimited} from '@/lib/runtime'
+import {clientKey, CORS, getRuntime, isOperator, paused, preflight, rateLimited, readJson} from '@/lib/runtime'
 
 // The bot crowd keeps running after the response: a full run (regular, extra time, 5 shootout rounds) is ~2 min.
 export const maxDuration = 300
@@ -19,22 +19,28 @@ export async function POST(request: Request) {
   if (rateLimited(`start:${clientKey(request)}`, 3, 60_000)) {
     return Response.json({status: 'rateLimited'}, {status: 429, headers: CORS})
   }
-  const body = (await request.json().catch(() => ({}))) as {incidentId?: unknown}
-  const requested = isOperator(request) && typeof body.incidentId === 'string' ? body.incidentId : undefined
+  const parsed = await readJson<{incidentId?: unknown}>(request, {headers: CORS, allowEmpty: true})
+  if ('error' in parsed) return parsed.error
+  const requested = isOperator(request) && typeof parsed.body.incidentId === 'string' ? parsed.body.incidentId : undefined
   if (requested !== undefined && !INCIDENT_ID_PATTERN.test(requested)) {
     return Response.json({status: 'invalid'}, {status: 400, headers: CORS})
   }
 
-  const result = await startNext(getRuntime(), requested)
-  const status =
-    result.status === 'busy'
-      ? 409
-      : result.status === 'coolingDown' || result.status === 'dailyLimit'
-        ? 429
-        : result.status === 'unknownIncident'
-          ? 400
-          : 200
-  return Response.json(result, {status, headers: CORS})
+  try {
+    const result = await startNext(getRuntime(), requested)
+    const status =
+      result.status === 'busy'
+        ? 409
+        : result.status === 'coolingDown' || result.status === 'dailyLimit'
+          ? 429
+          : result.status === 'unknownIncident'
+            ? 400
+            : 200
+    return Response.json(result, {status, headers: CORS})
+  } catch (error) {
+    console.error('start failed', error)
+    return Response.json({status: 'error'}, {status: 500, headers: CORS})
+  }
 }
 
 export const OPTIONS = preflight

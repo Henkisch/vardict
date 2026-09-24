@@ -20,6 +20,8 @@ export const RULES = {
   // Cost guards (Free plan quotas): runs started per rolling 24 h, human votes per referendum.
   maxRunsPerDay: 40,
   maxHumanVotesPerRound: 300,
+  // Free plan's 10k document cap, kept far away: a ceiling on human vote documents per rolling 24 h.
+  maxHumanVotesPerDay: 3000,
   quorumExtensionSeconds: 15,
   // Trips back to the VAR room before the match is abandoned.
   loopCap: 3,
