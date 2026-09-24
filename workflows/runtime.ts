@@ -373,7 +373,9 @@ export async function liveInstances({workflows, tag}: Runtime) {
 export const START_COOLDOWN_SECONDS = 10
 
 export type StartResult =
-  | {status: 'started' | 'recommended'; instanceId: string; incidentId: string}
+  // newSeason: true only when every incident had a final call and this press reset them all to start again.
+  | {status: 'started'; instanceId: string; incidentId: string; newSeason?: true}
+  | {status: 'recommended'; instanceId: string; incidentId: string}
   // instanceId is present for a genuinely busy live instance, absent for the lock-not-acquired /
   // recommend-failed variants (stage: 'starting') - both just mean "press again shortly".
   | {status: 'busy'; instanceId?: string; stage: string}
@@ -486,18 +488,37 @@ async function startNextLocked(runtime: Runtime, pick?: string): Promise<StartRe
   }
 
   // Next in line: the incident whose last referendum is oldest (never-voted first). Upheld incidents are done.
-  const incidentId =
-    pick ??
-    (await content.fetch<string | null>(
+  const nextInLine = () =>
+    content.fetch<string | null>(
       `*[_type == "incident" && !defined(finalCall) && !(_id in path("drafts.**"))]{
         _id, "last": *[_type == "referendum" && references(^._id)] | order(windowOpensAt desc)[0].windowOpensAt
       } | order(coalesce(last, "0") asc)[0]._id`,
-    ))
-  if (!incidentId) throw new Error('Every incident has a final call. Reset them to run again.')
+    )
+
+  let incidentId = pick ?? (await nextInLine())
+  let newSeason: true | undefined
+
+  if (!incidentId) {
+    // Every incident has a final call - one human vote counts x20, so a handful of judges can uphold all
+    // five in an afternoon. Rather than fail forever, the next press starts a new season: round history
+    // stays, only finalCall resets so the next-in-line query has somewhere to go again.
+    const publishedIds = await content.fetch<string[]>(`*[_type == "incident" && !(_id in path("drafts.**"))]._id`)
+    if (publishedIds.length > 0) {
+      const tx = content.transaction()
+      for (const id of publishedIds) tx.patch(content.patch(id).unset(['finalCall']))
+      await tx.commit()
+      incidentId = await nextInLine()
+      newSeason = true
+    }
+    // No published incidents at all: nothing to start.
+    if (!incidentId) return {status: 'unknownIncident'}
+  }
 
   try {
     const instanceId = await sendToThePeople(runtime, incidentId)
-    return {status: 'started', instanceId, incidentId}
+    return newSeason
+      ? {status: 'started', instanceId, incidentId, newSeason: true}
+      : {status: 'started', instanceId, incidentId}
   } catch (error) {
     // The run may already exist, parked in the VAR room without its recommend - the next press's
     // parked-run branch above recovers it.
