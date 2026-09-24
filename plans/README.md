@@ -17,7 +17,7 @@ real Sanity project and the public site — don't run them without the operator'
 | 003 | A vote window always closes exactly once; result matches the workflow | P1 | S | 002 | DONE (branch `advisor/003-close-window-robust` @ bc22b74; reviewed after 1 revision; not merged) |
 | 004 | Bot crowd never loses a wave, never runs twice, always closes | P1 | S | 002, 003 | TODO |
 | 005 | Starting a run is serialized, idempotent, operator-only picks | P1 | M | 002, 003 | TODO |
-| 006 | `/live` always shows the round that's actually happening | P1 | S | — | TODO |
+| 006 | `/live` always shows the round that's actually happening | P1 | S | — | DONE (branch `advisor/006-live-state-logic` @ 385346c; reviewed; no web test runner, see notes; not merged) |
 | 007 | All screens share one cached read (quota) | P1 | M | 006 | TODO |
 | 008 | Public API routes reject cross-site/oversized/malformed requests | P2 | S | 005 | TODO |
 | 009 | All confirmed → new season instead of a 500 | P1 | S | 005, 006 | TODO |
@@ -40,6 +40,14 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED (one-line reason) | REJECTED 
 - 009 uses 005's reordered `startNext` and 006's `runPhase`.
 - 011 goes last so the brief describes the final state.
 - Fastest path to fixing what the owner saw on the live site ("weird stuff"): 006, then 003 + 004 (after 001/002).
+
+## Notes from execution
+
+- **The lockfile resists any new dependency in `web`/`workflows`.** Adding one (typescript in 001, vitest in 006) makes
+  `pnpm install` also rewrite peer-resolution keys for web's `next`, `styled-jsx` and eslint packages (optional peers
+  `@babel/core`, `@typescript-eslint/parser` dropped). The lockfile was probably written by an earlier resolution; a
+  deliberate one-time normalisation (`pnpm install`, review, commit) would unblock test runners in `web`. Until then,
+  `web/src/lib/run-status.ts` lists its test cases in a comment; the reviewer ran all 10 by hand (all pass).
 
 ## Findings considered and rejected
 
