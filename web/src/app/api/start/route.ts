@@ -19,7 +19,7 @@ export async function POST(request: Request) {
   if (rateLimited(`start:${clientKey(request)}`, 3, 60_000)) {
     return Response.json({status: 'rateLimited'}, {status: 429, headers: CORS})
   }
-  const parsed = await readJson<{incidentId?: unknown}>(request, 1024, CORS)
+  const parsed = await readJson<{incidentId?: unknown}>(request, {headers: CORS, allowEmpty: true})
   if ('error' in parsed) return parsed.error
   const requested = isOperator(request) && typeof parsed.body.incidentId === 'string' ? parsed.body.incidentId : undefined
   if (requested !== undefined && !INCIDENT_ID_PATTERN.test(requested)) {

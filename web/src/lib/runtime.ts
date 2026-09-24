@@ -66,22 +66,32 @@ export const clientKey = (request: Request) =>
 // A "simple" cross-site POST needs no CORS preflight and can't set a custom content-type, so rejecting
 // anything that isn't declared application/json blocks another site's form from voting through a visitor's
 // browser. Also bounds body size before JSON.parse touches it. `headers` lets start/tick's error responses
-// carry CORS; same-origin routes (vote, crowd) pass none.
+// carry CORS; same-origin routes (vote, crowd) pass none. `allowEmpty` lets a request with no body through
+// regardless of content-type - the /live button's "Send to the people" POST to /api/start sends neither, and
+// an empty cross-site POST is no worse than the public button it's imitating.
 export async function readJson<T = Record<string, unknown>>(
   request: Request,
-  maxBytes = 1024,
-  headers: HeadersInit = {},
+  {maxBytes = 1024, headers = {}, allowEmpty = false}: {maxBytes?: number; headers?: HeadersInit; allowEmpty?: boolean} = {},
 ): Promise<{body: T} | {error: Response}> {
   const contentType = request.headers.get('content-type') ?? ''
-  if (!contentType.startsWith('application/json')) {
+  // A non-empty body still has to declare JSON, so this check only skips ahead of the content-type check
+  // when allowEmpty is set - a missing content-type with an actual body is still 415.
+  if (!allowEmpty && !contentType.startsWith('application/json')) {
     return {error: Response.json({status: 'unsupportedType'}, {status: 415, headers})}
   }
   const contentLength = Number(request.headers.get('content-length') ?? '0')
   if (contentLength > maxBytes) {
     return {error: Response.json({status: 'tooLarge'}, {status: 413, headers})}
   }
+  // Read once and reuse: the emptiness check below and the parse at the end both need this same text.
   const text = await request.text()
-  if (text.length > maxBytes) {
+  if (allowEmpty) {
+    if (text === '') return {body: {} as T}
+    if (!contentType.startsWith('application/json')) {
+      return {error: Response.json({status: 'unsupportedType'}, {status: 415, headers})}
+    }
+  }
+  if (new TextEncoder().encode(text).length > maxBytes) {
     return {error: Response.json({status: 'tooLarge'}, {status: 413, headers})}
   }
   try {
