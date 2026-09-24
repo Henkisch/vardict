@@ -180,7 +180,15 @@ export async function sendToThePeople({engine, projectId, contentDataset}: Runti
       {type: 'subject', name: 'subject', value: {id: `dataset:${projectId}:${contentDataset}:${incidentId}`, type: 'incident'}},
     ],
   })
-  await engine.fireAction({instanceId: instance._id, activity: 'review', action: 'recommend'})
+  // Keyed by this visit to the VAR room, so a retry after a dropped response (or the recovery path in
+  // startNext) replays instead of double-firing the human action.
+  const visits = instance.stages.filter((s) => s.name === 'varRoom').length
+  await engine.fireAction({
+    instanceId: instance._id,
+    activity: 'review',
+    action: 'recommend',
+    idempotencyKey: `recommend-${instance._id}-${visits}`,
+  })
   await engine.drainEffects({instanceId: instance._id})
   return instance._id
 }
@@ -366,32 +374,105 @@ export const START_COOLDOWN_SECONDS = 10
 
 export type StartResult =
   | {status: 'started' | 'recommended'; instanceId: string; incidentId: string}
-  | {status: 'busy'; instanceId: string; stage: string}
+  // instanceId is present for a genuinely busy live instance, absent for the lock-not-acquired /
+  // recommend-failed variants (stage: 'starting') - both just mean "press again shortly".
+  | {status: 'busy'; instanceId?: string; stage: string}
   | {status: 'coolingDown'; retryInSeconds: number}
   | {status: 'dailyLimit'; limit: number}
+  | {status: 'unknownIncident'}
+
+const START_LOCK_ID = 'vardict-start-lock'
+const START_LOCK_TTL_MS = 15_000
+
+// Serializes "Send to the people" presses. Without this, two presses landing at once (or a slow request
+// overlapping a retry) could both read the same parked/empty state and both act on it - aborting the same
+// run twice, or starting two runs. `lockedUntil` is a plain lease on a single tiny document; a caller that
+// can't acquire it gets 'busy' back and should just try again, the same as any other busy state.
+async function acquireStartLock(runtime: Runtime): Promise<boolean> {
+  const {content} = runtime
+  await content.createIfNotExists({_id: START_LOCK_ID, _type: 'startLock', lockedUntil: new Date(0).toISOString()})
+  const {_rev, lockedUntil} = await content.fetch<{_rev: string; lockedUntil: string}>(
+    '*[_id == $id][0]{_rev, lockedUntil}',
+    {id: START_LOCK_ID},
+  )
+  if (Date.parse(lockedUntil) > runtime.now()) return false
+  try {
+    await content
+      .patch(START_LOCK_ID)
+      .set({lockedUntil: new Date(runtime.now() + START_LOCK_TTL_MS).toISOString()})
+      .ifRevisionId(_rev)
+      .commit()
+    return true
+  } catch {
+    // Lost the race to acquire: someone else's commit landed between our read and our write.
+    return false
+  }
+}
+
+async function releaseStartLock(runtime: Runtime): Promise<void> {
+  await runtime.content
+    .patch(START_LOCK_ID)
+    .set({lockedUntil: new Date(runtime.now()).toISOString()})
+    .commit()
+    .catch((error) => console.warn('start lock release failed', error))
+}
 
 // The "Send to the people" button: one live vote at a time. A run parked in the VAR room (after an overturn)
-// is sent back to the people; otherwise the next incident in line starts a fresh run.
+// is sent back to the people; otherwise the next incident in line starts a fresh run. Only an operator-picked
+// `pick` (validated by the caller/route) reaches here as anything other than undefined.
 export async function startNext(runtime: Runtime, pick?: string): Promise<StartResult> {
+  if (!(await acquireStartLock(runtime))) return {status: 'busy', stage: 'starting'}
+  try {
+    return await startNextLocked(runtime, pick)
+  } finally {
+    await releaseStartLock(runtime)
+  }
+}
+
+async function startNextLocked(runtime: Runtime, pick?: string): Promise<StartResult> {
   const {engine, content, workflows, tag} = runtime
+
+  // Validate the pick before anything else can act on it - in particular, before any abort below.
+  if (pick !== undefined) {
+    const found = await content.fetch<string | null>(
+      `*[_type == "incident" && _id == $id && !(_id in path("drafts.**"))][0]._id`,
+      {id: pick},
+    )
+    if (!found) return {status: 'unknownIncident'}
+  }
+
   const [live] = await liveInstances(runtime)
   if (live && live.currentStage !== 'varRoom') return {status: 'busy', instanceId: live._id, stage: live.currentStage}
   // The operator picked a different incident: the parked run gives way (aborted runs keep their rounds).
   const replacing = Boolean(live && pick && docId(live.subjectId) !== pick)
-  if (replacing) {
-    await engine.abortInstance({instanceId: live._id})
-  } else if (live) {
-    await engine.fireAction({instanceId: live._id, activity: 'review', action: 'recommend'})
-    await engine.drainEffects({instanceId: live._id})
+
+  if (live && !replacing) {
+    const instance = await engine.getInstance({instanceId: live._id})
+    const visits = instance.stages.filter((s) => s.name === 'varRoom').length
+    try {
+      await engine.fireAction({
+        instanceId: live._id,
+        activity: 'review',
+        action: 'recommend',
+        idempotencyKey: `recommend-${live._id}-${visits}`,
+      })
+      await engine.drainEffects({instanceId: live._id})
+    } catch (error) {
+      // Leave the instance parked; the next press retries the same idempotency key and recovers it.
+      console.warn('recommend failed, left for the next press', live._id, error)
+      return {status: 'busy', stage: 'starting'}
+    }
     return {status: 'recommended', instanceId: live._id, incidentId: docId(live.subjectId)}
   }
 
+  // Checks before any side effect - including the abort below - so a rejected pick or a blocked start
+  // never costs the parked run its place.
   const last = await workflows.fetch<{completedAt: string} | null>(
     `*[_type == "sanity.workflow.instance" && tag == $wfTag && defined(completedAt)] | order(completedAt desc)[0]{completedAt}`,
     {wfTag: tag},
   )
   const since = last ? (runtime.now() - Date.parse(last.completedAt)) / 1000 : Infinity
-  if (!replacing && since < START_COOLDOWN_SECONDS) return {status: 'coolingDown', retryInSeconds: Math.ceil(START_COOLDOWN_SECONDS - since)}
+  if (since < START_COOLDOWN_SECONDS) return {status: 'coolingDown', retryInSeconds: Math.ceil(START_COOLDOWN_SECONDS - since)}
 
   // Counted from stored runs, so it holds across serverless instances (an in-memory limiter wouldn't).
   const startedToday = await workflows.fetch<number>(
@@ -399,6 +480,10 @@ export async function startNext(runtime: Runtime, pick?: string): Promise<StartR
     {wfTag: tag},
   )
   if (startedToday >= RULES.maxRunsPerDay) return {status: 'dailyLimit', limit: RULES.maxRunsPerDay}
+
+  if (replacing) {
+    await engine.abortInstance({instanceId: live!._id})
+  }
 
   // Next in line: the incident whose last referendum is oldest (never-voted first). Upheld incidents are done.
   const incidentId =
@@ -409,8 +494,16 @@ export async function startNext(runtime: Runtime, pick?: string): Promise<StartR
       } | order(coalesce(last, "0") asc)[0]._id`,
     ))
   if (!incidentId) throw new Error('Every incident has a final call. Reset them to run again.')
-  const instanceId = await sendToThePeople(runtime, incidentId)
-  return {status: 'started', instanceId, incidentId}
+
+  try {
+    const instanceId = await sendToThePeople(runtime, incidentId)
+    return {status: 'started', instanceId, incidentId}
+  } catch (error) {
+    // The run may already exist, parked in the VAR room without its recommend - the next press's
+    // parked-run branch above recovers it.
+    console.warn('start failed, left for the next press', incidentId, error)
+    return {status: 'busy', stage: 'starting'}
+  }
 }
 
 // `at` is in the runtime's own clock domain (production: real wall-clock ms, same as `now`'s default of

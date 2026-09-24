@@ -300,6 +300,84 @@ describe('runtime', () => {
     expect(result).toEqual({status: 'recommended', instanceId, incidentId: 'incident-1'})
   })
 
+  test('an unknown pick changes nothing (plan 005)', async () => {
+    const {runtime, instanceId, referendum, stage} = await start()
+    const ref = await referendum()
+    await setBotVotes(runtime, ref._id, 10, 50) // overturn -> parked in the VAR room
+    await closeWindow(runtime, instanceId, Date.parse(ref.closesAt))
+    expect(await stage()).toBe('varRoom')
+
+    const result = await startNext(runtime, 'nope')
+    expect(result).toEqual({status: 'unknownIncident'})
+    // Nothing was aborted: the parked instance is exactly where it was.
+    expect(await stage()).toBe('varRoom')
+  })
+
+  test('a pick at the daily cap does not abort the parked run (plan 005)', async () => {
+    const {runtime, instanceId, referendum, stage} = await start([
+      incidentDoc(),
+      incidentDoc({_id: 'incident-2', title: 'Test 2'}),
+    ])
+    const ref = await referendum()
+    await setBotVotes(runtime, ref._id, 10, 50) // overturn -> parked in the VAR room
+    await closeWindow(runtime, instanceId, Date.parse(ref.closesAt))
+    expect(await stage()).toBe('varRoom')
+
+    // Seed enough instance documents to hit the daily cap. The daily-cap query only reads
+    // (_type, tag, startedAt), so a direct write to the workflows dataset is enough - no need for the
+    // real engine to have started these runs. completedAt is set well outside the cooldown window, both so
+    // these seeds don't show up as `live` (liveInstances filters on !defined(completedAt), which would let
+    // one of them outrank the real parked instance) and so they don't trip the cooldown check themselves.
+    const wellPastCooldown = new Date(runtime.now() - (START_COOLDOWN_SECONDS + 3600) * 1000).toISOString()
+    for (let i = 0; i < RULES.maxRunsPerDay; i++) {
+      await runtime.workflows.create({
+        _id: `seed-cap-${i}`,
+        _type: 'sanity.workflow.instance',
+        tag: runtime.tag,
+        startedAt: new Date(runtime.now()).toISOString(),
+        completedAt: wellPastCooldown,
+        currentStage: 'upheld',
+      })
+    }
+
+    // A different, real incident: this would otherwise abort the parked run and replace it.
+    const result = await startNext(runtime, 'incident-2')
+    expect(result).toEqual({status: 'dailyLimit', limit: RULES.maxRunsPerDay})
+    // The parked run was never touched - the cap was checked before any abort.
+    expect(await stage()).toBe('varRoom')
+  })
+
+  test('two simultaneous starts create one run (plan 005)', async () => {
+    const {runtime} = await setup()
+    const [a, b] = await Promise.all([startNext(runtime), startNext(runtime)])
+    const statuses = [a.status, b.status].sort()
+    expect(statuses).toEqual(['busy', 'started'])
+    const liveCount = await runtime.workflows.fetch<number>(
+      'count(*[_type == "sanity.workflow.instance" && tag == $wfTag && !defined(completedAt)])',
+      {wfTag: runtime.tag},
+    )
+    expect(liveCount).toBe(1)
+  })
+
+  test('a failed recommend is recovered by the next press (plan 005)', async () => {
+    const {runtime} = await setup()
+    const originalFireAction = runtime.engine.fireAction.bind(runtime.engine)
+    let calls = 0
+    const fireActionSpy = vi.spyOn(runtime.engine, 'fireAction').mockImplementation(async (args: Parameters<typeof originalFireAction>[0]) => {
+      calls += 1
+      if (calls === 1) throw new Error('simulated recommend failure')
+      return originalFireAction(args)
+    })
+
+    const first = await startNext(runtime)
+    expect(first).toEqual({status: 'busy', stage: 'starting'})
+
+    const second = await startNext(runtime)
+    expect(second).toMatchObject({status: 'recommended', incidentId: 'incident-1'})
+
+    fireActionSpy.mockRestore()
+  })
+
   test('starting when every incident has a final call throws', async () => {
     const {bench, runtime, instanceId, referendum} = await start()
     const ref = await referendum()

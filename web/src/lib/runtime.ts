@@ -1,6 +1,6 @@
 import 'server-only'
 
-import {createHash} from 'node:crypto'
+import {createHash, timingSafeEqual} from 'node:crypto'
 import {after} from 'next/server'
 import {createRuntime, type Runtime} from 'workflows/runtime'
 
@@ -57,12 +57,28 @@ export function rateLimited(key: string, limit: number, windowMs: number) {
 export const clientKey = (request: Request) =>
   request.headers.get('x-forwarded-for')?.split(',')[0].trim() || request.headers.get('x-real-ip') || 'local'
 
+// True only for a request carrying the shared operator secret (the VAR Room, which ships it in its bundle -
+// served only to logged-in org members). Public callers of /api/start (judges pressing "Send to the people")
+// never send this header, so they can never pick an incident, only take "next in line". `timingSafeEqual`
+// needs equal-length buffers, so a length mismatch (including VARDICT_OPERATOR_KEY being unset, which would
+// otherwise compare a header against an empty string) is checked first and just fails closed.
+export function isOperator(request: Request): boolean {
+  const expected = process.env.VARDICT_OPERATOR_KEY
+  if (!expected) return false
+  const provided = request.headers.get('x-operator-key')
+  if (!provided) return false
+  const a = Buffer.from(provided)
+  const b = Buffer.from(expected)
+  if (a.length !== b.length) return false
+  return timingSafeEqual(a, b)
+}
+
 // /api/start and /api/tick are public (judges press the button), and the VAR Room calls them from the Sanity
 // Dashboard's origin, so they answer any origin. No cookies or credentials are involved.
 export const CORS = {
   'access-control-allow-origin': '*',
   'access-control-allow-methods': 'POST, OPTIONS',
-  'access-control-allow-headers': 'content-type',
+  'access-control-allow-headers': 'content-type, x-operator-key',
 }
 export const preflight = () => new Response(null, {status: 204, headers: CORS})
 
