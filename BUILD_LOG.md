@@ -331,3 +331,19 @@ uploads, which the clip rules ban, so an agent is checking the results for offic
 - The permission check blocked my production deploys ("Production Deploy"), and later even a commit that
   was bundled with one. Henrik connected the Vercel project to GitHub. Now we work on `main`, and a push is the
   deploy, which Henrik approves.
+
+### VAR Room and results pages
+
+- **VAR Room** (App SDK): the five incidents with status and a Send to the people button for each (fires `recommend`
+  through `/api/start`), the live round with the crowd broken down by persona (the view the public doesn't get),
+  and the workflow stage read from the private `workflows` dataset. Access comes from the Dashboard's logged-in
+  token. The persona table needs aggregate GROQ, so it's one of the few `useQuery` calls. `/api/start` and
+  `/api/tick` now answer CORS so the Dashboard can call them.
+- **Found a bug by running it:** asking for Díaz continued a Pickford run that was parked in the VAR room. That's
+  fine for the judges' button, wrong for an operator who picks an incident. Now an operator pick aborts the parked
+  run (its rounds stay in the history) and skips the cooldown.
+- **Henrik voted during a test run** and his overturn (×20) tipped a 51% bot round to overturned. First real vote.
+- **Results page** `/incidents/[slug]`: on the pitch / the VAR room / the people, the clip, time added by
+  democracy for that incident, every round grouped by run and loop, the outcry with sources, and a control-case
+  line that changes with the verdict. On its first real run the crowd overturned Díaz, 43%. The people got the
+  control case right.

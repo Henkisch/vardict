@@ -83,3 +83,52 @@ export function formatClock(totalSeconds: number) {
   const pad = (n: number) => String(n).padStart(2, '0')
   return h ? `${h}:${pad(m)}:${pad(sec)}` : `${pad(m)}:${pad(sec)}`
 }
+
+const weighted = (choice: string) =>
+  `count(*[_type == "vote" && references(^._id) && choice == "${choice}" && simulated == true])
+    + ${HUMAN_VOTE_WEIGHT} * count(*[_type == "vote" && references(^._id) && choice == "${choice}" && simulated != true])`
+
+export const INCIDENT_QUERY = `*[_type == "incident" && slug.current == $slug][0]{
+  title, situation, minute, originalCall, varRecommendation, finalCall, controlCase, realDelaySeconds, fallbackText,
+  clip{youtubeId, startSeconds, endSeconds, channel, embedAllowed},
+  outcry{level, summary, sources},
+  match->{competition, date, venue, score, homeTeam->${team}, awayTeam->${team}},
+  "rounds": *[_type == "referendum" && references(^._id)] | order(windowOpensAt asc){
+    _id, round, loop, result, windowOpensAt, workflowInstanceId,
+    "seconds": dateTime(closesAt) - dateTime(windowOpensAt),
+    "uphold": ${weighted('uphold')},
+    "overturn": ${weighted('overturn')},
+    "humans": count(*[_type == "vote" && references(^._id) && simulated != true])
+  },
+  "others": *[_type == "incident" && slug.current != $slug] | order(title asc){title, "slug": slug.current}
+}`
+
+export type IncidentRound = {
+  _id: string
+  round: string
+  loop: number
+  result?: 'upheld' | 'overturned' | 'tooClose'
+  windowOpensAt: string
+  workflowInstanceId: string
+  seconds: number
+  uphold: number
+  overturn: number
+  humans: number
+}
+
+export type IncidentResult = {
+  title: string
+  situation?: string
+  minute: number
+  originalCall: string
+  varRecommendation: string
+  finalCall?: string
+  controlCase?: boolean
+  realDelaySeconds: number
+  fallbackText: string
+  clip?: LiveReferendum['incident']['clip']
+  outcry: {level: number; summary: string; sources: string[]}
+  match: {competition: string; date: string; venue: string; score: {home: number; away: number}; homeTeam: Team; awayTeam: Team}
+  rounds: IncidentRound[]
+  others: {title: string; slug: string}[]
+}

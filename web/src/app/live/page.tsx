@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import {useState} from 'react'
 
 import {Bars} from '@/components/Bars'
@@ -112,6 +113,11 @@ export default function LivePage() {
                   {RESULT_COPY[ref.result].title}
                 </p>
                 <p className="text-muted">{RESULT_COPY[ref.result].body}</p>
+                {ref.result !== 'tooClose' && (
+                  <Link href={`/incidents/${incident.slug}`} className="text-sm text-var underline">
+                    Every round of this incident
+                  </Link>
+                )}
               </div>
             ) : counting ? (
               <p className="font-display text-3xl font-bold uppercase text-var">Counting…</p>

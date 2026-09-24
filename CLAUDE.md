@@ -300,8 +300,8 @@ Clip rules (strict):
 | Sep 25 | Schema + Studio | All six types live; clip input previews a clip; 2 incidents entered |
 | Sep 27 | Workflow + Functions | ✅ Sep 24: peoplesVar passes tests for every path; v2 deployed; runtime (`workflows/runtime.ts`) ran a full live shootout on `t2sbu6uu`. Routes /api/start + /api/tick still to do |
 | Sep 28 | Bot crowd | ✅ Sep 24: seeded crowd (`workflows/crowd.ts`), runs via Next `after()` (decided: not a Sanity Function), chains rounds |
-| Sep 30 | VAR Room + /vote + /live | /vote, /live, /api/vote working locally (Live Content API + poll fallback) Sep 24. VAR Room app still to do. Vercel project `henrik-larsson/vardict` (root dir `web`); prod deploy needs Henrik's go |
-| Oct 1 | Content + results | All 5 incidents in; results pages and democracy clock done |
+| Sep 30 | VAR Room + /vote + /live | ✅ Sep 24: live on https://live-vardict.vercel.app; VAR Room console built (`pnpm dev:var-room`, not deployed to the Dashboard yet) |
+| Oct 1 | Content + results | ✅ Sep 24: 5 incidents in; `/incidents/[slug]` (live) with every round, clock, outcry, control-case line |
 | Oct 2 | Deploy + dress rehearsal | Full run of all 5 incidents on deployed apps; seeds chosen |
 | Oct 3 | Demo + writeup | Video recorded; post drafted from BUILD_LOG.md |
 | Oct 4 | Publish | Post live |

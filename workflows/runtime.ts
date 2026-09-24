@@ -214,7 +214,11 @@ export async function startNext(runtime: Runtime, pick?: string): Promise<StartR
   const {engine, content, workflows, tag} = runtime
   const [live] = await liveInstances(runtime)
   if (live && live.currentStage !== 'varRoom') return {status: 'busy', instanceId: live._id, stage: live.currentStage}
-  if (live) {
+  // The operator picked a different incident: the parked run gives way (aborted runs keep their rounds).
+  const replacing = Boolean(live && pick && docId(live.subjectId) !== pick)
+  if (replacing) {
+    await engine.abortInstance({instanceId: live._id})
+  } else if (live) {
     await engine.fireAction({instanceId: live._id, activity: 'review', action: 'recommend'})
     await engine.drainEffects({instanceId: live._id})
     return {status: 'recommended', instanceId: live._id, incidentId: docId(live.subjectId)}
@@ -225,7 +229,7 @@ export async function startNext(runtime: Runtime, pick?: string): Promise<StartR
     {wfTag: tag},
   )
   const since = last ? (Date.now() - Date.parse(last.completedAt)) / 1000 : Infinity
-  if (since < START_COOLDOWN_SECONDS) return {status: 'coolingDown', retryInSeconds: Math.ceil(START_COOLDOWN_SECONDS - since)}
+  if (!replacing && since < START_COOLDOWN_SECONDS) return {status: 'coolingDown', retryInSeconds: Math.ceil(START_COOLDOWN_SECONDS - since)}
 
   // Next in line: the incident whose last referendum is oldest (never-voted first). Upheld incidents are done.
   const incidentId =
