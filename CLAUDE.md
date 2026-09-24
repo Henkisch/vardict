@@ -406,6 +406,8 @@ at once). Routes: one `/live` that follows the run (Henrik asked twice; kept, si
 
 **Polish backlog (Henrik: "do that in the end"):** animations between states, and don't swap the content before the
 transition plays (hold the old state until the transition starts). Also more layout polish on /live.
+The workflow path's stage explanations sit in a two-column grid that scatters on wide screens (WorkflowPath
+`dl`): make them sit naturally, e.g. one line per stage under its step, or a single column.
 
 Still open: loose ends in `plans/README.md` (season reset vs results wording, a clean slate before judging).
 
