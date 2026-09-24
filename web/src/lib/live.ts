@@ -3,6 +3,8 @@
 import {createClient} from '@sanity/client'
 import {useEffect, useState} from 'react'
 
+import type {Phase} from '@/lib/run-status'
+
 // Public, token-free clients: the production dataset is public, so browsers read it directly.
 const config = {
   projectId: process.env.NEXT_PUBLIC_SANITY_PROJECT_ID!,
@@ -24,11 +26,17 @@ export function useLiveQuery<T>(query: string, params: Record<string, unknown> =
   useEffect(() => {
     let tags: string[] = []
     let cancelled = false
+    // Requests can resolve out of order (a slow response outrun by a later, faster one); only ever apply the
+    // most recently *issued* response, never one older than what's already on screen.
+    let seq = 0
+    let applied = 0
     const load = async (lastLiveEventId?: string) => {
+      const mine = ++seq
       const response = await client
         .fetch<T>(query, JSON.parse(key), {filterResponse: false, lastLiveEventId})
         .catch(() => undefined)
-      if (cancelled || !response) return
+      if (cancelled || !response || mine < applied) return
+      applied = mine
       tags = response.syncTags ?? []
       setData(response.result)
     }
@@ -83,18 +91,46 @@ export function useCloseWhenCounting(counting: boolean) {
   }, [counting])
 }
 
-// The big screen's and phone's shared state. Polls fast only while a referendum has no result yet.
-export function useLiveState<T extends {referendum: {result?: string} | null}>(query: string) {
+const CLICK_BOOST_MS = 30_000
+const PHASE_BOOST_MS = 20_000
+
+// The big screen's and phone's shared state. Polls fast while the run's phase is voting, counting or between
+// (a round has a result but the run continues, e.g. mid-shootout) — plus for 20 s after the phase last
+// changed, to bridge the gap before the next round's referendum exists in the query result, and for 30 s
+// after pressing Send to the people.
+export function useLiveState<T>(query: string, phaseOf: (state: T | undefined) => Phase) {
   const [fast, setFast] = useState(false)
   // A screen that just pressed Send to the people polls fast for 30 s, until its round shows up.
   const [boosted, setBoosted] = useState(false)
+  const [phaseBoosted, setPhaseBoosted] = useState(false)
   const state = useLiveQuery<T>(query, {}, {fast})
-  const live = Boolean(state?.referendum && !state.referendum.result)
-  if ((live || boosted) !== fast) setFast(live || boosted)
+
+  const phase = phaseOf(state)
+  const active = phase === 'voting' || phase === 'counting' || phase === 'between'
+
+  // Adjusting state during render in response to a change — React's documented pattern for this, not an
+  // effect: boost for a beat whenever the phase itself changes, to bridge the gap before the next round's
+  // referendum exists in the query result (e.g. between shootout rounds).
+  const [prevPhase, setPrevPhase] = useState(phase)
+  if (prevPhase !== phase) {
+    setPrevPhase(phase)
+    if (!phaseBoosted) setPhaseBoosted(true)
+  }
+
+  const shouldPollFast = active || boosted || phaseBoosted
+  if (shouldPollFast !== fast) setFast(shouldPollFast)
+
   useEffect(() => {
     if (!boosted) return
-    const id = setTimeout(() => setBoosted(false), 30_000)
+    const id = setTimeout(() => setBoosted(false), CLICK_BOOST_MS)
     return () => clearTimeout(id)
   }, [boosted])
+
+  useEffect(() => {
+    if (!phaseBoosted) return
+    const id = setTimeout(() => setPhaseBoosted(false), PHASE_BOOST_MS)
+    return () => clearTimeout(id)
+  }, [phaseBoosted])
+
   return {state, boost: () => setBoosted(true)}
 }
