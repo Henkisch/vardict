@@ -96,7 +96,7 @@ export function Monitor({youtubeId, from, to, rate = 1, zoom = 1, label, rewind 
       <span className="absolute left-2 top-2 rounded bg-ink/80 px-1.5 py-0.5 font-display text-xs font-bold uppercase tracking-[0.15em]">
         {label}
       </span>
-      <span className="absolute bottom-2 right-2 rounded bg-ink/80 px-1.5 py-0.5 font-mono text-xs tabular">
+      <span className="absolute bottom-2 left-2 rounded bg-ink/80 px-1.5 py-0.5 font-mono text-xs tabular">
         {timecode(time)}
       </span>
       {rewinding && (
