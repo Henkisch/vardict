@@ -1,6 +1,6 @@
 import Link from 'next/link'
 
-import {Clip} from '@/components/Clip'
+import {MonitorWall} from '@/components/MonitorWall'
 import {CALL_LABELS, formatClock, type IncidentCard, type LiveReferendum} from '@/lib/queries'
 
 type Props = {
@@ -24,7 +24,7 @@ export function VarRoomScene({incident, loop, last, start}: Props) {
   return (
     <div className="flex flex-col gap-6">
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_24rem]">
-        <section className="flex min-w-0 flex-col overflow-hidden rounded-xl border border-line bg-black">
+        <section className="flex min-w-0 flex-col self-start overflow-hidden rounded-xl border border-line bg-black">
           <div className="flex items-center justify-between gap-3 border-b border-line bg-pitch px-4 py-2 font-display text-sm font-bold uppercase tracking-[0.2em]">
             <span className="flex items-center gap-2">
               <span className="h-2.5 w-2.5 rounded-full bg-overturn motion-safe:animate-pulse" aria-hidden />
@@ -38,7 +38,7 @@ export function VarRoomScene({incident, loop, last, start}: Props) {
               {formatClock(incident.realDelaySeconds)}
             </span>
           </div>
-          <Clip clip={incident.clip} fallbackText={incident.fallbackText} />
+          <MonitorWall incident={incident} />
         </section>
 
         <aside className="flex flex-col gap-5 rounded-xl border border-line bg-pitch p-5">

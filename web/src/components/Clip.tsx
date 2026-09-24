@@ -1,8 +1,9 @@
+import {Monitor} from '@/components/Monitor'
 import type {IncidentCard} from '@/lib/queries'
 
 type Props = {clip: IncidentCard['clip']; fallbackText: string}
 
-// Embed only, at the exact start and end. Without a referrer YouTube refuses the embed (error 153).
+// Embed only, looping the exact start-to-end window (see Monitor). Falls back to text plus a link out.
 export function Clip({clip, fallbackText}: Props) {
   if (!clip?.youtubeId || !clip.embedAllowed) {
     return (
@@ -21,17 +22,5 @@ export function Clip({clip, fallbackText}: Props) {
       </div>
     )
   }
-  const src =
-    `https://www.youtube-nocookie.com/embed/${clip.youtubeId}?start=${clip.startSeconds}&end=${clip.endSeconds}` +
-    '&autoplay=1&mute=1&rel=0&playsinline=1&modestbranding=1'
-  return (
-    <iframe
-      className="aspect-video w-full rounded-lg border border-line bg-black"
-      src={src}
-      title="Incident clip"
-      allow="autoplay; encrypted-media; picture-in-picture"
-      referrerPolicy="strict-origin-when-cross-origin"
-      allowFullScreen
-    />
-  )
+  return <Monitor youtubeId={clip.youtubeId} from={clip.startSeconds} to={clip.endSeconds} label="Live" />
 }

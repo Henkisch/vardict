@@ -45,6 +45,19 @@ export const clip = defineType({
           }),
     }),
     defineField({
+      name: 'keySeconds',
+      title: 'Key moment (seconds)',
+      type: 'number',
+      description:
+        'The moment that decides it: the contact, the offside line, the ball crossing. The VAR room replays and zooms in on it. Leave empty for the middle of the clip.',
+      validation: (rule) =>
+        rule.custom((key, context) => {
+          const {startSeconds: start, endSeconds: end} = (context.parent ?? {}) as {startSeconds?: number; endSeconds?: number}
+          if (key === undefined || start === undefined || end === undefined) return true
+          return (key >= start && key <= end) || 'The key moment must be inside the clip'
+        }),
+    }),
+    defineField({
       name: 'channel',
       title: 'Channel',
       type: 'string',

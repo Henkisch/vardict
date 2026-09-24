@@ -11,8 +11,8 @@ const team = '{name, shortName, primaryColor}'
 
 const INCIDENT_CARD = `{
   _id, title, "slug": slug.current, situation, minute, varRecommendation, originalCall, controlCase, fallbackText,
-  realDelaySeconds, finalCall,
-  clip{youtubeId, startSeconds, endSeconds, channel, embedAllowed},
+  realDelaySeconds, finalCall, incidentType,
+  clip{youtubeId, startSeconds, endSeconds, keySeconds, channel, embedAllowed},
   match->{competition, homeTeam->${team}, awayTeam->${team}}
 }`
 
@@ -72,7 +72,16 @@ export type IncidentCard = {
     fallbackText: string
     realDelaySeconds: number
     finalCall?: string
-    clip?: {youtubeId: string; startSeconds: number; endSeconds: number; channel: string; embedAllowed: boolean}
+    incidentType?: string
+    clip?: {
+      youtubeId: string
+      startSeconds: number
+      endSeconds: number
+      // The key moment (the contact, the offside line) for the replay monitor. Optional: defaults to mid-clip.
+      keySeconds?: number
+      channel: string
+      embedAllowed: boolean
+    }
     match: {competition: string; homeTeam: Team; awayTeam: Team}
 }
 
