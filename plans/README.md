@@ -70,7 +70,7 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED (one-line reason) | REJECTED 
 - **Results wording (from 010):** the control-case line on the incident page counts "back in the VAR room" as
   refusing; the overview only judges upheld/abandoned. Pick one. An operator-aborted latest run shows "Still being
   decided".
-- **Is `/api/live` actually cached on Vercel (from 007)?** Check `x-vercel-cache: HIT` after the next deploy.
+- ~~Is `/api/live` actually cached on Vercel (from 007)?~~ Verified after the session-4 deploy: MISS, then HIT (age 1, 2).
 
 ## Findings considered and rejected
 
