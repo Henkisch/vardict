@@ -27,13 +27,13 @@ export function MonitorWall({incident}: {incident: IncidentCard}) {
         <Monitor youtubeId={youtubeId} from={start} to={end} label="Cam 1 · Live" />
       </div>
       <div className="aspect-video">
-        <Monitor youtubeId={youtubeId} from={start} to={end} rate={0.25} label="Slow-mo 0.25×" />
+        <Monitor youtubeId={youtubeId} from={start} to={end} rate={0.25} small label="Slow-mo 0.25×" />
       </div>
       <div className="aspect-video">
-        <Monitor youtubeId={youtubeId} from={loopFrom} to={loopTo} rate={0.5} rewind label="Replay" />
+        <Monitor youtubeId={youtubeId} from={loopFrom} to={loopTo} rate={0.5} rewind small label="Replay" />
       </div>
       <div className="aspect-video">
-        <Monitor youtubeId={youtubeId} from={loopFrom} to={loopTo} zoom={1.5} label="Zoom ×1.5" />
+        <Monitor youtubeId={youtubeId} from={loopFrom} to={loopTo} zoom={1.5} small label="Zoom ×1.5" />
       </div>
     </div>
   )

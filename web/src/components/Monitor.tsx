@@ -15,14 +15,32 @@ type Props = {
   label: string
   // Flash a "REWIND" tag each time the loop jumps back, like an operator scrubbing.
   rewind?: boolean
+  // A side screen: below desktop size it's a small tile, so the label shrinks and the timecode hides.
+  small?: boolean
   className?: string
 }
 
 const TICK_MS = 200
+const PLAYER_W = 1280
+const PLAYER_H = 720
 
 // One screen on the VAR wall: a muted, controls-free YouTube player that loops its own window at its own speed.
-export function Monitor({youtubeId, from, to, rate = 1, zoom = 1, label, rewind = false, className = ''}: Props) {
+export function Monitor({youtubeId, from, to, rate = 1, zoom = 1, label, rewind = false, small = false, className = ''}: Props) {
   const frame = useRef<HTMLIFrameElement>(null)
+  const box = useRef<HTMLDivElement>(null)
+  const [scale, setScale] = useState(0.25)
+
+  // Scale the fixed-size player to cover the tile (both are 16:9, so this is a straight fit).
+  useEffect(() => {
+    const element = box.current
+    if (!element) return
+    const observer = new ResizeObserver(([entry]) => {
+      const {width, height} = entry.contentRect
+      setScale(Math.max(width / PLAYER_W, height / PLAYER_H))
+    })
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [])
   const [time, setTime] = useState(from)
   const [rewinding, setRewinding] = useState(false)
 
@@ -78,8 +96,13 @@ export function Monitor({youtubeId, from, to, rate = 1, zoom = 1, label, rewind 
   }, [src, from, to, rate, rewind])
 
   return (
-    <div className={`relative h-full w-full overflow-hidden rounded-md border border-line bg-black ${className}`}>
-      <div className="h-full w-full" style={zoom !== 1 ? {transform: `scale(${zoom})`} : undefined}>
+    <div ref={box} className={`relative h-full w-full overflow-hidden rounded-md border border-line bg-black ${className}`}>
+      {/* The player renders at a fixed 1280x720 and is scaled to the tile: at small sizes YouTube switches to its
+          mobile interface, which flashes a big pause circle over the picture on every loop. */}
+      <div
+        className="absolute left-1/2 top-1/2"
+        style={{width: PLAYER_W, height: PLAYER_H, transform: `translate(-50%, -50%) scale(${scale * zoom})`}}
+      >
         {src && (
           <iframe
             ref={frame}
@@ -93,14 +116,18 @@ export function Monitor({youtubeId, from, to, rate = 1, zoom = 1, label, rewind 
           />
         )}
       </div>
-      <span className="absolute left-2 top-2 rounded bg-ink/80 px-1.5 py-0.5 font-display text-xs font-bold uppercase tracking-[0.15em]">
+      <span
+        className={`absolute rounded bg-ink/80 font-display font-bold uppercase ${
+          small ? 'left-1 top-1 px-1 text-[9px] tracking-[0.1em] lg:left-2 lg:top-2 lg:px-1.5 lg:py-0.5 lg:text-xs lg:tracking-[0.15em]' : 'left-2 top-2 px-1.5 py-0.5 text-xs tracking-[0.15em]'
+        }`}
+      >
         {label}
       </span>
-      <span className="absolute bottom-2 left-2 rounded bg-ink/80 px-1.5 py-0.5 font-mono text-xs tabular">
+      <span className={`absolute bottom-2 left-2 rounded bg-ink/80 px-1.5 py-0.5 font-mono text-xs tabular ${small ? 'hidden lg:inline' : ''}`}>
         {timecode(time)}
       </span>
       {rewinding && (
-        <span className="absolute inset-0 flex items-center justify-center bg-ink/40 font-display text-3xl font-extrabold uppercase text-var">
+        <span className={`absolute inset-0 flex items-center justify-center bg-ink/40 font-display font-extrabold uppercase text-var ${small ? 'text-sm lg:text-3xl' : 'text-3xl'}`}>
           ◀◀ Rewind
         </span>
       )}

@@ -29,7 +29,7 @@ const LAST_COPY = {
 } as const
 
 // What the big screen shows between votes: the VAR room at work on the next decision.
-export function VarRoomScene({incident, loop, last, start}: Props) {
+export function VarRoomScene({incident, last, start}: Props) {
   const {homeTeam: home, awayTeam: away} = incident.match
   const recommendation = CALL_LABELS[incident.varRecommendation] ?? incident.varRecommendation
   return (
@@ -56,7 +56,6 @@ export function VarRoomScene({incident, loop, last, start}: Props) {
               <p className="text-sm text-muted">{incident.match.competition}</p>
             </div>
             <div className="flex flex-col gap-2">
-              {loop && loop > 1 && <SecondLook loop={loop} />}
               <h2 className="font-display text-3xl font-extrabold uppercase leading-tight text-balance xl:text-4xl">
                 {incident.title}
               </h2>
@@ -109,22 +108,3 @@ function Step({label, value, highlight = false}: {label: string; value: string; 
   )
 }
 
-const ORDINAL = ['', 'First', 'Second', 'Third']
-
-// After an overturn the same incident comes back for another look. Three strikes (overturns) abandon the match.
-function SecondLook({loop}: {loop: number}) {
-  const overturns = loop - 1
-  return (
-    <div className="flex flex-col gap-1">
-      <p className="flex items-center gap-2 font-display text-sm font-bold uppercase tracking-[0.15em] text-var">
-        <span className="flex gap-1" aria-hidden>
-          {[1, 2, 3].map((n) => (
-            <span key={n} className={`h-2.5 w-2.5 rounded-full ${n <= overturns ? 'bg-overturn' : 'border border-line'}`} />
-          ))}
-        </span>
-        {ORDINAL[loop] ?? `Look ${loop}`} look · overturned {overturns === 1 ? 'once' : `${overturns} times`}
-      </p>
-      <p className="text-xs text-muted">Three overturns and the match is abandoned.</p>
-    </div>
-  )
-}
