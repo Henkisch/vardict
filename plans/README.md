@@ -20,7 +20,7 @@ real Sanity project and the public site — don't run them without the operator'
 | 006 | `/live` always shows the round that's actually happening | P1 | S | — | DONE (branch `advisor/006-live-state-logic` @ 385346c; reviewed; no web test runner, see notes; not merged) |
 | 007 | All screens share one cached read (quota) | P1 | M | 006 | DONE (branch `advisor/007-shared-live-read` @ 912894c; reviewed after 1 revision; step 5 cache check pending deploy; not merged) |
 | 008 | Public API routes reject cross-site/oversized/malformed requests | P2 | S | 005 | DONE (branch `advisor/008-api-hardening` @ 9601749; reviewed after 1 revision; not merged) |
-| 009 | All confirmed → new season instead of a 500 | P1 | S | 005, 006 | TODO |
+| 009 | All confirmed → new season instead of a 500 | P1 | S | 005, 006 | DONE (branch `advisor/009-seasons` @ 9462572; reviewed; not merged) |
 | 010 | `/incidents` results overview + "Abandoned" | P2 | S | 007 | TODO |
 | 011 | Brief matches code; shared rules in one place | P2 | S | 001–010 | TODO |
 | 012 | Spike: "Watch a shootout" replay | P3 | M | 006, 010 | TODO |
@@ -54,6 +54,20 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED (one-line reason) | REJECTED 
 - **008 review caught a plan flaw:** `/live`'s "Send to the people" posts to `/api/start` with no body or content-type,
   so JSON-only would have answered 415. `readJson` got `allowEmpty` (start only). Before trusting any "JSON-only"
   rule, grep the callers.
+
+## Loose ends for the walkthrough (decide with Henrik)
+
+- **Season reset vs results pages (from 009):** a new season clears every `finalCall`; `/incidents/[slug]` derives
+  "Final call" and the control-case line from it, so past verdicts read as undecided (control case says "refused to
+  rubber-stamp"). Options: derive from rounds, or store a `season` on referendums. Candidate for plan 010.
+- **Henrik hasn't seen the VAR Room yet.** Local only (`pnpm dev:var-room`, opens in the Sanity Dashboard);
+  deploying it is plan 013. Include it in the walkthrough.
+- **Clean slate before launch/presentation.** `workflows/scripts/reset.ts` already aborts live runs, deletes all
+  votes + referendums and clears every `finalCall` (clock back to the real delays). Gaps to check: finished workflow
+  instances stay in the `workflows` dataset and still count toward the 40-runs/24 h cap; the start-lock doc stays.
+  Decide whether it should also `nuke` the workflows dataset (then redeploy the definition) and run it on a schedule
+  or by hand right before judging.
+- **Is `/api/live` actually cached on Vercel (from 007)?** Check `x-vercel-cache: HIT` after the next deploy.
 
 ## Findings considered and rejected
 
