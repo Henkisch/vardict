@@ -325,6 +325,19 @@ Never cut the workflow, /vote or /live.
 | Clips unavailable | Open | fallbackText plus a link out |
 | Vote spam | Open | One vote per round per sessionId; rate-limited /api/vote |
 
+## Next steps (Henrik, end of session 3)
+
+1. **Continue the improve plans**: next is `/improve execute 007` (shared cached read), then 008–011, then the
+   direction plans 012–015. Status lives in `plans/README.md`. 001–006 are merged and deployed.
+2. **Then a full walkthrough together, before the dress rehearsal.** Henrik feels the project has drifted and doesn't
+   fully work the way he expects. Walk through every real flow end to end on the deployed site, with Henrik:
+   judge on `/live` alone, phone voting, a full run (regular → extra time → shootout → loop → abandoned/upheld),
+   the VAR Room console, results pages, the new-season case, and what happens when two people use it at once.
+   Compare each against this brief and write down gaps.
+3. **Plan how the jury previews and tests it:** what judges see first, the testing notes in the post, whether they
+   can reach a shootout on their own, what state the demo is in when they arrive (reset/seasons), and what they
+   can't see (the VAR Room → video and screenshots).
+
 ## UI backlog (Henrik, session 3)
 
 - Layout and look pass on /live and /vote later.
