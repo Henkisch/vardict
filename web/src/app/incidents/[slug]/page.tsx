@@ -16,7 +16,7 @@ const RESULT = {
 
 export default function IncidentPage() {
   const {slug} = useParams<{slug: string}>()
-  const incident = useLiveQuery<IncidentResult | null>(`/api/live?q=incident&slug=${encodeURIComponent(slug)}`, {
+  const {data: incident} = useLiveQuery<IncidentResult | null>(`/api/live?q=incident&slug=${encodeURIComponent(slug)}`, {
     intervalMs: 30_000,
   })
 

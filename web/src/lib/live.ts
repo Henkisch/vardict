@@ -20,6 +20,8 @@ export function useLiveQuery<T>(
   {fast = false, sleepy = false, intervalMs}: {fast?: boolean; sleepy?: boolean; intervalMs?: number} = {},
 ) {
   const [data, setData] = useState<T | undefined>()
+  // Bumping this refetches at once, past the CDN cache (a new URL): used right after a press.
+  const [fresh, setFresh] = useState(0)
 
   useEffect(() => {
     let cancelled = false
@@ -29,7 +31,7 @@ export function useLiveQuery<T>(
     let applied = 0
     const load = async () => {
       const mine = ++seq
-      const response: T | undefined = await fetch(url)
+      const response: T | undefined = await fetch(fresh ? `${url}&fresh=${fresh}` : url)
         .then((r) => (r.ok ? r.json() : undefined))
         .catch(() => undefined)
       if (cancelled || response === undefined || mine < applied) return
@@ -46,9 +48,9 @@ export function useLiveQuery<T>(
       clearInterval(poll)
       document.removeEventListener('visibilitychange', onVisible)
     }
-  }, [url, fast, sleepy, intervalMs])
+  }, [url, fast, sleepy, intervalMs, fresh])
 
-  return data
+  return {data, refresh: () => setFresh(Date.now())}
 }
 
 // Ticks every 250 ms so countdowns stay smooth.
@@ -90,7 +92,7 @@ export function useLiveState<T>(url: string, phaseOf: (state: T | undefined) => 
   const [boosted, setBoosted] = useState(false)
   const [phaseBoosted, setPhaseBoosted] = useState(false)
   const [sleepy, setSleepy] = useState(false)
-  const state = useLiveQuery<T>(url, {fast, sleepy})
+  const {data: state, refresh} = useLiveQuery<T>(url, {fast, sleepy})
 
   const phase = phaseOf(state)
   const active = phase === 'voting' || phase === 'counting' || phase === 'between'
@@ -152,5 +154,5 @@ export function useLiveState<T>(url: string, phaseOf: (state: T | undefined) => 
     }
   }, [canSleep, phase])
 
-  return {state, boost: () => setBoosted(true)}
+  return {state, refresh, boost: () => setBoosted(true)}
 }

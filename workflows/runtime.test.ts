@@ -260,7 +260,7 @@ describe('runtime', () => {
     expect((await referendum()).result).toBe('upheld')
   })
 
-  test('shootout: rounds accumulate a score, 3 wins upholds', async () => {
+  test('shootout: sudden death, one scored penalty upholds', async () => {
     const {runtime, instanceId, referendum, stage} = await start()
 
     let ref = await referendum()
@@ -274,14 +274,10 @@ describe('runtime', () => {
     await closeWindow(runtime, instanceId, Date.parse(ref.closesAt))
     expect(await stage()).toBe('shootout')
 
-    const roundOutcomes = [true, false, true, true] // win, lose, win, win: 3 wins reached on the 4th round
-    for (const won of roundOutcomes) {
-      expect(await startNext(runtime)).toMatchObject({status: 'kickedOff', stage: 'shootout'}) // Take the next penalty
-      ref = await referendum()
-      const votes = won ? {uphold: 31, overturn: 30} : {uphold: 29, overturn: 31}
-      await setBotVotes(runtime, ref._id, votes.uphold, votes.overturn)
-      await closeWindow(runtime, instanceId, Date.parse(ref.closesAt))
-    }
+    expect(await startNext(runtime)).toMatchObject({status: 'kickedOff', stage: 'shootout'}) // Penalties!
+    ref = await referendum()
+    await setBotVotes(runtime, ref._id, 31, 30) // just over 50%: scored
+    await closeWindow(runtime, instanceId, Date.parse(ref.closesAt))
     expect(await stage()).toBe('upheld')
   })
 

@@ -7,11 +7,15 @@
 // is 25% of a 60-bot round. Quorum counts heads; the split counts weight. Shown on /live, /vote and the VAR Room.
 export const HUMAN_VOTE_WEIGHT = 20
 
-// Best-of-5 shootout: this many round wins (or losses) ends it.
-export const SHOOTOUT_ROUNDS_TO_WIN = 3
+// Sudden death (Henrik, session 4: five penalties was too long): one penalty decides it. Scored = upheld,
+// saved = back to the VAR room. The workflow still counts wins/losses, so this could go back up.
+export const SHOOTOUT_ROUNDS_TO_WIN = 1
 
 // Trips back to the VAR room before the match is abandoned ("match to be replayed").
 export const LOOP_CAP = 3
+
+// How long each vote is open, in seconds. Short on purpose: a judge plays a whole run alone (session 4).
+export const WINDOW_SECONDS = {referendum: 20, extraTime: 10, shootout: 8} as const
 
 export const CALL_LABELS: Record<string, string> = {
   goal: 'Goal',

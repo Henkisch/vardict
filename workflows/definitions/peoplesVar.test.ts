@@ -44,7 +44,7 @@ describe('peoplesVar', () => {
     await kickOff()
     expect(await pendingEffects()).toEqual(['open-referendum'])
     const [effect] = await bench.listPendingEffects({instanceId: id})
-    expect(effect.params).toMatchObject({incidentId: expect.stringMatching(/:incident-diaz$/), round: 'regular', windowSeconds: 30, loop: 1})
+    expect(effect.params).toMatchObject({incidentId: expect.stringMatching(/:incident-diaz$/), round: 'regular', windowSeconds: 20, loop: 1})
   })
 
   test('over 55% upholds in regular time and finalizes the call', async () => {
@@ -81,7 +81,7 @@ describe('peoplesVar', () => {
     await shootout.recommend()
     await shootout.close(50)
     await shootout.close(50)
-    for (const won of [true, true, false, true]) await shootout.round(won)
+    await shootout.round(true) // sudden death: one penalty decides it
     expect(await finals(shootout)).toEqual(['finalize-shootout'])
   })
 
@@ -112,7 +112,7 @@ describe('peoplesVar', () => {
     }
   })
 
-  test('extra time waits for its kick-off, then opens a 15 s window', async () => {
+  test('extra time waits for its kick-off, then opens a 10 s window', async () => {
     const {recommend, kickOff, close, bench, id, pendingEffects} = await start()
     await recommend()
     await kickOff()
@@ -120,10 +120,11 @@ describe('peoplesVar', () => {
     expect(await pendingEffects()).toEqual(['open-referendum']) // extra time's ballot isn't open yet
     await kickOff()
     const pending = await bench.listPendingEffects({instanceId: id})
-    expect(pending.at(-1)?.params).toMatchObject({round: 'extraTime', windowSeconds: 15})
+    expect(pending.at(-1)?.params).toMatchObject({round: 'extraTime', windowSeconds: 10})
   })
 
-  test('shootout: 3 rounds won upholds, with one ballot per round', async () => {
+  // Sudden death (session 4): SHOOTOUT_ROUNDS_TO_WIN is 1, so one penalty decides it.
+  test('shootout: a scored penalty upholds, one ballot for the one penalty', async () => {
     const {bench, id, stage, recommend, kickOff, close, round} = await start()
     await recommend()
     await kickOff()
@@ -131,30 +132,21 @@ describe('peoplesVar', () => {
     await kickOff()
     await close(50)
     expect(await stage()).toBe('shootout')
-    for (const won of [true, false, true]) {
-      await kickOff() // Take the next penalty
-      await round(won)
-    }
-    expect(await stage()).toBe('shootout')
-    await kickOff()
+    await kickOff() // Penalties!
     await round(true)
     expect(await stage()).toBe('upheld')
 
     const rounds = (await bench.listPendingEffects({instanceId: id}))
       .filter((e) => e.name.startsWith('open-'))
       .map((e) => e.params.round)
-    expect(rounds).toEqual(['regular', 'extraTime', 'shootout1', 'shootout2', 'shootout3', 'shootout4'])
+    expect(rounds).toEqual(['regular', 'extraTime', 'shootout1'])
   })
 
-  test('shootout: 3 rounds lost goes back to the VAR room', async () => {
+  test('shootout: a saved penalty goes back to the VAR room', async () => {
     const {stage, recommend, close, round} = await start()
     await recommend()
     await close(50)
     await close(50)
-    await round(false)
-    await round(true)
-    await round(false)
-    await round(true)
     await round(false)
     expect(await stage()).toBe('varRoom')
   })
@@ -164,15 +156,12 @@ describe('peoplesVar', () => {
     await recommend()
     await close(50)
     await close(50)
-    for (const won of [false, false, false]) await round(won)
+    await round(false)
     expect(await stage()).toBe('varRoom')
     await recommend()
     await close(50)
     await close(50)
-    expect(await stage()).toBe('shootout')
-    await round(true)
-    await round(true)
-    expect(await stage()).toBe('shootout')
+    expect(await stage()).toBe('shootout') // the earlier miss doesn't count against this shootout
     await round(true)
     expect(await stage()).toBe('upheld')
   })

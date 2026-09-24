@@ -42,7 +42,7 @@ body {
   }
   /* Each kick-off number punches in. */
   .kickoff-beat {
-    animation: kickoff-beat 800ms cubic-bezier(0.2, 0.8, 0.2, 1);
+    animation: kickoff-beat 600ms cubic-bezier(0.2, 0.8, 0.2, 1);
   }
 }
 

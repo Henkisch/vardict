@@ -2,7 +2,7 @@
 
 import {useEffect, useState} from 'react'
 
-const BEAT_MS = 800
+const BEAT_MS = 600
 
 // The breath before every vote: 3, 2, 1, whistle. Calls `onWhistle` once at the end, then stays up (showing
 // "Kick-off") until the parent unmounts it, which covers the second or two before the new round shows up.

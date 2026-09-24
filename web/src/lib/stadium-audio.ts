@@ -1,137 +1,106 @@
 'use client'
 
-// The stadium's sound, made in the browser with the Web Audio API: a crowd murmur that swells with the vote, a
-// referee's whistle, a roar, a gasp and a groan. Synthesised, so there's nothing to license or download; recorded
-// CC0 samples can replace any cue later behind the same functions. Browsers only allow audio after a click, which
-// is what the "Enter the stadium" button is for.
+// The stadium's sound: real recordings (see public/sounds/CREDITS.md) played through the Web Audio API. A crowd
+// bed loops under everything and swells with the vote; the roar, the "ooh" and the referee's whistle play on
+// cue. Browsers only allow audio after a click, which is what the "Enter the stadium" button is for.
 
 export type Cue = 'whistle' | 'roar' | 'gasp' | 'groan' | 'fullTime'
 
-let ctx: AudioContext | undefined
-let master: GainNode | undefined
-let murmurGain: GainNode | undefined
-let murmurFilter: BiquadFilterNode | undefined
-let noise: AudioBuffer | undefined
+const FILES = {
+  bed: '/sounds/crowd-bed.mp3',
+  roar: '/sounds/crowd-roar.mp3',
+  ooh: '/sounds/crowd-ooh.mp3',
+  whistle: '/sounds/whistle.mp3',
+} as const
 
-// Two seconds of brown-ish noise, looped: the raw material of every crowd sound here.
-function noiseBuffer(context: AudioContext) {
-  const length = context.sampleRate * 2
-  const buffer = context.createBuffer(1, length, context.sampleRate)
-  const data = buffer.getChannelData(0)
-  let last = 0
-  for (let i = 0; i < length; i++) {
-    last = (last + 0.02 * (Math.random() * 2 - 1)) / 1.02
-    data[i] = last * 3.5
-  }
-  return buffer
+type Buffers = Partial<Record<keyof typeof FILES, AudioBuffer>>
+type Engine = {ctx: AudioContext; master: GainNode; bedGain: GainNode; buffers: Buffers}
+
+// One engine per page, kept on window: a module reload (Fast Refresh in dev) must reuse it, or the old crowd
+// keeps playing with nothing left that can mute it.
+const holder = globalThis as unknown as {__vardictStadium?: Engine}
+const engine = () => holder.__vardictStadium
+
+async function load(ctx: AudioContext, url: string) {
+  const response = await fetch(url)
+  return ctx.decodeAudioData(await response.arrayBuffer())
 }
 
-function noiseSource(context: AudioContext) {
-  const source = context.createBufferSource()
-  source.buffer = noise!
-  source.loop = true
-  return source
-}
-
-// Starts the murmur. Call from a click handler (autoplay policy). Safe to call twice.
+// Starts the crowd. Call from a click handler (autoplay policy). Safe to call twice.
 export async function startStadium() {
   if (typeof window === 'undefined') return
-  if (!ctx) {
-    ctx = new AudioContext()
-    noise = noiseBuffer(ctx)
-    master = ctx.createGain()
-    master.gain.value = 0.8
+  if (!holder.__vardictStadium) {
+    const ctx = new AudioContext()
+    const master = ctx.createGain()
+    master.gain.value = 0.9
     master.connect(ctx.destination)
+    const bedGain = ctx.createGain()
+    bedGain.gain.value = 0
+    bedGain.connect(master)
+    const e: Engine = {ctx, master, bedGain, buffers: {}}
+    holder.__vardictStadium = e
 
-    murmurFilter = ctx.createBiquadFilter()
-    murmurFilter.type = 'bandpass'
-    murmurFilter.frequency.value = 500
-    murmurFilter.Q.value = 0.7
-    murmurGain = ctx.createGain()
-    murmurGain.gain.value = 0.12
-    const source = noiseSource(ctx)
-    source.connect(murmurFilter).connect(murmurGain).connect(master)
-    source.start()
+    // Each file loads on its own, so the crowd starts as soon as the bed is in, even if a cue is slow.
+    for (const [name, url] of Object.entries(FILES) as [keyof typeof FILES, string][]) {
+      load(ctx, url)
+        .then((buffer) => {
+          e.buffers[name] = buffer
+          if (name === 'bed') {
+            const source = ctx.createBufferSource()
+            source.buffer = buffer
+            source.loop = true
+            source.connect(bedGain)
+            source.start()
+            bedGain.gain.setTargetAtTime(0.35, ctx.currentTime, 1.5)
+          }
+        })
+        .catch((error: unknown) => console.warn('stadium sound failed to load', url, error))
+    }
   }
+  const {ctx} = holder.__vardictStadium
   if (ctx.state === 'suspended') await ctx.resume()
 }
 
-export function setMuted(muted: boolean) {
-  if (!ctx || !master) return
-  master.gain.setTargetAtTime(muted ? 0 : 0.8, ctx.currentTime, 0.1)
+// Muting suspends the whole context: nothing can leak through, and it costs no CPU while silent.
+export async function setMuted(muted: boolean) {
+  const e = engine()
+  if (!e) return
+  if (muted) await e.ctx.suspend()
+  else await e.ctx.resume()
 }
 
 // 0 = a quiet ground between votes, 1 = a packed stand on its feet. Glides, never jumps.
 export function setIntensity(level: number) {
-  if (!ctx || !murmurGain || !murmurFilter) return
+  const e = engine()
+  if (!e) return
   const l = Math.max(0, Math.min(1, level))
-  murmurGain.gain.setTargetAtTime(0.08 + l * 0.32, ctx.currentTime, 0.6)
-  murmurFilter.frequency.setTargetAtTime(420 + l * 480, ctx.currentTime, 0.6)
+  e.bedGain.gain.setTargetAtTime(0.25 + l * 0.75, e.ctx.currentTime, 0.8)
 }
 
-// A burst of crowd: filtered noise with an envelope. `sweep` bends the filter (down for a groan).
-function crowdBurst({peak, attack, hold, release, freq, sweep = 0, q = 0.8}: {
-  peak: number
-  attack: number
-  hold: number
-  release: number
-  freq: number
-  sweep?: number
-  q?: number
-}) {
-  if (!ctx || !master) return
-  const t = ctx.currentTime
-  const source = noiseSource(ctx)
-  const filter = ctx.createBiquadFilter()
-  filter.type = 'bandpass'
-  filter.Q.value = q
-  filter.frequency.setValueAtTime(freq, t)
-  if (sweep) filter.frequency.linearRampToValueAtTime(freq + sweep, t + attack + hold + release)
-  const gain = ctx.createGain()
-  gain.gain.setValueAtTime(0, t)
-  gain.gain.linearRampToValueAtTime(peak, t + attack)
-  gain.gain.setValueAtTime(peak, t + attack + hold)
-  gain.gain.exponentialRampToValueAtTime(0.001, t + attack + hold + release)
-  source.connect(filter).connect(gain).connect(master)
-  source.start(t)
-  source.stop(t + attack + hold + release + 0.1)
-}
-
-// A pea whistle: a high tone with a fast warble. `blasts` short peeps (3 for full time).
-function whistle(blasts: number[]) {
-  if (!ctx || !master) return
-  let t = ctx.currentTime
-  for (const length of blasts) {
-    const tone = ctx.createOscillator()
-    tone.type = 'square'
-    tone.frequency.value = 2900
-    const warble = ctx.createOscillator()
-    warble.frequency.value = 38
-    const depth = ctx.createGain()
-    depth.gain.value = 160
-    warble.connect(depth).connect(tone.frequency)
-    const soften = ctx.createBiquadFilter()
-    soften.type = 'lowpass'
-    soften.frequency.value = 4200
-    const gain = ctx.createGain()
-    gain.gain.setValueAtTime(0, t)
-    gain.gain.linearRampToValueAtTime(0.09, t + 0.02)
-    gain.gain.setValueAtTime(0.09, t + length - 0.04)
-    gain.gain.linearRampToValueAtTime(0, t + length)
-    tone.connect(soften).connect(gain).connect(master)
-    tone.start(t)
-    warble.start(t)
-    tone.stop(t + length)
-    warble.stop(t + length)
-    t += length + 0.12
-  }
+function play(name: keyof typeof FILES, {gain = 1, rate = 1, at = 0}: {gain?: number; rate?: number; at?: number} = {}) {
+  const e = engine()
+  const buffer = e?.buffers[name]
+  if (!e || !buffer) return
+  const source = e.ctx.createBufferSource()
+  source.buffer = buffer
+  source.playbackRate.value = rate
+  const g = e.ctx.createGain()
+  g.gain.value = gain
+  source.connect(g).connect(e.master)
+  source.start(e.ctx.currentTime + at)
 }
 
 export function cue(name: Cue) {
-  if (!ctx) return
-  if (name === 'whistle') whistle([0.55])
-  if (name === 'fullTime') whistle([0.3, 0.3, 0.9])
-  if (name === 'roar') crowdBurst({peak: 0.9, attack: 0.25, hold: 1.4, release: 2.5, freq: 900, q: 0.5})
-  if (name === 'gasp') crowdBurst({peak: 0.5, attack: 0.08, hold: 0.3, release: 1.2, freq: 1200, q: 1.2})
-  if (name === 'groan') crowdBurst({peak: 0.6, attack: 0.3, hold: 0.6, release: 1.8, freq: 700, sweep: -450, q: 1})
+  if (engine()?.ctx.state !== 'running') return
+  if (name === 'whistle') play('whistle', {gain: 0.6})
+  // Full time: two short peeps and a long one, from the same whistle at different lengths via playback rate.
+  if (name === 'fullTime') {
+    play('whistle', {gain: 0.55, rate: 1.6})
+    play('whistle', {gain: 0.55, rate: 1.6, at: 0.45})
+    play('whistle', {gain: 0.6, at: 0.9})
+  }
+  if (name === 'roar') play('roar', {gain: 1})
+  if (name === 'gasp') play('ooh', {gain: 0.9})
+  // A groan: the "ooh", slowed and deeper.
+  if (name === 'groan') play('ooh', {gain: 0.9, rate: 0.8})
 }

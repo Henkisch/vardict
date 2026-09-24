@@ -9,7 +9,6 @@ import {EnterStadium} from '@/components/EnterStadium'
 import {FitBox} from '@/components/FitBox'
 import {KickOff} from '@/components/KickOff'
 import {PunditTicker} from '@/components/PunditTicker'
-import {QrCode} from '@/components/QrCode'
 import {VarRoomScene} from '@/components/VarRoomScene'
 import {Verdict} from '@/components/Verdict'
 import {VoteButtons} from '@/components/VoteButtons'
@@ -20,7 +19,7 @@ import {cue, setIntensity, setMuted, startStadium} from '@/lib/stadium-audio'
 
 export default function LivePage() {
   const now = useNow()
-  const {state, boost} = useLiveState<LiveState>('/api/live?q=live', (s) => runPhase(s?.referendum, now))
+  const {state, refresh, boost} = useLiveState<LiveState>('/api/live?q=live', (s) => runPhase(s?.referendum, now))
   const ref = state?.referendum
   const closesAt = ref ? Date.parse(ref.closesAt) : 0
   const secondsLeft = ref && !ref.result ? Math.max(0, (closesAt - now) / 1000) : 0
@@ -35,16 +34,23 @@ export default function LivePage() {
   // penalty, Start a new season) runs the 3-2-1 kick-off, then asks the server to open the next vote.
   const [startMessage, setStartMessage] = useState<string>()
   const [kickingOff, setKickingOff] = useState<{from?: string} | null>(null)
+  // The server starts on the press, while the 3-2-1 plays, so the round is usually ready by the whistle.
   function press() {
     if (kickingOff) return
     setStartMessage(undefined)
     setKickingOff({from: ref?._id})
+    void startNextRound()
   }
-  async function whistle() {
+  function whistle() {
     cue('whistle')
+  }
+  async function startNextRound() {
     boost()
     const response = await fetch('/api/start', {method: 'POST'}).catch(() => undefined)
     const body = response ? await response.json().catch(() => ({})) : {}
+    // Fetch the new round straight away (and once more, in case the effect was still being drained).
+    refresh()
+    setTimeout(refresh, 1500)
     const message =
       body.status === 'busy'
         ? 'A vote is already live.'
@@ -103,7 +109,7 @@ export default function LivePage() {
       setSoundOn(true)
       return
     }
-    setMuted(!muted)
+    void setMuted(!muted)
     setMutedState(!muted)
   }
 
@@ -170,7 +176,7 @@ export default function LivePage() {
   return (
     <div className="stadium flex min-h-dvh flex-col">
     <main className="mx-auto flex w-full max-w-[1920px] flex-1 flex-col gap-3 px-4 py-3 sm:px-6 lg:h-dvh lg:overflow-hidden">
-      <header className="flex shrink-0 flex-wrap items-baseline justify-between gap-x-6 gap-y-1 border-b border-line pb-2">
+      <header className="flex shrink-0 flex-wrap items-baseline justify-between gap-x-6 gap-y-1 pb-1">
         <div className="flex flex-wrap items-baseline gap-x-4">
           <h1 className="font-display text-3xl font-extrabold uppercase tracking-wide">
             VAR<span className="text-var">dict</span>
@@ -261,18 +267,13 @@ export default function LivePage() {
             {counting && <p className="font-display text-3xl font-bold uppercase text-var">Counting…</p>}
 
             {voting && (
-              <>
-                <div className="flex flex-col gap-2">
-                  <p className="text-sm text-muted">Your vote counts ×{HUMAN_VOTE_WEIGHT} against the simulated crowd.</p>
-                  <VoteButtons key={ref._id} referendumId={ref._id} size="panel" />
-                </div>
-                <QrCode />
-              </>
+              <div className="flex flex-col gap-2">
+                <VoteButtons key={ref._id} referendumId={ref._id} size="panel" />
+                <p className="text-sm text-muted">
+                  Your vote counts ×{HUMAN_VOTE_WEIGHT} against {ref.bots} simulated fans.
+                </p>
+              </div>
             )}
-            <p className="text-xs text-muted">
-              {ref.humans} human and {ref.bots} simulated {ref.bots === 1 ? 'vote' : 'votes'} this round. Humans are
-              rare, so each human vote counts ×{HUMAN_VOTE_WEIGHT}. Bots are flagged as simulated.
-            </p>
           </aside>
         </div>
       ) : null}

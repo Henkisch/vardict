@@ -7,7 +7,7 @@ import {useLiveQuery} from '@/lib/live'
 import {CALL_LABELS, formatClock, type IncidentOverviewRow, type IncidentsOverview} from '@/lib/queries'
 
 export default function IncidentsPage() {
-  const overview = useLiveQuery<IncidentsOverview>('/api/live?q=incidents', {intervalMs: 30_000})
+  const {data: overview} = useLiveQuery<IncidentsOverview>('/api/live?q=incidents', {intervalMs: 30_000})
 
   return (
     <main className="mx-auto flex w-full max-w-4xl flex-col gap-8 px-4 py-8 sm:px-8">

@@ -203,9 +203,9 @@ Rules (defaults, may change after the first test):
 
 | Rule | Value |
 | --- | --- |
-| Regular window | 30 s |
-| Extra-time window | 15 s |
-| Shootout | 5 rounds of 10 s, best of 5 |
+| Regular window | 20 s (was 30, shortened session 4) |
+| Extra-time window | 10 s (was 15) |
+| Shootout | 5 rounds of 8 s (was 10), best of 5 |
 | Quorum | 20 votes per round, else the window extends once by 15 s |
 | Human vote weight | 1 human vote = 20 bot votes (Henrik, session 3: few real voters; one human = 25% of a 60-bot round). Quorum counts heads; the split counts weight. Shown on /live and /vote |
 | Loop cap | 3 trips to VarRoom, then Abandoned |

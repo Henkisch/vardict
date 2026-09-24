@@ -1,3 +1,5 @@
+import {WINDOW_SECONDS} from 'workflows/shared'
+
 import type {Phase} from '@/lib/run-status'
 import type {RunRound} from '@/lib/queries'
 
@@ -9,9 +11,9 @@ type Stage = 'varRoom' | 'referendum' | 'extraTime' | 'shootout' | 'upheld' | 'a
 
 const EXPLAIN: Record<Stage, string> = {
   varRoom: 'The VAR room reviews the footage and recommends a call.',
-  referendum: 'The people vote for 30 s. Over 55% upholds, under 45% sends it back.',
-  extraTime: 'Too close to call: 15 more seconds, same thresholds.',
-  shootout: 'Still too close: best of five 10-second votes.',
+  referendum: `The fans vote for ${WINDOW_SECONDS.referendum} s. Over 55% keeps the call, under 45% overturns it.`,
+  extraTime: `Too close to call: ${WINDOW_SECONDS.extraTime} more seconds, same thresholds.`,
+  shootout: `Still too close: sudden death. One ${WINDOW_SECONDS.shootout}-second vote decides it.`,
   upheld: 'The people confirmed the call. It stands.',
   abandoned: 'Three trips back to the VAR room. Match to be replayed.',
 }
@@ -35,7 +37,7 @@ function stepsFor(run: RunRound[], phase: Phase): Step[] {
       loop = round.loop
     }
     const stage = stageOf(round.round)
-    const label = stage === 'shootout' ? `Penalty ${round.round.replace('shootout', '')}` : stage === 'extraTime' ? 'Extra time' : 'Referendum'
+    const label = stage === 'shootout' ? 'Penalty' : stage === 'extraTime' ? 'Extra time' : 'Referendum'
     steps.push({stage, label, result: round.result, current: !round.result})
   }
   const last = run.at(-1)

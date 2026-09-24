@@ -9,7 +9,7 @@ import {
   defineWorkflow,
 } from '@sanity/workflow-engine/define'
 
-import {HUMAN_VOTE_WEIGHT, LOOP_CAP, SHOOTOUT_ROUNDS_TO_WIN} from '../shared'
+import {HUMAN_VOTE_WEIGHT, LOOP_CAP, SHOOTOUT_ROUNDS_TO_WIN, WINDOW_SECONDS} from '../shared'
 
 // The rules of the People's VAR. Percentages are the share of votes to UPHOLD the VAR recommendation.
 export const RULES = {
@@ -31,7 +31,7 @@ export const RULES = {
 
 type VoteStage = 'referendum' | 'extraTime' | 'shootout'
 
-export const WINDOW_SECONDS: Record<VoteStage, number> = {referendum: 30, extraTime: 15, shootout: 10}
+export {WINDOW_SECONDS}
 
 // Effect names must be unique per definition, so each vote stage gets its own. The runtime registers
 // one handler per kind for all three (see EFFECTS).
