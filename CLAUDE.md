@@ -92,7 +92,7 @@ organization dashboard, not on a public URL. So:
 | Part | Built with | Audience | Job |
 | --- | --- | --- | --- |
 | VAR Room | App SDK | Henrik only (org member) | Pick an incident, start a referendum, perform the human `recommend` transition, watch votes and bot waves live, restart a referendum |
-| /vote | Next.js | Public, phones | Two huge buttons (Uphold / Overturn), the situation line, round and seconds left |
+| /vote | Next.js | Public, phones | Redirects to `/live` - voting happens there (Henrik, session 3: one page is both the big screen and where you vote) |
 | /live | Next.js | Public, big screen | "Send to the people" button (starts a referendum, see Judge testing), clip with the situation line under it, VAR recommendation, live bars, countdown, round, democracy clock, QR code to /vote |
 | /incidents | Next.js | Public | Results overview: every incident's fixture, VAR call and outcome, plus the shared democracy clock (plan 010) |
 | /incidents/[slug] | Next.js | Public | Final call, every round's split, total delay added, control-case headline |
@@ -100,7 +100,7 @@ organization dashboard, not on a public URL. So:
 | /api/start | Next.js server route | Called by /live's "Send to the people" button and the VAR Room | Starts the next incident's referendum (engine API + `recommend`), one at a time, with a cooldown; only an operator (shared secret) may pick a specific incident |
 | /api/tick | Next.js server route | Called by /live, the VAR Room and the bot crowd | Calls `closeWindow` (wraps `engine.fireAction` + `drainEffects`) so vote windows close on time; idempotent |
 | /api/crowd | Next.js server route | Called by the server itself when a round opens (`workflows/runtime.ts`'s `open` effect) | Runs one referendum's bot crowd (`runCrowd`) in the background, guarded by an HMAC key derived from the write token |
-| /api/live | Next.js server route | Polled by /live, /vote and /incidents | The one GROQ read every public screen shares, cached at Vercel's CDN (`?q=live\|incident\|incidents`) |
+| /api/live | Next.js server route | Polled by /live, /incidents and /incidents/[slug] | The one GROQ read every public screen shares, cached at Vercel's CDN (`?q=live\|incident\|incidents`) |
 | Studio | Sanity Studio | Henrik | Edit incidents, laws, matches; custom clip input |
 
 All writes go through the Content Lake. Every public screen reads through `/api/live` (see below), not a
@@ -116,9 +116,9 @@ demo video and screenshots, since they can't log in.
    this round (`_id = vote-<referendum>-<session>` is the lock), and rate-limits by IP and by per-round /
    per-day vote caps.
 3. The route creates the `vote` document using the write token (server-only env var).
-4. `/live`, `/vote` and `/incidents` pick it up on their next poll of `/api/live` (3 s while a round is live,
-   slower otherwise - see "Still to verify" below). The VAR Room, which reads the Content Lake directly, sees
-   it immediately.
+4. `/live`, `/incidents` and `/incidents/[slug]` pick it up on their next poll of `/api/live` (3 s while a round
+   is live, slower otherwise - see "Still to verify" below). `/vote` itself just redirects to `/live`. The VAR
+   Room, which reads the Content Lake directly, sees it immediately.
 5. Bot votes never become `vote` documents: they're atomic increments on the referendum's `botVotes`
    counters, applied by the same server (`/api/crowd` → `runCrowd`). The workflow's vote count adds the two
    sources together (`workflows/shared.ts`'s `weightedCount`), so a human vote and a bot wave both move the
@@ -355,10 +355,11 @@ Never cut the workflow, /vote or /live.
 | Clips unavailable | Open | fallbackText plus a link out |
 | Vote spam | Open | One vote per round per sessionId; rate-limited /api/vote |
 
-## Next steps (Henrik, end of session 3, updated after plan 011)
+## Next steps (updated session 4)
 
-Plans 001–010 are merged and deployed; plan 011 (this shared-constants and docs pass) is executed, awaiting
-review/merge. Status lives in `plans/README.md`.
+Plans 001–011 are merged to `main`. 001–006 are deployed; 007–011 go live with the next push to `main`
+(Henrik's call). After that push: redeploy the Studio schema (vote type changed, plan 011) and check
+`/api/live` returns `x-vercel-cache: HIT`. Status lives in `plans/README.md`.
 
 1. **A full walkthrough together, before the dress rehearsal.** Henrik feels the project has drifted and doesn't
    fully work the way he expects. Walk through every real flow end to end on the deployed site, with Henrik:
