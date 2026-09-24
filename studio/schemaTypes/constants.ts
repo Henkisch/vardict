@@ -49,5 +49,5 @@ export const PERSONAS = [
 export const titleFor = (list: {title: string; value: string}[], value?: string) =>
   list.find((item) => item.value === value)?.title ?? value
 
-// Clips longer than this don't fit the Control Room's attention span, or ours.
+// Clips longer than this don't fit the big screen's attention span, or ours.
 export const MAX_CLIP_SECONDS = 30

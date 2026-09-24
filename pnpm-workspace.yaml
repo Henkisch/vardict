@@ -1,7 +1,7 @@
 packages:
   - studio
   - web
-  - control-room
+  - var-room
   - functions
   - workflows
 

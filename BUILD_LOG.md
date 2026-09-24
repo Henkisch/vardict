@@ -183,3 +183,76 @@ bound ("under 40 s from goal to restart").
   with a side-by-side test page (no-referrer → error 153, with the attribute → plays) because the browser tool
   couldn't reach into the Dashboard's cross-origin Studio iframe. Lesson: I never actually looked at the preview
   in the deployed Studio before calling it done.
+
+## Session 3 — 2026-09-24 — Brief v2: who sees what
+
+### What we did
+
+- Henrik brought a **v2 brief** from the morning. The big change: App SDK apps only run inside the Sanity Dashboard
+  for logged-in org members, so voters and judges can never open them. The public big screen moves to a new
+  Next.js page, `/live`. The App SDK app stays, renamed from "Control Room" to **VAR Room**, and becomes Henrik's
+  private operator console (start referendums, fire `recommend`, watch bots and votes live). It still covers the
+  App SDK bonus, shown to judges through the demo video.
+- Merged v2 into `CLAUDE.md`: a "who sees what" table, "how a vote travels", the `controlCase` field (Díaz is the
+  control case), a demo video checklist, and the Norway fish-cake protest as writeup material.
+- Renamed `/control-room` to `/var-room` (directory, package, workspace entry, root script). It was still only a
+  scaffold plus the smoke test, and no app had been deployed, so nothing in Sanity needed migrating.
+
+### Where v2 and verified facts disagreed
+
+v2 was written from the pre-session-1 brief, so three things in it had already been disproved:
+1. **"A Scheduled Function ticks the vote windows."** Free tier runs them daily at most (verified session 1).
+   Kept `/api/tick`. Since the big screen moved, `/live` now calls it when its countdown hits zero (the VAR Room and
+   bot crowd still do too). tick is idempotent and only advances due transitions, so a public caller is harmless.
+2. **"FIFA or UEFA channels are fine."** They are official, but FIFA blocks embedding (error 150, session 2).
+   Kept the embed rules plus the `referrerPolicy` fix for error 153.
+3. **"Verify App SDK auth on day 1."** Already done in session 1. Only the `/live` real-time approach and
+   write protection on the public dataset are still open.
+
+v2 also dropped the parked Premier League swap; Henrik chose to keep it parked.
+
+### Course correction
+
+My plan said "the App SDK app becomes the VAR Room", and I led with the public screen moving out. Henrik read it as
+the App SDK being demoted and replied "APP SDK IS THE VAR ROOM!!". Nothing was wrong in substance, but the framing
+was. I rewrote the plan to lead with the App SDK = VAR Room line.
+
+### Clips
+
+Henrik suggested "craziest VAR incidents" compilations, where the situations are easy to see. Most of those are fan
+uploads, which the clip rules ban, so an agent is checking the results for official-channel compilations.
+
+### The clip hunt, round two: all Premier League
+
+- **Prompt that worked:** Henrik: "a good collection of clips is key here.. focus should be entirely on the actual
+  situations", then "only premier league clips are fine too". That unblocked everything. Three agents searched in
+  parallel (tournament handballs, tournament goal-line/offside, Premier League), using session 2's storyboard tools.
+- **"Craziest VAR incidents" compilations were a dead end:** roughly 30 uploads, all fan channels. The official
+  compilations cover a single season and none had our incidents.
+- **Tournament incidents failed on clarity, not just embedding.** Perišić and Khalilzadeh exist only on FIFA
+  (error 150 in the real player). Our Cucurella "clip" was a still photo, and our Khalilzadeh CBS clip turned out to
+  be a slideshow of photos. Japan–Spain embeds but only shows the view from above. We didn't know how weak the
+  session-2 picks were until someone looked at the frames with clarity as the only question.
+- **The Premier League set:** Díaz (control case), Maupay, Pickford on Van Dijk, Gordon v Arsenal, and Milenkovic v
+  West Ham (the record 374 s check). All five embed in a real IFrame API player. The two best clips are PGMOL audio
+  releases (TNT, The Telegraph), which show the VAR's own screens with offside lines and subtitles. That's close to
+  perfect for a show about the VAR room.
+- **Snag:** I tried screenshotting 720p frames by seeking a headless player. Most seeks didn't land (the player
+  hadn't buffered), so 12 of the screenshots were identical black frames. One real frame (Díaz, 2D line on the boot)
+  confirmed that clip. For the rest, Henrik watches the links: faster than building a better harness.
+- **Content changes:** new `situation` field (≤140 chars, shown under the clip during the vote, Henrik's idea) and
+  `controlCase`. Rewrote the seed for the PL set (clip timings folded in, `clips.py` removed). Deleted the four
+  tournament incident drafts plus their matches and 7 teams. Nothing referenced them (no referendums or votes yet).
+  Redeployed the Studio.
+- **Still estimated:** Maupay's review length (150 s, whistle to kick) and Pickford's (60 s). No source gives a number.
+
+### Reading the rules again: judges can't start anything
+
+- Henrik pasted the challenge's "How To Participate" section. Checking it against the brief turned up a gap. Judges
+  test on their own time, but only the VAR Room (Sanity login) could start a referendum, so a judge opening `/live`
+  would almost always find nothing running.
+- **Decision:** a public "Send to the people" button on `/live`, backed by `/api/start`: one referendum at a time,
+  a cooldown, and an IP rate limit. We rejected giving judges Sanity credentials (setup, and a risk to the org) and
+  an always-on loop (judges would land mid-vote).
+- Also recorded: the public dataset URL only shows **published** documents, so the incidents must be published
+  before submitting, and uploaded agent sessions stay unlisted until someone presses "Make Public".

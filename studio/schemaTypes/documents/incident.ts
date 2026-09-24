@@ -69,6 +69,23 @@ export const incident = defineType({
       validation: (rule) => rule.required().min(0).integer(),
     }),
     defineField({
+      name: 'situation',
+      title: 'Situation',
+      type: 'string',
+      group: 'story',
+      description:
+        'One or two short lines shown under the clip during the live vote: score, minute, what happened, what VAR decided.',
+      validation: (rule) => rule.required().max(140),
+    }),
+    defineField({
+      name: 'controlCase',
+      title: 'Control case',
+      type: 'boolean',
+      group: 'story',
+      description: 'The one clear-cut incident where VAR was simply wrong. Does the crowd still get it wrong?',
+      initialValue: false,
+    }),
+    defineField({
       name: 'outcry',
       title: 'Outcry',
       type: 'outcry',

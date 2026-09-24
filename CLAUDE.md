@@ -4,6 +4,11 @@ VARdict is an entry for the Sanity Challenge on DEV, **Path Two: Vibe-Code Somet
 Challenge page: https://dev.to/challenges/sanity-2026-09-16
 Submissions close **October 4, 2026, 11:59 PM PDT** (08:59 on Oct 5 in Sweden). Aim to publish on Oct 4.
 
+> **v2 changes (session 3):** Public screens moved from the App SDK to Next.js, because App SDK apps only run inside
+> the Sanity Dashboard for logged-in org members, so voters and judges can't open them. The App SDK app (formerly
+> "Control Room") is now the private **VAR Room** operator console; the public big screen is `/live` in Next.js.
+> Clip clarity now decides the 5 incidents (an all-Premier-League set is fine), including one control case.
+
 ## The concept
 
 The VAR room makes a decision, but the decision only stands if the public confirms it by live vote.
@@ -26,6 +31,7 @@ Pitch: "Football fixed VAR. We fixed it with democracy. Now it's slower and less
 - **Verify, don't assume.** When an assumption below turns out wrong, stop, tell Henrik, update this file, and
   log it.
 - **Never commit secrets.** Tokens go in `.env.local` files, which are gitignored. Provide `.env.example` files.
+  The write token must never reach browser code.
 
 ## Sanity project facts
 
@@ -41,11 +47,11 @@ Pitch: "Football fixed VAR. We fixed it with democracy. Now it's slower and less
 
 ## In scope (must ship)
 
-- 5 real, famous VAR incidents as structured content
+- 5 real Premier League VAR incidents as structured content (4 that split opinion + 1 control case)
 - Official YouTube clips embedded at exact start and end times, with a text fallback
 - One workflow, `peoplesVar`: VAR room, public referendum, extra time, shootout, loop back on overturn
-- Control Room (App SDK): the operator's big screen with live bars
-- Phone voting page and results pages (Next.js)
+- VAR Room (App SDK): Henrik's private operator console
+- Public Next.js site: phone voting (`/vote`), live big screen (`/live`), results pages
 - Simulated crowd with fixed personas; every bot vote flagged `simulated: true`
 - "Time added by democracy" clock, computed with GROQ (never stored)
 - Custom Studio input that previews a clip at the chosen start and end
@@ -61,8 +67,8 @@ pnpm workspace (`pnpm-workspace.yaml`), Node 24 (`.nvmrc`).
 
 ```
 /studio          Sanity Studio (sanity 6.x): schemas + custom clip input
-/web             Next.js 16: /vote (phone), /incidents/[slug] (results), /api/tick, /api/vote
-/control-room    App SDK app (sanity dev → Dashboard): the big screen
+/web             Next.js 16: /vote, /live, /incidents/[slug], /api/vote, /api/tick, /api/start
+/var-room        App SDK app (sanity dev → Dashboard): Henrik's private operator console
 /functions       Sanity Functions: effect drainer + bot crowd (Blueprints)
 /workflows       peoplesVar definition, sanity.workflow.ts, tests, scripts/
 CLAUDE.md        this file
@@ -72,14 +78,46 @@ BUILD_LOG.md     session log for the writeup
 `web/AGENTS.md` is Next.js's own agent note: Next 16 differs from training data, read
 `web/node_modules/next/dist/docs/` before writing Next code.
 
-## Architecture
+## Architecture: who sees what
 
-- All parts share one Sanity project. All writes go through the Content Lake, so every screen updates live.
-- Workflow instances live in the `workflows` dataset, next to the `production` content dataset.
-- **Verified (session 1):** App SDK apps run inside the Sanity Dashboard iframe. The Dashboard hands the app a
-  logged-in Sanity user's token, and redirects to sanity.io/login if nobody is logged in. So anonymous phone
-  voters vote through the Next.js `/vote` page, which writes votes via a server route using a write token.
-  The App SDK Control Room is only the operator's big screen.
+App SDK apps run inside the Sanity Dashboard, which loads them in an iframe and hands them a logged-in user's
+token (verified session 1: it redirects to sanity.io/login if nobody is logged in). Deployed apps land in the
+organization dashboard, not on a public URL. So:
+
+| Part | Built with | Audience | Job |
+| --- | --- | --- | --- |
+| VAR Room | App SDK | Henrik only (org member) | Pick an incident, start a referendum, perform the human `recommend` transition, watch votes and bot waves live, restart a referendum |
+| /vote | Next.js | Public, phones | Two huge buttons (Uphold / Overturn), the situation line, round and seconds left |
+| /live | Next.js | Public, big screen | "Send to the people" button (starts a referendum, see Judge testing), clip with the situation line under it, VAR recommendation, live bars, countdown, round, democracy clock, QR code to /vote |
+| /incidents/[slug] | Next.js | Public | Final call, every round's split, total delay added, control-case headline |
+| /api/vote | Next.js server route | Called by /vote | Validates and writes votes with a server-only token |
+| /api/start | Next.js server route | Called by /live's button | Starts the next incident's referendum (engine API + `recommend`), one at a time, with a cooldown |
+| /api/tick | Next.js server route | Called by /live, VAR Room, bot crowd | Calls `engine.tick()` so vote windows close on time |
+| Functions | Sanity Functions | Backend | Effect drainer, bot crowd |
+| Studio | Sanity Studio | Henrik | Edit incidents, laws, matches; custom clip input |
+
+All writes go through the Content Lake. The VAR Room and /live both listen in real time, so every vote
+shows up on both immediately. The VAR Room still covers the challenge bonus for the App SDK with real-time
+data; it is shown to judges through the demo video and screenshots, since they can't log in.
+
+### How a vote travels
+
+1. The phone taps Uphold and POSTs to `/api/vote` with `referendumId`, `choice` and a `sessionId`
+   (random ID stored in a cookie on first visit).
+2. The route checks that the referendum is open (`now < closesAt`), that this `sessionId` hasn't voted in
+   this round, and rate-limits by IP and session.
+3. The route creates the `vote` document using the write token (server-only env var).
+4. `/live` and the VAR Room see it immediately through their real-time listeners.
+5. Bot votes are created by a Function and enter the Content Lake the same way, so the workflow can't tell
+   real from simulated votes.
+
+### Still to verify
+
+- **Real-time on /live:** how a public Next.js page listens for new votes (e.g. `next-sanity` with the Live
+  Content API, or a client listener) and what it needs from the dataset. Read the current docs.
+- **Dataset visibility:** `production` is public, so anyone can read votes (fine, they're anonymous). Confirm
+  that writes still require the token.
+- ~~App SDK auth~~: verified session 1, the VAR Room reads live data from the Dashboard.
 
 ### Workflows facts (verified session 1, packages 0.35.0)
 
@@ -103,7 +141,7 @@ BUILD_LOG.md     session log for the writeup
 
 | Type | Key fields | Notes |
 | --- | --- | --- |
-| incident | title, slug, match (ref), minute, incidentType, lawsInvolved (refs), originalCall, varRecommendation, finalCall, realDelaySeconds, clip, fallbackText, outcry | Three separate call fields tell the story as data |
+| incident | title, slug, match (ref), minute, incidentType, lawsInvolved (refs), situation, originalCall, varRecommendation, recommendationFavours, finalCall, realDelaySeconds, clip, fallbackText, outcry, controlCase, crowdSeed | Three separate call fields tell the story as data. situation = ≤140-char context line shown with the clip during the vote. controlCase marks the one clear-cut incident |
 | match | homeTeam, awayTeam (refs), competition, date, venue, score | |
 | team | name, shortName, primaryColor | Colors used in the voting UI |
 | law | number, title, summary | IFAB Laws of the Game, summaries in our own words |
@@ -125,7 +163,8 @@ Derived, never stored:
 Validation:
 - clip.endSeconds > startSeconds, and the clip is max 30 seconds
 - outcry.sources needs at least one URL
-- No vote can be created after its referendum's closesAt (enforced in the `/api/vote` route; Studio validation is advisory)
+- No vote can be created after its referendum's closesAt (enforced in `/api/vote` and the bot Function; Studio
+  validation is advisory)
 
 Note: `production` is public, so vote documents (incl. random `sessionId`s) are publicly readable. Never store
 anything identifying in a vote.
@@ -155,27 +194,20 @@ Rules (defaults, may change after the first test):
 
 Mapping to Workflows constructs:
 - Stages: VarRoom, Referendum, ExtraTime, Shootout, Upheld, Abandoned
-- Transitions: `recommend` (human, from the Control Room), `closeVote` (automatic)
+- Transitions: `recommend` (human, from the VAR Room app), `closeVote` (automatic)
 - Conditions: the vote split picks which transition `closeVote` takes
 - Effects: entering a vote stage creates a referendum document and starts the bot crowd
 - Guard: incident.finalCall cannot be set until the workflow reaches Upheld. **Advisory only** (guards not
   lake-enforced in early access); in practice only the Upheld effect writes finalCall.
 - **Time (changed session 1):** a Scheduled Function can't close 10–30 s windows. Scheduled Function minimum
   cadence is Free = daily, Growth = hourly, Enterprise = minutely. Instead `POST /api/tick` in `/web`
-  (server token) calls `engine.tick()`. Callers: the Control Room when its countdown hits 0, and the bot
-  crowd after its final wave. tick is safe to call twice.
+  (server token) calls `engine.tick()`. Callers: `/live` when its countdown hits 0, the VAR Room, and the bot
+  crowd after its final wave. tick is safe to call twice and only advances transitions that are due, so a public
+  caller is harmless; rate-limit it anyway.
 - Test every path (including loop, shootout and loop cap) with the Workflows test bench before deploying
   (docs: https://www.sanity.io/docs/workflows/testing.md, in-memory engine with a controllable clock).
 
-## Voting and the simulated crowd
-
-Real and simulated votes go through the same path, so the workflow can't tell them apart.
-
-| Screen | Where | Shows |
-| --- | --- | --- |
-| Big screen | Control Room (App SDK) | Clip, VAR recommendation, live bars, countdown, democracy clock, current round, QR code to /vote |
-| Phone | Next.js /vote | Two huge buttons, Uphold and Overturn, plus round and seconds left |
-| Results | Next.js /incidents/[slug] | Final call, every round's split, total delay added |
+## Simulated crowd
 
 Crowd personas (fixed, not tunable):
 
@@ -202,32 +234,34 @@ Abuse protection: one vote per round per sessionId; the vote route is rate-limit
 
 ## Incidents
 
-Henrik's picks (session 2). The original five slots were a guideline; "longest delay" was dropped on purpose,
-the democracy clock still sums each incident's real review time. Facts are being verified before entry.
+**All Premier League (Henrik, session 3), picked by clip clarity.** Tournament footage failed: FIFA blocks embeds,
+and the other official uploads were stills or studio talk. Five incidents for now, maybe six later; narrow down after
+the dress rehearsal. Facts verified session 3; seed: `studio/seed/incidents.py` (drafts, idempotent).
 
-| # | Incident | Type | Why it splits people |
+| # | Incident | Why it splits | Clip (all embed) |
 | --- | --- | --- | --- |
-| 1 | Perišić, 2018 World Cup final, France v Croatia | handball → penalty after monitor review | First VAR decision in a World Cup final; arm moving down, barely saw the ball |
-| 2 | Cucurella, Euro 2024 QF, Germany v Spain (extra time) | handball, no penalty | Judged correct at first, UEFA later said it was wrong |
-| 3 | Japan v Spain, 2022 World Cup | ball in/out of play (Law 9), goal allowed | Looked out to the eye; camera said in; Germany went out |
-| 4 | Khalilzadeh, 2026 World Cup, Iran v Egypt | offside, stoppage-time goal ruled out by ~1 mm | Letter of the law v spirit of the game. **Post-knowledge-cutoff: verify every detail** |
-| 5 | Luis Díaz, Tottenham v Liverpool, PL, 30 Sep 2023 | offside, correct goal disallowed | Control case: VAR said "check complete" by mistake (PGMOL admitted). Does the crowd still vote wrong? |
+| 1 | **Control case:** Luis Díaz, Tottenham–Liverpool, 30 Sep 2023, 34'. Onside goal disallowed after the VAR said "check complete" by mistake | Nothing to debate; PGMOL admitted the error. `controlCase: true`. Does the crowd still get it wrong? | TNT `BnSo_5MTcGY` 18–48 (PGMOL audio, 2D lines) |
+| 2 | Maupay handball, Brighton–Man Utd, 26 Sep 2020, 90+7'. Penalty given after the full-time whistle | Strict 2020 handball law; Brighton hit the woodwork five times | TNT `_2t489AY06k` 134–164 |
+| 3 | Pickford on Van Dijk, Everton–Liverpool, 17 Oct 2020, 6'. VAR checked only offside: no foul, no card | Referee later said it should have been red; Van Dijk out for the season | TNT `6XQJSG-IWLU` 64–94 |
+| 4 | Gordon goal, Newcastle–Arsenal, 4 Nov 2023, 64'. Three checks (ball out, offside, push), goal stands, 246 s | Arteta called it a disgrace; panel backed it 4–1 | The Telegraph `9nSgsgq46aI` 120–150 (PGMOL audio) |
+| 5 | Milenkovic goal, West Ham–Forest, 18 May 2025, 61'. Record 374 s offside check, goal stands | The wait, not the call: lines drawn by hand, VAR headset failed | West Ham `fawYYhtE1yg` 60–90 (**check it shows the right goal**) |
 
-Reserve: Llorente, Man City v Tottenham, UCL QF 2019 (hip or arm?).
+Estimates, not sourced: Maupay `realDelaySeconds` 150 (whistle to kick), Pickford 60. Díaz facts from session 2.
+Dropped in session 3 (no clear embeddable clip): Perišić, Cucurella, Japan–Spain, Khalilzadeh.
+Spare if we go to six: Llorente (UCL, not PL), Tottenham–Chelsea Nov 2023, Firmino armpit offside (weak clip).
 
-**Open decision (parked by Henrik, session 2): swap some tournament incidents for Premier League ones.** Tournament
-footage can't be embedded (FIFA/UEFA block it), while PL club channels allow embeds. Candidates from the session-2
-research, each with an official club/broadcaster clip (embeddability still to test):
-- Firmino armpit offside, Aston Villa v Liverpool, 2 Nov 2019 (Liverpool FC channel)
-- Maupay penalty after the final whistle, Brighton v Man Utd, 26 Sep 2020 (Man Utd channel)
-- Record 374 s review, West Ham v Nottm Forest, 18 May 2025 (West Ham channel)
-Don't act on this until Henrik picks it up again.
+Bonus material for the writeup (not an incident): Norway, where fans protested VAR with fish cakes, a match
+was abandoned, clubs voted to scrap VAR, and the federation's congress voted to keep it anyway. The people
+voted and VAR won. Sweden rejected introducing VAR in 2024.
 
 Clip rules (strict):
+- **The clip is the product (Henrik, session 3).** Every window must show the situation itself: live angle plus
+  replays, ideally the VAR angle or offside lines. No studio talk, pundit faces, celebrations or press conferences.
+  Compilations are mostly fan uploads, so find one official single-incident clip per incident.
 - Embed only, using `start` and `end` URL parameters. Never download, cut, convert or re-host footage.
-- Official league, club or broadcaster channels only.
-- Every incident gets a `fallbackText`. If no official embeddable clip exists, use the fallback. No fan uploads.
-- **FIFA blocks embedding of all its World Cup footage** (IFrame API error 150). When `clip.embedAllowed` is false,
+- Official league, club or broadcaster channels only (The Telegraph OK, Henrik session 3). No fan uploads.
+- Every incident gets a `fallbackText`. If no official embeddable clip exists, use the fallback.
+- **FIFA blocks embedding of all its World Cup footage** (IFrame API error 150), one reason we went all-PL. When `clip.embedAllowed` is false,
   the frontend shows `fallbackText` plus a link to `youtube.com/watch?v=<id>&t=<startSeconds>`. Test embeddability in a
   real player; oEmbed returning 200 proves nothing.
 - Every YouTube iframe needs `referrerPolicy="strict-origin-when-cross-origin"`. Without a referrer YouTube shows
@@ -242,33 +276,58 @@ Clip rules (strict):
 | Sep 25 | Schema + Studio | All six types live; clip input previews a clip; 2 incidents entered |
 | Sep 27 | Workflow + Functions | peoplesVar passes tests for every path |
 | Sep 28 | Bot crowd | Seeded personas move the bars; votes flagged simulated |
-| Sep 30 | Control Room + phone page | Big screen and phone voting work live on the same referendum |
-| Oct 1 | Content + results | All 5 incidents in; results page and democracy clock done |
+| Sep 30 | VAR Room + /vote + /live | Operator starts a referendum in the VAR Room; phone votes via /api/vote show up live on /live |
+| Oct 1 | Content + results | All 5 incidents in; results pages and democracy clock done |
 | Oct 2 | Deploy + dress rehearsal | Full run of all 5 incidents on deployed apps; seeds chosen |
 | Oct 3 | Demo + writeup | Video recorded; post drafted from BUILD_LOG.md |
 | Oct 4 | Publish | Post live |
 
 If behind schedule, cut in this order: results page polish, then the clip input, then down to 3 incidents.
-Never cut the workflow or the live voting.
+Never cut the workflow, /vote or /live.
 
 ## Risks and fallbacks
 
 | Risk | Status | Fallback |
 | --- | --- | --- |
 | Workflows early access blocks us | Retired: deploy, start, fire-action and cascade work on `t2sbu6uu` | Keep the definition, drive transitions from code directly, log it honestly |
-| App SDK needs login | Confirmed: it does | Phone voting stays in Next.js; App SDK is the big screen only |
-| Vote windows can't close on time | **New, mitigated** | `/api/tick` driven by Control Room + bot crowd, not a Scheduled Function |
-| Workflows 0.x breaking change mid-build | New | Pinned exact at 0.35.0; don't upgrade before Oct 4 unless blocked |
+| App SDK needs login | Confirmed: it does | Everything public lives in Next.js; the VAR Room is Henrik's console only |
+| Judges can't open the VAR Room | Expected | Show it in the demo video and screenshots |
+| /live real-time is harder than expected | Open | Short-interval polling as a stopgap, noted honestly in the build log |
+| Vote windows can't close on time | Mitigated | `/api/tick` driven by /live, the VAR Room and the bot crowd, not a Scheduled Function |
+| Workflows 0.x breaking change mid-build | Open | Pinned exact at 0.35.0; don't upgrade before Oct 4 unless blocked |
 | Clips unavailable | Open | fallbackText plus a link out |
-| Vote spam | Open | One vote per round per sessionId; rate-limited route |
+| Vote spam | Open | One vote per round per sessionId; rate-limited /api/vote |
+
+## Judge testing (decided session 3)
+
+Judges test on their own time and can't log in to the Dashboard, so the VAR Room can't be the only way to start a
+referendum. `/live` gets a public **"Send to the people"** button. It calls `/api/start`, which starts the next
+incident's referendum through the engine and fires `recommend`, and the bot crowd joins. Guards: only one
+referendum at a time (the button is disabled while one runs), a cooldown between starts, rate limit by IP. The
+VAR Room keeps full operator control (pick any incident, restart). No credentials are given out.
+
+## Demo video checklist
+
+- /live on a big screen with moving bars
+- Henrik's phone in frame voting on /vote alongside the bot crowd
+- The VAR Room performing `recommend` and starting a referendum
+- One incident reaching the shootout, and the control-case result
 
 ## Submission requirements (for the final days)
 
-- Path Two template, in English, tagged #sanitychallenge
-- Sanity project ID (`t2sbu6uu`) or public dataset URL (required)
-- Deployed links, demo video, "My Build Process" written from BUILD_LOG.md
+Rules: https://dev.to/challenges/sanity-2026-09-16 ("How To Participate").
+
+- Path Two template, in English, tagged #sanitychallenge. We only submit Path Two (each path needs its own post).
+- **Required:** Sanity project ID (`t2sbu6uu`) or a public dataset URL, so Sanity can see the content model. Give
+  both, e.g. `https://t2sbu6uu.api.sanity.io/v2025-02-19/data/query/production?query=*[_type=="incident"]`
+  (drafts aren't public: publish the incidents first). Without it the submission may count as incomplete.
+- Deployed links to /live, /vote and results; demo video; "My Build Process" written from BUILD_LOG.md
 - Simulated crowd explained openly
-- Agent session transcript uploaded, checked for keys and tokens, set to public.
+- Login: the public app needs none. Say so, and explain the VAR Room needs a Sanity login, which is why it's in the
+  video and why `/live` has its own start button.
+- Testing notes for judges: open /live, press "Send to the people", scan the QR code, vote
+- Agent session (optional, encouraged): upload through DEV's Agent Sessions uploader, curate/slice the parts worth
+  showing, check for keys and sensitive data, then press **Make Public** (uploads are unlisted by default, and judges
+  can't open them otherwise).
   **Session 1's transcript contains the original project tokens (printed by MCP `create_project`). Rotate
   them before publishing.**
-- Testing notes for judges: how to open a referendum and vote
