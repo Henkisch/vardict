@@ -79,6 +79,7 @@ export default function LivePage() {
           <section className="flex flex-1 flex-col items-center justify-center gap-4 py-16 text-center">
             <p className="font-display text-4xl font-extrabold uppercase">Every call has been confirmed</p>
             <p className="max-w-xl text-muted">The people have upheld all five. Democracy is complete, and slower.</p>
+            <StartButton onClick={sendToThePeople} busy={starting} message={startMessage} label="Start a new season" />
           </section>
         ) : (
           <p className="py-16 text-center text-muted">Connecting to the VAR room…</p>
@@ -153,7 +154,17 @@ export default function LivePage() {
   )
 }
 
-function StartButton({onClick, busy, message}: {onClick: () => void; busy: boolean; message?: string}) {
+function StartButton({
+  onClick,
+  busy,
+  message,
+  label = 'Send to the people',
+}: {
+  onClick: () => void
+  busy: boolean
+  message?: string
+  label?: string
+}) {
   return (
     <div className="flex flex-col items-center gap-2">
       <button
@@ -162,7 +173,7 @@ function StartButton({onClick, busy, message}: {onClick: () => void; busy: boole
         disabled={busy}
         className="w-full rounded-lg bg-var px-8 py-4 font-display text-3xl font-extrabold uppercase text-ink hover:brightness-110 focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-chalk disabled:opacity-60"
       >
-        {busy ? 'Checking the monitor…' : 'Send to the people'}
+        {busy ? 'Checking the monitor…' : label}
       </button>
       {message && <p className="text-sm text-muted">{message}</p>}
     </div>

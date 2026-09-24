@@ -378,14 +378,49 @@ describe('runtime', () => {
     fireActionSpy.mockRestore()
   })
 
-  test('starting when every incident has a final call throws', async () => {
+  test('starting when every incident has a final call starts a new season instead of throwing', async () => {
     const {bench, runtime, instanceId, referendum} = await start()
     const ref = await referendum()
     await setBotVotes(runtime, ref._id, 40, 5)
     await closeWindow(runtime, instanceId, Date.parse(ref.closesAt)) // upheld -> writes finalCall
     // Clear the start cooldown first, so it's the incident-exhausted check under test, not the cooldown.
     bench.advance((START_COOLDOWN_SECONDS + 1) * 1000)
-    await expect(startNext(runtime)).rejects.toThrow('Every incident has a final call')
+
+    const referendumsBefore = await runtime.content.fetch<string[]>('*[_type == "referendum"]._id')
+
+    const result = await startNext(runtime)
+    expect(result).toMatchObject({status: 'started', newSeason: true, incidentId: 'incident-1'})
+    expect(result.status).toBe('started')
+    if (result.status !== 'started') throw new Error('unreachable')
+    expect(result.instanceId).not.toBe(instanceId) // a fresh run, not the finished one
+
+    // The new run isn't decided yet, so no incident has a finalCall - including the one that was just reset.
+    const undecided = await runtime.content.fetch<number>('count(*[_type == "incident" && defined(finalCall)])')
+    expect(undecided).toBe(0)
+
+    // Round history survives: the upheld run's own referendum is still there, plus the new run's opening one.
+    const referendumsAfter = await runtime.content.fetch<string[]>('*[_type == "referendum"]._id')
+    expect(referendumsAfter).toEqual(expect.arrayContaining(referendumsBefore))
+    expect(referendumsAfter.length).toBe(referendumsBefore.length + 1)
+  })
+
+  test('one incident still open: a final call elsewhere does not trigger a season reset', async () => {
+    const {bench, runtime, instanceId, referendum} = await start([
+      incidentDoc(),
+      incidentDoc({_id: 'incident-2', title: 'Test 2'}),
+    ])
+    const ref = await referendum()
+    await setBotVotes(runtime, ref._id, 40, 5)
+    await closeWindow(runtime, instanceId, Date.parse(ref.closesAt)) // upholds incident-1 only
+    bench.advance((START_COOLDOWN_SECONDS + 1) * 1000)
+
+    const result = await startNext(runtime)
+    expect(result).toMatchObject({status: 'started', incidentId: 'incident-2'})
+    expect(result).not.toHaveProperty('newSeason')
+
+    // incident-1's finalCall is untouched - no season reset happened.
+    const incident1 = await runtime.content.fetch<{finalCall?: string}>('*[_id == "incident-1"][0]{finalCall}')
+    expect(incident1.finalCall).toBe('noGoal')
   })
 
   test('runCrowd releases every planned vote across the window', async () => {
