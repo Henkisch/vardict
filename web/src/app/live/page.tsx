@@ -23,7 +23,11 @@ export default function LivePage() {
   const {state, refresh, boost} = useLiveState<LiveState>('/api/live?q=live', (s) => runPhase(s?.referendum, now))
   const ref = state?.referendum
   const closesAt = ref ? Date.parse(ref.closesAt) : 0
-  const secondsLeft = ref && !ref.result ? Math.max(0, (closesAt - now) / 1000) : 0
+  // A new round opens KICKOFF_SECONDS after it's created: every screen counts down to windowOpensAt.
+  const opensAt = ref ? Date.parse(ref.windowOpensAt) : 0
+  const kickoffLeft = ref && !ref.result ? Math.max(0, (opensAt - now) / 1000) : 0
+  const countingDown = kickoffLeft > 0
+  const secondsLeft = ref && !ref.result ? Math.max(0, (closesAt - Math.max(now, opensAt)) / 1000) : 0
   const phase = runPhase(ref, now)
   const voting = phase === 'voting'
   const counting = phase === 'counting'
@@ -34,16 +38,15 @@ export default function LivePage() {
   // Experience v3: nothing moves on by itself. Every press (Let the fans decide, Go to extra time, Take the next
   // penalty, Start a new season) runs the 3-2-1 kick-off, then asks the server to open the next vote.
   const [startMessage, setStartMessage] = useState<string>()
-  const [kickingOff, setKickingOff] = useState<{from?: string} | null>(null)
-  // The server starts on the press, while the 3-2-1 plays, so the round is usually ready by the whistle.
+  // The press only asks the server; the button says so. The screen changes once, when the new round exists, and
+  // the 3-2-1 then plays over the vote screen (timed by the round's windowOpensAt).
+  const [starting, setStarting] = useState<{from?: string} | null>(null)
   function press() {
-    if (kickingOff) return
+    if (starting) return
     setStartMessage(undefined)
-    setKickingOff({from: ref?._id})
+    setStarting({from: ref?._id})
     void startNextRound()
   }
-  // Nothing to do at the end of the countdown: the round appears when it's open.
-  function whistle() {}
   async function startNextRound() {
     boost()
     const response = await fetch('/api/start', {method: 'POST'}).catch(() => undefined)
@@ -66,17 +69,17 @@ export default function LivePage() {
                   ? 'Something went wrong. Try again.'
                   : undefined
     if (message) {
-      setKickingOff(null)
+      setStarting(null)
       setStartMessage(message)
     }
   }
-  // The kick-off stays up until the new round is on screen (or 10 s, if it never shows).
-  if (kickingOff && ref && ref._id !== kickingOff.from && voting) setKickingOff(null)
+  // Done starting once the new round is on screen (or after 15 s, if it never shows).
+  if (starting && ref && ref._id !== starting.from) setStarting(null)
   useEffect(() => {
-    if (!kickingOff) return
-    const id = setTimeout(() => setKickingOff(null), 10_000)
+    if (!starting) return
+    const id = setTimeout(() => setStarting(null), 15_000)
     return () => clearTimeout(id)
-  }, [kickingOff])
+  }, [starting])
 
   // A result holds on the verdict screen until someone presses. Rounds this tab watched live get their verdict;
   // a visitor arriving later goes straight to the VAR room (except mid-run, where the verdict carries the button).
@@ -135,7 +138,7 @@ export default function LivePage() {
   }, [verdictKey, soundOn])
 
   // What the pundits talk about right now.
-  const trigger = kickingOff
+  const trigger = countingDown
     ? 'kickoff'
     : voting || counting
       ? 'voting'
@@ -149,7 +152,7 @@ export default function LivePage() {
               : 'overturned'
         : 'review'
   // Which of the three steps the screen is on, and the workflow stage it corresponds to.
-  const step: Step = kickingOff || voting || counting ? 'vote' : showVerdict ? 'verdict' : 'var-room'
+  const step: Step = voting || counting ? 'vote' : showVerdict ? 'verdict' : 'var-room'
   const roundName = ref?.round === 'regular' ? 'Regular time' : ref?.round === 'extraTime' ? 'Extra time' : ref ? 'Penalty' : undefined
   const workflowStage =
     step === 'var-room'
@@ -166,11 +169,11 @@ export default function LivePage() {
             ? 'varRoom'
             : 'overturned'
   const tickerIncident = showVerdict || voting || counting || parked ? ref?.incident._id : state?.next?._id
-  const start = <StartButton onClick={press} busy={Boolean(kickingOff)} message={startMessage} />
+  const start = <StartButton onClick={press} busy={Boolean(starting)} message={startMessage} />
   const nextLabel =
     ref?.round === 'regular' ? 'Go to extra time' : ref?.round === 'extraTime' ? 'Penalties!' : 'Take the next penalty'
   const verdictAction = between ? (
-    <StartButton onClick={press} busy={Boolean(kickingOff)} message={startMessage} label={nextLabel} />
+    <StartButton onClick={press} busy={Boolean(starting)} message={startMessage} label={nextLabel} />
   ) : (
     <StartButton
       onClick={() => setAcknowledged(ref?._id)}
@@ -206,11 +209,11 @@ export default function LivePage() {
       </header>
 
       {state && (
-        <StepIndicator step={step} detail={step === 'var-room' ? undefined : roundName} stage={kickingOff ? undefined : workflowStage} />
+        <StepIndicator step={step} detail={step === 'var-room' ? undefined : roundName} stage={workflowStage} />
       )}
 
       {!sessionEntered && !enteredNow && state && <EnterStadium fixtures={state.fixtures} onEnter={enter} />}
-      {kickingOff && <KickOff onWhistle={whistle} />}
+      {countingDown && <KickOff seconds={Math.ceil(kickoffLeft)} />}
 
       {showVerdict && ref ? (
         <Verdict round={ref} phase={phase} action={verdictAction} />
@@ -223,7 +226,7 @@ export default function LivePage() {
           <section className="flex flex-1 flex-col items-center justify-center gap-4 py-16 text-center">
             <p className="font-display text-4xl font-extrabold uppercase">Every call has been confirmed</p>
             <p className="max-w-xl text-muted">The people have upheld all five. Democracy is complete, and slower.</p>
-            <StartButton onClick={press} busy={Boolean(kickingOff)} message={startMessage} label="Start a new season" />
+            <StartButton onClick={press} busy={Boolean(starting)} message={startMessage} label="Start a new season" />
           </section>
         ) : (
           <p className="py-16 text-center text-muted">Connecting to the VAR room…</p>
@@ -302,7 +305,7 @@ function StartButton({
         disabled={busy}
         className="w-full rounded-lg bg-var px-8 py-4 font-display text-3xl font-extrabold uppercase text-ink hover:brightness-110 focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-chalk disabled:opacity-60"
       >
-        {busy ? 'Checking the monitor…' : label}
+        {busy ? 'Opening the vote…' : label}
       </button>
       {message && <p className="text-sm text-muted">{message}</p>}
     </div>

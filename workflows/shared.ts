@@ -14,6 +14,9 @@ export const SHOOTOUT_ROUNDS_TO_WIN = 1
 // How long each vote is open, in seconds. Short on purpose: a judge plays a whole run alone (session 4).
 export const WINDOW_SECONDS = {referendum: 20, extraTime: 10, shootout: 8} as const
 
+// A new round opens this many seconds after it's created: the 3-2-1 every screen shows, timed by the round itself.
+export const KICKOFF_SECONDS = 3
+
 export const CALL_LABELS: Record<string, string> = {
   goal: 'Goal',
   noGoal: 'No goal',

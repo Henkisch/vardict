@@ -5,7 +5,7 @@ import {createEngine, type EffectHandler, type Engine} from '@sanity/workflow-en
 
 import {chaosChoice, planCrowd, type PlannedVote, waves} from './crowd'
 import {EFFECTS, RULES} from './definitions/peoplesVar'
-import {PERSONAS} from './shared'
+import {KICKOFF_SECONDS, PERSONAS} from './shared'
 
 export const DEFINITION = 'peoples-var'
 
@@ -72,7 +72,8 @@ export async function openReferendum(
   const referendumId = `referendum-${effectKey.replace(/[^a-zA-Z0-9_-]/g, '-')}`
   const existing = await content.getDocument<{closesAt: string}>(referendumId)
   if (existing) return {referendumId, closesAt: existing.closesAt}
-  const opensAt = now()
+  // The window opens after the kick-off countdown, so every screen can count down to the same moment.
+  const opensAt = now() + KICKOFF_SECONDS * 1000
   const closesAt = new Date(opensAt + Number(params.windowSeconds) * 1000).toISOString()
   const doc = await content.createIfNotExists({
     _id: referendumId,
