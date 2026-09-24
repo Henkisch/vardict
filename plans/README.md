@@ -19,7 +19,7 @@ real Sanity project and the public site — don't run them without the operator'
 | 005 | Starting a run is serialized, idempotent, operator-only picks | P1 | M | 002, 003 | DONE (branch `advisor/005-start-flow-safe` @ 8915cd3; reviewed; not merged; needs VARDICT_OPERATOR_KEY + SANITY_APP_OPERATOR_KEY) |
 | 006 | `/live` always shows the round that's actually happening | P1 | S | — | DONE (branch `advisor/006-live-state-logic` @ 385346c; reviewed; no web test runner, see notes; not merged) |
 | 007 | All screens share one cached read (quota) | P1 | M | 006 | TODO |
-| 008 | Public API routes reject cross-site/oversized/malformed requests | P2 | S | 005 | TODO |
+| 008 | Public API routes reject cross-site/oversized/malformed requests | P2 | S | 005 | DONE (branch `advisor/008-api-hardening` @ 9601749; reviewed after 1 revision; not merged) |
 | 009 | All confirmed → new season instead of a 500 | P1 | S | 005, 006 | TODO |
 | 010 | `/incidents` results overview + "Abandoned" | P2 | S | 007 | TODO |
 | 011 | Brief matches code; shared rules in one place | P2 | S | 001–010 | TODO |
@@ -48,6 +48,12 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED (one-line reason) | REJECTED 
   `@babel/core`, `@typescript-eslint/parser` dropped). The lockfile was probably written by an earlier resolution; a
   deliberate one-time normalisation (`pnpm install`, review, commit) would unblock test runners in `web`. Until then,
   `web/src/lib/run-status.ts` lists its test cases in a comment; the reviewer ran all 10 by hand (all pass).
+- **Executor worktrees can start on a stale base.** 008's first worktree came up at `efb151d` (38 commits behind
+  `main`); the executor stopped on the drift check. The re-dispatch reset the worktree to `main` first. Do the same
+  for future dispatches.
+- **008 review caught a plan flaw:** `/live`'s "Send to the people" posts to `/api/start` with no body or content-type,
+  so JSON-only would have answered 415. `readJson` got `allowEmpty` (start only). Before trusting any "JSON-only"
+  rule, grep the callers.
 
 ## Findings considered and rejected
 
