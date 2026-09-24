@@ -33,9 +33,9 @@ export function VarRoomScene({incident, loop, last, start}: Props) {
   const {homeTeam: home, awayTeam: away} = incident.match
   const recommendation = CALL_LABELS[incident.varRecommendation] ?? incident.varRecommendation
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3">
+    <div className="flex flex-col gap-3 lg:min-h-0 lg:flex-1">
       {/* The wall gets all the room there is: this is the show. */}
-      <section className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-line bg-black">
+      <section className="flex min-w-0 flex-col overflow-hidden rounded-xl border border-line bg-black lg:min-h-0 lg:flex-1">
         <div className="flex items-center justify-between gap-3 border-b border-line bg-pitch px-4 py-2 font-display text-sm font-bold uppercase tracking-[0.2em]">
           <span className="flex items-center gap-2">
             <span className="h-2.5 w-2.5 rounded-full bg-overturn motion-safe:animate-pulse" aria-hidden />
@@ -49,7 +49,7 @@ export function VarRoomScene({incident, loop, last, start}: Props) {
             {formatClock(incident.realDelaySeconds)}
           </span>
         </div>
-        <FitBox ratio={WALL_RATIO} className="flex-1 p-2">
+        <FitBox ratio={WALL_RATIO} className="p-2 lg:flex-1">
           <MonitorWall incident={incident} />
         </FitBox>
       </section>
