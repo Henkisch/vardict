@@ -7,7 +7,7 @@ import {crowdKey, getRuntime, paused} from '@/lib/runtime'
 export const maxDuration = 90
 
 // Runs one referendum's bot crowd, then closes the window. Internal: called by this server when a round opens.
-// Safe to repeat: bot votes have deterministic ids, so a restarted crowd only fills in what's missing.
+// Safe to repeat: waves are numbered on the referendum's counters, so a restarted crowd only adds missing waves.
 export async function POST(request: Request) {
   const off = paused()
   if (off) return off

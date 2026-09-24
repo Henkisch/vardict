@@ -3,7 +3,7 @@
 import {createClient, type SanityClient} from '@sanity/client'
 import {createEngine, type EffectHandler, type Engine} from '@sanity/workflow-engine'
 
-import {chaosChoice, planCrowd, waves} from './crowd'
+import {chaosChoice, planCrowd, type PlannedVote, waves} from './crowd'
 import {EFFECTS, RULES} from './definitions/peoplesVar'
 
 export const DEFINITION = 'peoples-var'
@@ -23,6 +23,11 @@ export type RuntimeConfig = {
   client?: SanityClient
   // Clock. Tests pass a bench's controllable clock so time-based behaviour is deterministic.
   now?: () => number
+  // How runCrowd waits between waves and while closing its window. Default: a real timer, so `ms` is real
+  // wall-clock milliseconds - matching `now`'s own default of `Date.now`. Tests inject a fast/no-op sleep
+  // (e.g. one that instead advances a bench's own clock) so waits aren't pinned to real time, which has
+  // nothing to do with a bench's separately-tracked clock.
+  sleep?: (ms: number) => Promise<void>
 }
 
 export type Runtime = {
@@ -34,6 +39,7 @@ export type Runtime = {
   tag: string
   background: (task: () => Promise<void>) => void
   now: () => number
+  sleep: (ms: number) => Promise<void>
 }
 
 // Effect params carry documents as global references: dataset:<project>:<dataset>:<id>.
@@ -45,27 +51,46 @@ const stageField = (field: string, value: unknown) => ({
   value: {type: 'literal' as const, value},
 })
 
+// Creates the referendum document for a stage visit, keyed by the effect's own key so at-least-once
+// redelivery is idempotent: a repeat finds the document already there and returns it unchanged, without
+// calling `onOpened` again - which is what starts the bot crowd, so two crowds racing on the same document
+// is exactly the bug this guards against. Exported so a test can call it directly with the same effectKey
+// twice (see runtime.test.ts).
+export async function openReferendum(
+  content: SanityClient,
+  now: () => number,
+  effectKey: string,
+  instanceId: string,
+  params: Record<string, unknown>,
+  onOpened: (referendumId: string) => void,
+): Promise<{referendumId: string; closesAt: string}> {
+  const referendumId = `referendum-${effectKey.replace(/[^a-zA-Z0-9_-]/g, '-')}`
+  const existing = await content.getDocument<{closesAt: string}>(referendumId)
+  if (existing) return {referendumId, closesAt: existing.closesAt}
+  const opensAt = now()
+  const closesAt = new Date(opensAt + Number(params.windowSeconds) * 1000).toISOString()
+  const doc = await content.createIfNotExists({
+    _id: referendumId,
+    _type: 'referendum',
+    // Lets /live and /api/tick find the run from the referendum alone.
+    workflowInstanceId: instanceId,
+    incident: {_type: 'reference', _ref: docId(params.incidentId)},
+    round: params.round,
+    loop: Number(params.loop),
+    threshold: RULES.upheldAbove / 100,
+    windowOpensAt: new Date(opensAt).toISOString(),
+    closesAt,
+    botVotes: emptyBotVotes(),
+  })
+  onOpened(doc._id)
+  return {referendumId: doc._id, closesAt: doc.closesAt}
+}
+
 function handlers(content: SanityClient, now: () => number, onOpened: (referendumId: string) => void) {
   // Creates the referendum document the phones vote on. Idempotent on the effect key (at-least-once delivery).
   const open: EffectHandler = async (params, ctx) => {
-    const opensAt = now()
-    const referendumId = `referendum-${ctx.effectKey.replace(/[^a-zA-Z0-9_-]/g, '-')}`
-    const closesAt = new Date(opensAt + Number(params.windowSeconds) * 1000).toISOString()
-    const doc = await content.createIfNotExists({
-      _id: referendumId,
-      _type: 'referendum',
-      // Lets /live and /api/tick find the run from the referendum alone.
-      workflowInstanceId: ctx.instanceId,
-      incident: {_type: 'reference', _ref: docId(params.incidentId)},
-      round: params.round,
-      loop: Number(params.loop),
-      threshold: RULES.upheldAbove / 100,
-      windowOpensAt: new Date(opensAt).toISOString(),
-      closesAt,
-      botVotes: emptyBotVotes(),
-    })
-    onOpened(doc._id)
-    return {ops: [stageField('referendumId', doc._id), stageField('closesAt', doc.closesAt)]}
+    const {referendumId, closesAt} = await openReferendum(content, now, ctx.effectKey, ctx.instanceId, params, onOpened)
+    return {ops: [stageField('referendumId', referendumId), stageField('closesAt', closesAt)]}
   }
 
   // At-least-once delivery can call this twice for the same window; `extended` makes the second call a no-op
@@ -120,6 +145,7 @@ export function createRuntime({
   startCrowd,
   client,
   now = Date.now,
+  sleep = (ms) => new Promise<void>((resolve) => setTimeout(resolve, ms)),
 }: RuntimeConfig): Runtime {
   const base = client ?? createClient({projectId, token, apiVersion: '2025-02-19', useCdn: false})
   const content = base.withConfig({dataset: contentDataset})
@@ -142,7 +168,7 @@ export function createRuntime({
       ),
     },
   })
-  const runtime: Runtime = {engine, content, workflows, projectId, contentDataset, tag, background, now}
+  const runtime: Runtime = {engine, content, workflows, projectId, contentDataset, tag, background, now, sleep}
   return runtime
 }
 
@@ -387,7 +413,12 @@ export async function startNext(runtime: Runtime, pick?: string): Promise<StartR
   return {status: 'started', instanceId, incidentId}
 }
 
-const sleepUntil = (at: number) => new Promise<void>((resolve) => setTimeout(resolve, Math.max(0, at - Date.now())))
+// `at` is in the runtime's own clock domain (production: real wall-clock ms, same as `now`'s default of
+// `Date.now`; tests: a bench's controllable clock). Delegates the actual wait to `runtime.sleep` so tests can
+// swap in a fast/no-op wait instead of pinning this to real time.
+const sleepUntil = (runtime: Runtime, at: number) => runtime.sleep(Math.max(0, at - runtime.now()))
+
+const backoff = () => new Promise<void>((resolve) => setTimeout(resolve, 200 + Math.round(Math.random() * 200)))
 
 type CrowdReferendum = {
   round: string
@@ -398,6 +429,92 @@ type CrowdReferendum = {
   seed: number
   recommendationFavours: 'home' | 'away'
   outcryLevel: number
+}
+
+type WaveApplyResult = 'closed' | 'applied' | 'gaveUp'
+
+// Applies one wave's votes as a single atomic `inc`, guarded by `ifRevisionId` and the wave's own index in
+// `botVotes.waves` (so two runners racing on the same wave can't double count). Retries up to 3 times - on a
+// failed read or a lost revision race - with a short backoff between attempts, so one conflicting write
+// doesn't permanently drop the wave. (The bug this fixes: the old code skipped straight to the NEXT wave on
+// any commit failure, silently losing that wave's votes for good.)
+async function applyWave(runtime: Runtime, referendumId: string, index: number, votes: PlannedVote[]): Promise<WaveApplyResult> {
+  const {content} = runtime
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    let now: {_rev: string; result?: string; botVotes?: BotVotes; humansUp: number; humansDown: number}
+    try {
+      now = await content.fetch(
+        `*[_id == $id][0]{_rev, result, botVotes,
+          "humansUp": count(*[_type == "vote" && referendum._ref == $id && choice == "uphold"]),
+          "humansDown": count(*[_type == "vote" && referendum._ref == $id && choice == "overturn"])}`,
+        {id: referendumId},
+      )
+    } catch (error) {
+      if (attempt === 3) {
+        console.warn('crowd wave skipped', referendumId, index, error)
+        return 'gaveUp'
+      }
+      await backoff()
+      continue
+    }
+    if (now.result) return 'closed' // the round closed while we were retrying
+    if ((now.botVotes?.waves ?? 0) > index) return 'applied' // someone else already applied this exact wave
+    const upSoFar = (now.botVotes?.uphold ?? 0) + RULES.humanVoteWeight * now.humansUp
+    const downSoFar = (now.botVotes?.overturn ?? 0) + RULES.humanVoteWeight * now.humansDown
+    const inc: Record<string, number> = {}
+    const add = (path: string) => (inc[path] = (inc[path] ?? 0) + 1)
+    for (const vote of votes) {
+      const choice = vote.choice ?? chaosChoice(upSoFar, downSoFar)
+      add(`botVotes.${choice}`)
+      add(`botVotes.byPersona.${vote.persona}.${choice}`)
+    }
+    try {
+      await content
+        .patch(referendumId)
+        .setIfMissing({botVotes: emptyBotVotes()})
+        .inc(inc)
+        .set({'botVotes.waves': index + 1})
+        // Fails if anything else changed the counters since the read; retried above instead of skipped.
+        .ifRevisionId(now._rev)
+        .commit()
+      return 'applied'
+    } catch (error) {
+      if (attempt === 3) {
+        console.warn('crowd wave skipped', referendumId, index, error)
+        return 'gaveUp'
+      }
+      await backoff()
+    }
+  }
+  return 'gaveUp'
+}
+
+// Keeps calling closeWindow until the round is actually done - closed, already closed, or no longer a voting
+// stage - instead of giving up after one call. (The bug this fixes: the old code called closeWindow exactly
+// once at the crowd's tail, so a round that needed a quorum extension never got closed once the crowd had
+// finished its waves and exited - the run just hung.) Bounded so a stuck instance can't loop forever inside
+// one request. Exported so a test can drive it directly (see runtime.test.ts).
+export async function closeUntilDone(
+  runtime: Runtime,
+  referendumId: string,
+  workflowInstanceId: string,
+  maxAttempts = 6,
+): Promise<CloseResult | undefined> {
+  const {content} = runtime
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const {closesAt} = await content.fetch<{closesAt: string}>('*[_id == $id][0]{closesAt}', {id: referendumId})
+    await sleepUntil(runtime, Date.parse(closesAt) + 500)
+    let result: CloseResult
+    try {
+      result = await closeWindow(runtime, workflowInstanceId)
+    } catch (error) {
+      console.warn('crowd close failed', referendumId, attempt, error)
+      continue
+    }
+    if (result.status === 'closed' || result.status === 'alreadyClosed' || result.status === 'notVoting') return result
+    // 'extended' or 'stillOpen': the window moved (or hadn't opened yet when we checked); loop and re-read closesAt.
+  }
+  return undefined
 }
 
 // Releases about 60 seeded bot votes in waves across the window, then closes the window. Closing it can open the
@@ -414,38 +531,27 @@ export async function runCrowd(runtime: Runtime, referendumId: string) {
   const windowSeconds = (Date.parse(ref.closesAt) - opensAt) / 1000
   const plan = planCrowd({...ref, windowSeconds})
   const planned = waves(plan)
+
   for (const [index, wave] of planned.entries()) {
-    await sleepUntil(opensAt + wave.atMs)
-    const now = await content.fetch<{_rev: string; result?: string; botVotes?: BotVotes; humansUp: number; humansDown: number}>(
-      `*[_id == $id][0]{_rev, result, botVotes,
-        "humansUp": count(*[_type == "vote" && referendum._ref == $id && choice == "uphold"]),
-        "humansDown": count(*[_type == "vote" && referendum._ref == $id && choice == "overturn"])}`,
-      {id: referendumId},
-    )
-    if (now.result) return // closed already
-    // Waves are numbered, so a restarted crowd (at-least-once effects) skips what's been counted.
-    if ((now.botVotes?.waves ?? 0) > index) continue
-    const upSoFar = (now.botVotes?.uphold ?? 0) + RULES.humanVoteWeight * now.humansUp
-    const downSoFar = (now.botVotes?.overturn ?? 0) + RULES.humanVoteWeight * now.humansDown
-    const inc: Record<string, number> = {}
-    const add = (path: string) => (inc[path] = (inc[path] ?? 0) + 1)
-    for (const vote of wave.votes) {
-      const choice = vote.choice ?? chaosChoice(upSoFar, downSoFar)
-      add(`botVotes.${choice}`)
-      add(`botVotes.byPersona.${vote.persona}.${choice}`)
+    await sleepUntil(runtime, opensAt + wave.atMs)
+
+    const state = await content
+      .fetch<{result?: string; waves: number}>('*[_id == $id][0]{result, "waves": coalesce(botVotes.waves, 0)}', {id: referendumId})
+      .catch(() => undefined)
+    if (state?.result) return // closed already
+    const alreadyApplied = state?.waves ?? 0
+    if (alreadyApplied > index) continue // this wave was already applied - a restarted crowd catching up
+
+    // A conflicting commit can leave an earlier wave still missing; recover it before applying this one, so
+    // `botVotes.waves` never jumps ahead of what's actually been counted.
+    for (let missing = alreadyApplied; missing < index; missing++) {
+      const status = await applyWave(runtime, referendumId, missing, planned[missing].votes)
+      if (status === 'closed') return
     }
-    await content
-      .patch(referendumId)
-      .setIfMissing({botVotes: emptyBotVotes()})
-      .inc(inc)
-      .set({'botVotes.waves': index + 1})
-      // Fails if anything else changed the counters since the read; the next wave re-reads.
-      .ifRevisionId(now._rev)
-      .commit()
-      .catch((error: unknown) => console.warn('crowd wave skipped', referendumId, index, error))
+
+    const status = await applyWave(runtime, referendumId, index, wave.votes)
+    if (status === 'closed') return
   }
-  // The window may have been extended; wait for the real close, then close it.
-  const {closesAt} = await content.fetch<{closesAt: string}>('*[_id == $id][0]{closesAt}', {id: referendumId})
-  await sleepUntil(Date.parse(closesAt) + 500)
-  await closeWindow(runtime, ref.workflowInstanceId)
+
+  await closeUntilDone(runtime, referendumId, ref.workflowInstanceId)
 }
