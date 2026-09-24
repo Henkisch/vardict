@@ -377,3 +377,24 @@ uploads, which the clip rules ban, so an agent is checking the results for offic
   desktop can play. `/vote` stays as the phone view.
 - Wrote the first full DEV draft in `SUBMISSION.md` from this log. The TODOs are the video, screenshots, making the
   repo public, and the agent session.
+
+### /improve: audit, 15 plans, executed 001–006
+
+- Ran the `improve` skill: 4 parallel audits (correctness, security/cost, tests/docs, brief gaps). I vetted the
+  findings against the code and wrote 15 self-contained plans (`plans/`). Each was executed by a separate Sonnet
+  executor in its own worktree, and I reviewed the diff and reran `pnpm verify` before merging.
+- Done and deployed (pushed to `main`, commit 3c7b5d9): 001 `pnpm verify`; 002 in-memory runtime test harness;
+  003 vote windows close exactly once and self-heal; 004 bot crowd retries lost waves and closes through extensions;
+  005 serialized, idempotent starts with operator-only picks; 006 `/live` phase logic (fixes the wrong scene between
+  shootout rounds). 51 tests.
+- Plan 001 was blocked on its first attempt. All three stops were gaps in my plan (no TypeScript in `workflows`,
+  lockfile churn when adding it, `next typegen` needed), not executor errors. It was rewritten and passed on the
+  second attempt.
+- Finding: adding any dependency to `web`/`workflows` rewrites unrelated lockfile peer keys (next, eslint). So `web`
+  has no test runner yet; I ran `runPhase`'s 10 cases by hand.
+- Operator key generated and set without ever being printed: `VARDICT_OPERATOR_KEY` in Vercel production and
+  `web/.env.local`, `SANITY_APP_OPERATOR_KEY` in `var-room/.env.local`.
+- Slip: my post-deploy smoke test sent a real `POST /api/start` to production (200), which started a real run.
+- Next: plans 007 (shared cached read, quota), 008 (API hardening), 009 (seasons), 010 (results index), 011 (docs),
+  012–015 (direction). Parked: the Vercel spend cap (separate Hobby account likely). `.claude/` (worktrees) is
+  untracked and should be gitignored.
