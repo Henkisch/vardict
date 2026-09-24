@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "check": "sanity-workflows deploy --check",
-    "deploy": "sanity-workflows deploy"
+    "deploy": "sanity-workflows deploy",
+    "test": "vitest run"
   },
   "dependencies": {
     "@sanity/client": "8.7.0",
@@ -13,6 +14,8 @@
     "@sanity/workflow-engine": "0.35.0"
   },
   "devDependencies": {
-    "tsx": "^4.23.15"
+    "@sanity/workflow-engine-test": "0.35.0",
+    "tsx": "^4.23.15",
+    "vitest": "5.0.1"
   }
 }

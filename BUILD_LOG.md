@@ -256,3 +256,23 @@ uploads, which the clip rules ban, so an agent is checking the results for offic
   an always-on loop (judges would land mid-vote).
 - Also recorded: the public dataset URL only shows **published** documents, so the incidents must be published
   before submitting, and uploaded agent sessions stay unlisted until someone presses "Make Public".
+
+### peoplesVar: from brief to 14 green paths
+
+- Read the current Workflows docs (0.35 matches our pin) before writing anything: definitions, conditions,
+  activities and actions, operations, fields, effects, testing.
+- **Brief vs. reality:** the brief said "conditions: the vote split picks which transition closeVote takes". A
+  condition can't count vote documents: it only sees the instance snapshot. Fix: the tick route counts the votes
+  and hands the split to the action as params. The workflow still makes every routing decision.
+- **Ops can't branch.** An action's operations always all run, so a shootout round can't choose between
+  "increment won" and "increment lost". Fix: two actions, `roundWon` and `roundLost`, and the caller picks one.
+- **First `defineWorkflow` run failed with 6 validation errors.** It was a good error message: it listed every problem
+  with its path. `peoplesVar` breaks the name grammar (`peoples-var`). Effect names must be unique per definition,
+  so there's one per stage. And the validator refused actions in the terminal `upheld` stage ("they can never
+  run"). So the final call is written from the stage that decides the vote, in the same hop.
+- The shootout is a stage that loops into itself, one visit per round. The loop cap counts `varRoom` visits in the
+  instance's own stage history, a raw-snapshot query the docs show for exactly this.
+- 13 tests, then 14 (added "only upheld writes the final call"). One failed on the first run: effect params carry
+  the subject as a global reference, not a bare id. The handler will need to strip it.
+- `sanity-workflows deploy --check` passed, then `peoples-var v1` was deployed. It printed that definition sharing
+  with Sanity is on by default.

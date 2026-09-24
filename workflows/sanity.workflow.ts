@@ -1,6 +1,6 @@
 import {defineWorkflowConfig} from '@sanity/workflow-engine/define'
 
-import {smoke} from './definitions/smoke'
+import {peoplesVar} from './definitions/peoplesVar'
 
 export default defineWorkflowConfig({
   deployments: [
@@ -10,7 +10,7 @@ export default defineWorkflowConfig({
       expectedMinReaderModel: 10,
       workflowResource: {type: 'dataset', id: 't2sbu6uu.workflows'},
       resourceAliases: [{name: 'content', resource: {type: 'dataset', id: 't2sbu6uu.production'}}],
-      definitions: [smoke],
+      definitions: [peoplesVar],
     },
   ],
 })

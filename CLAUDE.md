@@ -192,20 +192,34 @@ Rules (defaults, may change after the first test):
 | Quorum | 20 votes per round, else the window extends once by 15 s |
 | Loop cap | 3 trips to VarRoom, then Abandoned |
 
-Mapping to Workflows constructs:
-- Stages: VarRoom, Referendum, ExtraTime, Shootout, Upheld, Abandoned
-- Transitions: `recommend` (human, from the VAR Room app), `closeVote` (automatic)
-- Conditions: the vote split picks which transition `closeVote` takes
-- Effects: entering a vote stage creates a referendum document and starts the bot crowd
-- Guard: incident.finalCall cannot be set until the workflow reaches Upheld. **Advisory only** (guards not
-  lake-enforced in early access); in practice only the Upheld effect writes finalCall.
-- **Time (changed session 1):** a Scheduled Function can't close 10–30 s windows. Scheduled Function minimum
-  cadence is Free = daily, Growth = hourly, Enterprise = minutely. Instead `POST /api/tick` in `/web`
-  (server token) calls `engine.tick()`. Callers: `/live` when its countdown hits 0, the VAR Room, and the bot
-  crowd after its final wave. tick is safe to call twice and only advances transitions that are due, so a public
-  caller is harmless; rate-limit it anyway.
-- Test every path (including loop, shootout and loop cap) with the Workflows test bench before deploying
-  (docs: https://www.sanity.io/docs/workflows/testing.md, in-memory engine with a controllable clock).
+Built and bench-tested in session 3: `workflows/definitions/peoplesVar.ts` (deployed name **`peoples-var`**, names
+must be lowercase-dash), tests in `peoplesVar.test.ts` (`pnpm --filter workflows test`, 14 paths incl. loop,
+shootout, second shootout, loop cap, quorum extension, single run per incident). v1 deployed to `dev`.
+
+How it maps to Workflows (learned the hard way, see BUILD_LOG session 3):
+- **Conditions can't read vote documents.** They only see the instance snapshot (instance + subject). So the tick
+  route counts votes with GROQ when a window closes and fires a caller action with params `{upholdPct, votes}`:
+  `closeVote` in referendum/extraTime, `roundWon`/`roundLost` in the shootout (ops can't branch, so the route picks:
+  over 50% uphold wins the round). Under quorum it fires `extend` instead (once per stage visit).
+- Transitions route on the recorded fields, in declaration order: upheld → overturned (back to `varRoom`) → too close.
+- **Shootout = one stage visit per round**: the stage transitions into itself. The score (`shootoutWon/Lost`) is
+  workflow-scoped; extra time's `closeVote` resets it to 0–0.
+- **Loop cap** reads stage history from the raw snapshot: `count(*[_id == $self][0].stages[name == "varRoom"]) > 3`,
+  i.e. the 3rd trip back abandons.
+- `recommend` is the one human action (VAR Room, or `/api/start` for judges). `singleSubject` start requirement: one
+  live run per incident.
+- **Effects** (names must be unique per definition, so one per stage; the runtime maps each kind to one handler):
+  `open-{referendum,extra-time,shootout-round}` creates the referendum doc and starts the bots, and should write
+  `referendumId` + `closesAt` back as stage fields. `extend-*` pushes `closesAt` by 15 s. `finalize-*` writes
+  `incident.finalCall`. It fires in the deciding stage because a terminal stage can't run actions. Effect params
+  carry `incidentId` as a GDR (`dataset:t2sbu6uu:production:<id>`): strip to the last segment.
+- Guard on finalCall: still advisory only, not declared yet.
+- **Time:** a Scheduled Function can't close 10–30 s windows (Free = daily, Growth = hourly, Enterprise = minutely).
+  `POST /api/tick` in `/web` (server token) counts the votes and fires the close action. Callers: `/live` when its
+  countdown hits 0, the VAR Room, and the bot crowd after its final wave. It must be idempotent: skip if the stage
+  already has a result.
+- Subjects must be **published** incidents (the seed makes drafts): publish before a real run.
+- Deploy shares definitions with Sanity by default (`--no-share-defs` to opt out). Nothing secret in ours.
 
 ## Simulated crowd
 
@@ -274,7 +288,7 @@ Clip rules (strict):
 | --- | --- | --- |
 | Sep 24 | Setup and risk check | ✅ Sep 23: project + datasets created, Workflows proven end to end, App SDK reads live in the Dashboard |
 | Sep 25 | Schema + Studio | All six types live; clip input previews a clip; 2 incidents entered |
-| Sep 27 | Workflow + Functions | peoplesVar passes tests for every path |
+| Sep 27 | Workflow + Functions | ✅ Sep 24: peoplesVar passes tests for every path, deployed. Effect handlers + /api/tick still to do |
 | Sep 28 | Bot crowd | Seeded personas move the bars; votes flagged simulated |
 | Sep 30 | VAR Room + /vote + /live | Operator starts a referendum in the VAR Room; phone votes via /api/vote show up live on /live |
 | Oct 1 | Content + results | All 5 incidents in; results pages and democracy clock done |

@@ -1,0 +1,226 @@
+import {
+  defineAction,
+  defineActivity,
+  defineEffect,
+  defineField,
+  defineOp,
+  defineStage,
+  defineTransition,
+  defineWorkflow,
+} from '@sanity/workflow-engine/define'
+
+// The rules of the People's VAR. Percentages are the share of votes to UPHOLD the VAR recommendation.
+export const RULES = {
+  upheldAbove: 55,
+  overturnedBelow: 45,
+  shootoutRoundsToWin: 3,
+  quorum: 20,
+  quorumExtensionSeconds: 15,
+  // Trips back to the VAR room before the match is abandoned.
+  loopCap: 3,
+} as const
+
+type VoteStage = 'referendum' | 'extraTime' | 'shootout'
+
+export const WINDOW_SECONDS: Record<VoteStage, number> = {referendum: 30, extraTime: 15, shootout: 10}
+
+// Effect names must be unique per definition, so each vote stage gets its own. The runtime registers
+// one handler per kind for all three (see EFFECTS).
+export const EFFECTS = {
+  open: {referendum: 'open-referendum', extraTime: 'open-extra-time', shootout: 'open-shootout-round'},
+  extend: {referendum: 'extend-referendum', extraTime: 'extend-extra-time', shootout: 'extend-shootout-round'},
+  finalize: {referendum: 'finalize-referendum', extraTime: 'finalize-extra-time', shootout: 'finalize-shootout'},
+} as const satisfies Record<string, Record<VoteStage, string>>
+
+// GROQ for the referendum round name stored on the referendum document.
+const ROUND: Record<VoteStage, string> = {
+  referendum: "'regular'",
+  extraTime: "'extraTime'",
+  shootout: "'shootout' + string($fields.shootoutWon + $fields.shootoutLost + 1)",
+}
+
+// The engine can't read vote documents (conditions only see the instance snapshot), so the tick route
+// counts the votes when a window closes and passes the result in as action params.
+const voteParams = [
+  {name: 'upholdPct', type: 'number' as const, required: true},
+  {name: 'votes', type: 'number' as const, required: true},
+]
+
+const recordResult = [
+  defineOp({type: 'field.set', target: {field: 'upholdPct'}, value: {type: 'param', param: 'upholdPct'}}),
+  defineOp({type: 'field.set', target: {field: 'votes'}, value: {type: 'param', param: 'votes'}}),
+]
+
+const setLiteral = (field: string, value: number) =>
+  defineOp({type: 'field.set', target: {field}, value: {type: 'literal', value}})
+
+// Routing reads fields, not activity status: a stage is decided once the tick route has recorded a result.
+const decided = 'defined($fields.upholdPct)'
+const WIN: Record<VoteStage, string> = {
+  referendum: `${decided} && $fields.upholdPct > ${RULES.upheldAbove}`,
+  extraTime: `${decided} && $fields.upholdPct > ${RULES.upheldAbove}`,
+  shootout: `${decided} && $fields.shootoutWon >= ${RULES.shootoutRoundsToWin}`,
+}
+const LOSS: Record<VoteStage, string> = {
+  referendum: `${decided} && $fields.upholdPct < ${RULES.overturnedBelow}`,
+  extraTime: `${decided} && $fields.upholdPct < ${RULES.overturnedBelow}`,
+  shootout: `${decided} && $fields.shootoutLost >= ${RULES.shootoutRoundsToWin}`,
+}
+
+function closeActions(stage: VoteStage) {
+  if (stage === 'shootout') {
+    // Ops can't branch, so the tick route picks the action: over 50% uphold wins the round.
+    return [
+      defineAction({
+        name: 'roundWon',
+        title: 'Round won (upheld)',
+        params: voteParams,
+        ops: [...recordResult, defineOp({type: 'field.inc', target: {field: 'shootoutWon'}})],
+        status: 'done',
+      }),
+      defineAction({
+        name: 'roundLost',
+        title: 'Round lost (overturned)',
+        params: voteParams,
+        ops: [...recordResult, defineOp({type: 'field.inc', target: {field: 'shootoutLost'}})],
+        status: 'done',
+      }),
+    ]
+  }
+  return [
+    defineAction({
+      name: 'closeVote',
+      title: 'Close the vote',
+      params: voteParams,
+      // Leaving extra time for a shootout starts it at 0–0.
+      ops: stage === 'extraTime' ? [...recordResult, setLiteral('shootoutWon', 0), setLiteral('shootoutLost', 0)] : recordResult,
+      status: 'done',
+    }),
+  ]
+}
+
+function voteStage(stage: VoteStage, title: string, tooClose: string) {
+  return defineStage({
+    name: stage,
+    title,
+    // Stage-scoped: every visit (every loop back, every shootout round) starts clean.
+    fields: [
+      defineField({type: 'number', name: 'upholdPct'}),
+      defineField({type: 'number', name: 'votes'}),
+      defineField({type: 'boolean', name: 'extended', initialValue: {type: 'literal', value: false}}),
+      // Written by the open-* effect handler.
+      defineField({type: 'string', name: 'referendumId'}),
+      defineField({type: 'datetime', name: 'closesAt'}),
+    ],
+    activities: [
+      defineActivity({
+        name: 'ballot',
+        title: 'Open the vote',
+        actions: [
+          defineAction({
+            name: 'open',
+            when: 'true',
+            status: 'done',
+            effects: [
+              defineEffect({
+                name: EFFECTS.open[stage],
+                // Bindings are GROQ, resolved when the effect is queued.
+                bindings: {incidentId: '$fields.subject._id', round: ROUND[stage], windowSeconds: String(WINDOW_SECONDS[stage])},
+              }),
+            ],
+          }),
+        ],
+      }),
+      defineActivity({
+        name: 'count',
+        title: 'Count the votes',
+        actions: [
+          ...closeActions(stage),
+          // A window that closes under quorum gets one extension; the tick route fires this instead.
+          defineAction({
+            name: 'extend',
+            title: 'Extend the window (no quorum)',
+            filter: '$fields.extended != true',
+            ops: [defineOp({type: 'field.set', target: {field: 'extended'}, value: {type: 'literal', value: true}})],
+            effects: [
+              defineEffect({
+                name: EFFECTS.extend[stage],
+                bindings: {referendumId: '$fields.referendumId', seconds: String(RULES.quorumExtensionSeconds)},
+              }),
+            ],
+          }),
+        ],
+      }),
+      // Upheld is terminal and can't run work, so the call is written here, in the hop that moves there.
+      defineActivity({
+        name: 'finalize',
+        title: 'Write the final call',
+        actions: [
+          defineAction({
+            name: 'writeFinalCall',
+            when: WIN[stage],
+            status: 'done',
+            effects: [defineEffect({name: EFFECTS.finalize[stage], bindings: {incidentId: '$fields.subject._id'}})],
+          }),
+        ],
+      }),
+    ],
+    // Declaration order is routing priority.
+    transitions: [
+      defineTransition({name: 'upheld', to: 'upheld', when: WIN[stage]}),
+      defineTransition({name: 'overturned', to: 'varRoom', when: LOSS[stage]}),
+      defineTransition({name: stage === 'shootout' ? 'nextRound' : 'tooClose', to: tooClose, when: decided}),
+    ],
+  })
+}
+
+export const peoplesVar = defineWorkflow({
+  name: 'peoples-var',
+  title: "People's VAR",
+  description:
+    'The VAR room recommends, the public decides. Too close to call goes to extra time, then a shootout. Overturned goes back to the VAR room.',
+  initialStage: 'varRoom',
+  start: {
+    kind: 'interactive',
+    requirements: [{type: 'singleSubject', name: 'one-run-per-incident', title: 'This incident is already live'}],
+  },
+  predicates: {
+    // Stage visits live in the raw instance snapshot; the first visit isn't a loop.
+    loopCapReached: `count(*[_id == $self][0].stages[name == "varRoom"]) > ${RULES.loopCap}`,
+  },
+  fields: [
+    defineField({
+      type: 'subject',
+      name: 'subject',
+      title: 'Incident',
+      types: ['incident'],
+      required: true,
+      initialValue: {type: 'input'},
+    }),
+    // Workflow scope so the score survives the shootout's stage-per-round loop.
+    defineField({type: 'number', name: 'shootoutWon', initialValue: {type: 'literal', value: 0}}),
+    defineField({type: 'number', name: 'shootoutLost', initialValue: {type: 'literal', value: 0}}),
+  ],
+  stages: [
+    defineStage({
+      name: 'varRoom',
+      title: 'VAR room',
+      activities: [
+        defineActivity({
+          name: 'review',
+          title: 'Review the footage',
+          actions: [defineAction({name: 'recommend', title: 'Send to the people', status: 'done'})],
+        }),
+      ],
+      transitions: [
+        defineTransition({name: 'abandon', to: 'abandoned', when: '$loopCapReached'}),
+        defineTransition({name: 'recommend', to: 'referendum', when: '$allActivitiesDone'}),
+      ],
+    }),
+    voteStage('referendum', 'Referendum', 'extraTime'),
+    voteStage('extraTime', 'Extra time', 'shootout'),
+    voteStage('shootout', 'Shootout', 'shootout'),
+    defineStage({name: 'upheld', title: 'Upheld', description: 'The people have spoken. The call stands.'}),
+    defineStage({name: 'abandoned', title: 'Abandoned', description: 'Match to be replayed.'}),
+  ],
+})
