@@ -355,32 +355,40 @@ Never cut the workflow, /vote or /live.
 | Clips unavailable | Open | fallbackText plus a link out |
 | Vote spam | Open | One vote per round per sessionId; rate-limited /api/vote |
 
-## Next steps (updated session 4)
+## Experience v3 (decided with Henrik, session 4)
 
-Plans 001–011 are merged to `main`. 001–006 are deployed; 007–011 go live with the next push to `main`
-(Henrik's call). After that push: redeploy the Studio schema (vote type changed, plan 011) and check
-`/api/live` returns `x-vercel-cache: HIT`. Status lives in `plans/README.md`.
+Plans 001–011 are merged and deployed (status in `plans/README.md`). The walkthrough started from the top and
+turned into a direction change. Henrik: **"it feels like there are so much stuff happening automagically, I want
+it to be a controlled workflow, step by step"**, and "I want a stadium feeling in there". The goal: a fun, cool
+atmosphere that holds up in a screen recording, because that's how most judges will see it.
 
-1. **A full walkthrough together, before the dress rehearsal.** Henrik feels the project has drifted and doesn't
-   fully work the way he expects. Walk through every real flow end to end on the deployed site, with Henrik:
-   judge on `/live` alone, phone voting, a full run (regular → extra time → shootout → loop → abandoned/upheld),
-   the VAR Room console, results pages, the new-season case, and what happens when two people use it at once.
-   Compare each against this brief and write down gaps. Start from the known ones already listed in
-   `plans/README.md` under "Loose ends for the walkthrough" (season reset vs. results pages, the VAR Room
-   Henrik hasn't seen yet, a clean-slate/reset story before judging, results wording, and whether `/api/live` is
-   actually cached).
-2. **Plan how the jury previews and tests it:** what judges see first, the testing notes in the post, whether they
-   can reach a shootout on their own, what state the demo is in when they arrive (reset/seasons), and what they
-   can't see (the VAR Room → video and screenshots). Not decided yet - depends on what the walkthrough finds.
-3. **If time allows after 1 and 2:** the remaining direction plans 012–015. Status and scope live in
-   `plans/README.md`; nothing decided here yet.
+**The story:** `/live` is **the stadium**. The App SDK console is **Stockley Park**, the officials' booth
+(PGMOL's real VAR hub is there, miles from the ground). The demo video cuts between them.
 
-## UI backlog (Henrik, session 3)
+Decisions:
 
-- Layout and look pass on /live and /vote later.
-- **VAR Room scene on /live while waiting:** instead of an empty page, show the next incident "on the monitor"
-  (clip, situation line, on-field call, "The VAR room is reviewing…") with the Send to the people button, and the
-  same scene after an overturn ("Back in the VAR room, loop 2 of 3").
+| Topic | Decision |
+| --- | --- |
+| Pacing | **Step by step.** Every voting stage waits for a press: Send to the people → vote → verdict screen → "Go to extra time" / "Start the shootout" / "Take the next penalty" / "Back to the VAR room". Bots vote only inside a round someone started. Needs a new workflow version (a kick-off action per voting stage) |
+| Who presses | **Anyone on `/live`** (built for one judge alone at a desk; their vote counts ×20). Stockley Park can press the same buttons for the recording |
+| Monitor wall | On `/live`, in the VAR-room phase: **main monitor (1×) + three small ones: slow-mo 0.25×, rewind loop of the key second, zoomed crop.** Four players of the same official clip, controlled via the YouTube IFrame API (this also fixes the clip running past `endSeconds` onto YouTube's end screen). Keep zoom subtle, logo visible (YouTube terms: don't hide the player or branding) |
+| Vibe | **All four, one per act.** VAR check = TV broadcast (scorebug, "VAR CHECK: POSSIBLE FOUL" banner, the monitor wall). Vote = the stands (jumbotron bars, crowd swelling). Verdict = the reveal (roar/groan; democracy clock on retro split-flap digits; maybe a Teletext-style results page) |
+| Look | **Floodlit night match**: dark stadium, floodlight glare, glowing jumbotron |
+| First screen | **"Enter the stadium"**: full-screen match-day intro (the fixture list of the 5 incidents, one line of pitch); the click also unlocks audio |
+| Sound | **Reacts to the vote**: ambient murmur that swells as the bars move, a whistle when a round opens, a roar or groan on the verdict. **CC0 recordings**, credited in the post. Video stays muted |
+| Humour | **Pundit banter**: a commentary ticker. Lines are **Sanity content** (a `punditLine` type: text, pundit persona, trigger such as round opens / bots swing it / too close / overturned / shootout / abandoned, optional incident) |
+| Phone | **A fan in the stands**: big Uphold/Overturn like holding up a card, a haptic buzz, the vote showing up in the crowd on the big screen |
+| Stockley Park | The App SDK console as the booth: live workflow stage, bot waves and human votes arriving in real time, making the VAR call, picking the next incident. Carries the App SDK story in the video |
+
+**Must-haves (Henrik): all four:** the step-by-step flow, the monitor wall, stadium + sound, the Stockley Park console.
+Nice-to-have if time allows: the phone as a fan (the vote in the crowd), split-flap digits, the Teletext results page.
+
+Proposed order (10 days to Oct 4): step-by-step flow (the foundation, touches the workflow) → monitor wall + clip
+control → stadium intro, look, sound, jumbotron, pundit ticker → Stockley Park → Oct 2 reset and rehearsal → Oct 3
+video and post → Oct 4 publish. If behind, cut in this order: the Teletext page, split-flap, the phone flag in the
+crowd, the zoomed monitor, the pundit ticker. Never cut the step-by-step flow.
+
+Still open: loose ends in `plans/README.md` (season reset vs results wording, a clean slate before judging).
 
 ## Cost guards (cost review, session 3)
 
