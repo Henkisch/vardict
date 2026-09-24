@@ -17,7 +17,7 @@ export function EnterStadium({fixtures, onEnter}: {fixtures: Fixture[]; onEnter:
         </div>
         <p className="max-w-xl text-lg text-muted">
           Five real Premier League VAR decisions. The VAR room makes its call, then you and the crowd keep it or
-          overturn it. Too close? Extra time. Still too close? Penalties.
+          overturn it. Too close? Extra time. Still too close? One sudden-death penalty.
         </p>
         <ol className="w-full divide-y divide-line rounded-xl border border-line bg-pitch/80 text-left">
           {fixtures.map((f, i) => (

@@ -9,6 +9,7 @@ import {EnterStadium} from '@/components/EnterStadium'
 import {FitBox} from '@/components/FitBox'
 import {KickOff} from '@/components/KickOff'
 import {PunditTicker} from '@/components/PunditTicker'
+import {StepIndicator, type Step} from '@/components/StepIndicator'
 import {VarRoomScene} from '@/components/VarRoomScene'
 import {Verdict} from '@/components/Verdict'
 import {VoteButtons} from '@/components/VoteButtons'
@@ -147,6 +148,23 @@ export default function LivePage() {
               ? 'upheld'
               : 'overturned'
         : 'review'
+  // Which of the three steps the screen is on, and the workflow stage it corresponds to.
+  const step: Step = kickingOff || voting || counting ? 'vote' : showVerdict ? 'verdict' : 'var-room'
+  const roundName = ref?.round === 'regular' ? 'Regular time' : ref?.round === 'extraTime' ? 'Extra time' : ref ? 'Penalty' : undefined
+  const workflowStage =
+    step === 'var-room'
+      ? 'varRoom'
+      : step === 'vote' || (showVerdict && between)
+        ? ref?.round === 'regular'
+          ? 'referendum'
+          : ref?.round === 'extraTime'
+            ? 'extraTime'
+            : 'shootout'
+        : ref?.result === 'upheld'
+          ? 'upheld'
+          : ref?.result === 'noVotes'
+            ? 'varRoom'
+            : 'overturned'
   const tickerIncident = showVerdict || voting || counting || parked ? ref?.incident._id : state?.next?._id
   const start = <StartButton onClick={press} busy={Boolean(kickingOff)} message={startMessage} />
   const nextLabel =
@@ -190,6 +208,10 @@ export default function LivePage() {
           </Link>
         </div>
       </header>
+
+      {state && (
+        <StepIndicator step={step} detail={step === 'var-room' ? undefined : roundName} stage={kickingOff ? undefined : workflowStage} />
+      )}
 
       {!sessionEntered && !enteredNow && state && <EnterStadium fixtures={state.fixtures} onEnter={enter} />}
       {kickingOff && <KickOff onWhistle={whistle} />}
