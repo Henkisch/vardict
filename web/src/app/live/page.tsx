@@ -6,6 +6,7 @@ import {useState} from 'react'
 import {Bars} from '@/components/Bars'
 import {Clip} from '@/components/Clip'
 import {QrCode} from '@/components/QrCode'
+import {VoteButtons} from '@/components/VoteButtons'
 import {useCloseWhenCounting, useLiveQuery, useNow} from '@/lib/live'
 import {CALL_LABELS, formatClock, HUMAN_VOTE_WEIGHT, LIVE_QUERY, roundLabel, type LiveState} from '@/lib/queries'
 
@@ -124,7 +125,13 @@ export default function LivePage() {
             ) : null}
 
             {voting ? (
-              <QrCode />
+              <>
+                <div className="flex flex-col gap-2">
+                  <p className="text-sm text-muted">Vote here, or on your phone. Your vote counts ×{HUMAN_VOTE_WEIGHT}.</p>
+                  <VoteButtons key={ref._id} referendumId={ref._id} size="panel" />
+                </div>
+                <QrCode />
+              </>
             ) : ref.result === 'tooClose' || counting ? (
               <p className="text-center text-muted">The next round opens in a moment.</p>
             ) : (
