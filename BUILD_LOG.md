@@ -398,3 +398,45 @@ uploads, which the clip rules ban, so an agent is checking the results for offic
 - Next: plans 007 (shared cached read, quota), 008 (API hardening), 009 (seasons), 010 (results index), 011 (docs),
   012–015 (direction). Parked: the Vercel spend cap (separate Hobby account likely). `.claude/` (worktrees) is
   untracked and should be gitignored.
+
+## Session 4 — 2026-09-24 — /improve, plans 007–010
+
+### What we did
+
+- Kept executing the improve plans with the same loop as before: a Sonnet executor per plan in its own worktree, then
+  I review the diff, rerun `pnpm verify` and merge locally. Henrik's prompts were short: "merge, go ahead with 007
+  next", "kk go on", "yes". Merged to `main`, **not pushed** (production still runs 3c7b5d9):
+  - **008 API hardening:** vote/start/crowd accept JSON only, max 1 KB; start/tick fail as a clean 500 with CORS; one
+    read fewer per vote (`createIfNotExists` returns the existing doc); a global cap of 3000 human votes per 24 h
+    (Free plan: 10k documents); the internal crowd key is an HMAC and refuses when the token is missing.
+  - **007 one shared read:** browsers no longer query Sanity. `/api/live` runs the GROQ and Vercel's CDN caches it
+    (1 s while a round is live or between rounds, 5 s idle, 10 s for incident pages), so Sanity sees about one read
+    per cache window however many people watch. A forgotten `/live` tab drops to one poll a minute after 5 minutes
+    of no input. The late Live Content API subscription is gone.
+  - **009 seasons:** when every incident is upheld, the next "Send to the people" clears all final calls and starts
+    a new season instead of answering 500. History stays; a test proves no referendum is lost.
+- Reviewed, not merged: **010**, a `/incidents` results overview (the democracy clock, every verdict, the control case
+  read as right/wrong) and "Abandoned · match to be replayed". Verdicts are now derived from the rounds, not
+  `finalCall`, so a new season doesn't erase them.
+
+### Where it went wrong
+
+- **The worktree started on old code.** 008's first executor got a worktree 38 commits behind `main` (`efb151d`).
+  It noticed on the drift check and stopped without touching anything. Since then every dispatch starts by resetting
+  its worktree to the current `main` commit.
+- **My plan would have broken the judges' button.** 008 said "JSON only", but `/live`'s "Send to the people" posts
+  with no body at all, so it would have got 415. I caught it in review by grepping the callers, not from the tests
+  (web has none). `/api/start` now lets an empty body through.
+- **My plan would have made shootouts lag.** 007 cached "no open round" for 5 s, and that includes the gap between
+  shootout rounds, which are only 10 s long. Fixed in review: the cache time now follows the same phase logic
+  `/live` uses.
+- **A done criterion that couldn't pass.** 007 asked for no `client.fetch` under `web/src/app`, but the new route
+  lives there. The executor reported it instead of hiding it. My fault.
+- Local `next build` now needs the two public `NEXT_PUBLIC_SANITY_*` env vars. Vercel has them.
+
+### Loose ends (Henrik: "we'll have to sort out the actual behavior later on together")
+
+Collected in `plans/README.md` for the walkthrough: season reset vs results pages; control-case wording; Henrik
+hasn't seen the VAR Room yet (local only, deploy is plan 013); a clean-slate reset before launch (`reset.ts` exists
+but leaves finished workflow instances counting toward the 40-runs/24 h cap); check that `/api/live` is actually
+cached (`x-vercel-cache: HIT`) after the next deploy.
