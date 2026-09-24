@@ -2,6 +2,9 @@ import {startNext} from 'workflows/runtime'
 
 import {clientKey, getRuntime, rateLimited} from '@/lib/runtime'
 
+// The bot crowd keeps running after the response: a full run (regular, extra time, 5 shootout rounds) is ~2 min.
+export const maxDuration = 300
+
 // "Send to the people": starts the next incident's referendum, or sends a run that was overturned back to the
 // people. One live vote at a time. Public on purpose, so judges can test without a Sanity login.
 export async function POST(request: Request) {

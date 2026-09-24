@@ -8,7 +8,12 @@ import {closeWindow, createRuntime, sendToThePeople} from '../runtime'
 const [incidentId, plan = '50,50,70,70,70'] = process.argv.slice(2)
 if (!incidentId) throw new Error('usage: live-run.ts <incidentId> [pcts]')
 
-const runtime = createRuntime({projectId: process.env.SANITY_PROJECT_ID!, token: process.env.SANITY_WRITE_TOKEN!})
+// No bot crowd here: this script casts its own votes.
+const runtime = createRuntime({
+  projectId: process.env.SANITY_PROJECT_ID!,
+  token: process.env.SANITY_WRITE_TOKEN!,
+  background: () => {},
+})
 const {engine, content} = runtime
 const VOTES = 25
 const FUTURE = Date.now() + 60 * 60 * 1000

@@ -1,5 +1,6 @@
 import 'server-only'
 
+import {after} from 'next/server'
 import {createRuntime, type Runtime} from 'workflows/runtime'
 
 let runtime: Runtime | undefined
@@ -11,6 +12,8 @@ export function getRuntime() {
     contentDataset: process.env.NEXT_PUBLIC_SANITY_DATASET,
     workflowsDataset: process.env.SANITY_WORKFLOWS_DATASET,
     token: process.env.SANITY_WRITE_TOKEN!,
+    // The bot crowd runs after the response; nested rounds nest their own `after`.
+    background: (task) => after(task),
   })
   return runtime
 }
