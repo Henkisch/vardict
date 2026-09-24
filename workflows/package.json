@@ -6,7 +6,8 @@
   "scripts": {
     "check": "sanity-workflows deploy --check",
     "deploy": "sanity-workflows deploy",
-    "test": "vitest run"
+    "test": "vitest run",
+    "typecheck": "pnpm --filter web exec tsc -p ../workflows/tsconfig.json"
   },
   "dependencies": {
     "@sanity/client": "8.7.0",
