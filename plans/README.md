@@ -12,7 +12,7 @@ real Sanity project and the public site — don't run them without the operator'
 
 | Plan | Title | Priority | Effort | Depends on | Status |
 |------|-------|----------|--------|------------|--------|
-| 001 | One command verifies every package | P1 | S | — | IN PROGRESS (revised: add typescript to workflows) |
+| 001 | One command verifies every package | P1 | S | — | IN PROGRESS (attempt 1 BLOCKED on plan gaps; plan rewritten, attempt 2 running) |
 | 002 | Runtime testable in memory + characterization tests | P1 | M | 001 | TODO |
 | 003 | A vote window always closes exactly once; result matches the workflow | P1 | S | 002 | TODO |
 | 004 | Bot crowd never loses a wave, never runs twice, always closes | P1 | S | 002, 003 | TODO |

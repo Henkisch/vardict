@@ -15,7 +15,7 @@
 - **Risk**: LOW
 - **Depends on**: none
 - **Category**: dx
-- **Planned at**: commit `9a0bb9b`, 2026-09-24
+- **Planned at**: commit `9a0bb9b`, 2026-09-24 (revised after execution attempt 1, see Maintenance notes)
 
 ## Why this matters
 
@@ -71,10 +71,8 @@ plan uses the command this plan creates as its verification gate.
 - `package.json` (root) — add scripts
 - `workflows/package.json`, `web/package.json`, `var-room/package.json`, `studio/package.json` — add `typecheck` (and
   `lint` where an eslint config exists)
-- `workflows/package.json` — add `"typescript": "^5.8"` to `devDependencies` (revised after the first execution:
-  `workflows` has no TypeScript compiler of its own; `var-room` and `studio` already use `^5.8`, resolving to 5.9.3,
-  which is in the pnpm store)
-- `pnpm-lock.yaml` — only the change `pnpm install` makes for that one devDependency
+- (No dependency changes. Learned in execution: adding `typescript` to `workflows` — `^5.8` or `6.0.3` — rewrites
+  lockfile keys for web's Next.js/eslint toolchain, so `workflows` reuses web's compiler instead.)
 - `workflows/tsconfig.json` (create)
 - `.gitignore` (only to add `*.tsbuildinfo` if missing)
 
@@ -93,11 +91,10 @@ plan uses the command this plan creates as its verification gate.
 
 ## Steps
 
-### Step 1: Give `workflows` a TypeScript compiler and a `tsconfig.json`
+### Step 1: Add `workflows/tsconfig.json`
 
-Add `"typescript": "^5.8"` to `workflows/package.json` `devDependencies`, then run `pnpm install` at the repo root.
-Check `git diff pnpm-lock.yaml`: the only change must be `typescript` added under the `workflows` importer, resolving
-to the already-present version (5.9.3). Then create:
+`workflows/` has no TypeScript compiler of its own, and adding one disturbs the lockfile (see Scope). Its typecheck
+reuses web's compiler (TypeScript 5.9.3). Create `workflows/tsconfig.json`:
 ```json
 {
   "compilerOptions": {
@@ -114,13 +111,15 @@ to the already-present version (5.9.3). Then create:
 }
 ```
 
-**Verify**: `pnpm --filter workflows exec tsc -p tsconfig.json` → exit 0, no output. (Don't use `npx tsc`: without a
-local compiler it resolves to an unrelated npm package named `tsc`.)
+**Verify**: `pnpm --filter web exec tsc -p ../workflows/tsconfig.json` → exit 0, no output. (Don't use `npx tsc`:
+without a local compiler it resolves to an unrelated npm package named `tsc`.) `git status --short pnpm-lock.yaml` →
+empty.
 
 ### Step 2: Add `typecheck` / `lint` scripts to each package
 
-- `workflows/package.json`: `"typecheck": "tsc -p tsconfig.json"`
-- `web/package.json`: `"typecheck": "tsc --noEmit"`
+- `workflows/package.json`: `"typecheck": "pnpm --filter web exec tsc -p ../workflows/tsconfig.json"`
+- `web/package.json`: `"typecheck": "next typegen && tsc --noEmit"` — `web/src/app/layout.tsx` uses Next 16's
+  generated global `LayoutProps`, which only exists after `next typegen` (or a dev/build run) writes `.next/types`.
 - `var-room/package.json`: `"typecheck": "tsc --noEmit"`, `"lint": "eslint src"`
 - `studio/package.json`: `"typecheck": "tsc --noEmit"`, `"lint": "eslint ."` (check `studio/eslint.config.mjs` ignores
   `dist`; if linting `.` reports errors only inside `dist/` or `node_modules/`, use `eslint schemaTypes components structure sanity.config.ts`).
@@ -155,18 +154,23 @@ No new tests — this plan creates the harness. The existing 22 workflow tests m
 
 - [ ] `pnpm verify` exits 0
 - [ ] `workflows/tsconfig.json` exists and `pnpm --filter workflows typecheck` exits 0
-- [ ] `git status --short` lists only: root `package.json`, the four package `package.json` files, `workflows/tsconfig.json`, `pnpm-lock.yaml`, and optionally `.gitignore`
+- [ ] `git status --short` lists only: root `package.json`, the four package `package.json` files, `workflows/tsconfig.json`, and optionally `.gitignore` (no `pnpm-lock.yaml`)
 - [ ] `plans/README.md` status row for 001 updated
 
 ## STOP conditions
 
 - A `typecheck` or `lint` fails on existing source code (not config). Report the exact errors; do not edit source files.
 - `pnpm --filter workflows check` fails. That touches the workflow definition, which is out of scope.
-- `pnpm install` changes anything in `pnpm-lock.yaml` beyond adding `typescript` to the `workflows` importer (e.g. it
-  resolves a new TypeScript version or touches other packages).
+- `pnpm-lock.yaml` changes at all (this plan adds no dependencies).
 
 ## Maintenance notes
 
 - Every later plan uses `pnpm verify` as its final gate; keep it fast (it currently takes well under a minute).
 - If a package is added to `pnpm-workspace.yaml`, give it `typecheck`/`lint` scripts so `pnpm -r --if-present` picks it up.
 - Deferred on purpose: CI. Worth adding after Oct 4.
+
+- Execution attempt 1 (2026-09-24) was BLOCKED after two revisions, on plan gaps, not executor errors: `workflows` lacks
+  `typescript`; adding it (`^5.8` → unmet peer for `@sanity/workflow-blueprint`; `6.0.3` → web lockfile churn) was
+  rejected; web's `tsc --noEmit` needs `next typegen` first. This version folds both lessons in.
+- `workflows`' typecheck depends on web's TypeScript. If web's TypeScript is ever removed or moved, give `workflows`
+  its own compiler after Oct 4 and accept the lockfile update.
