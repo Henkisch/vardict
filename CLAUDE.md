@@ -360,6 +360,20 @@ Henrik to do in dashboards (can't be done from code):
 - Optional: a Vercel Firewall rate-limit rule on `/api/start` and `/api/vote`.
 - Sanity sends usage emails at 80% and 100% to admins automatically.
 
+## Investigate next (parked by Henrik, session 3: "loads of weird stuff going on")
+
+Collect Henrik's list first. Known so far:
+- **Screens miss new rounds.** Measured: Live Content API events *do* match our sync tags, but arrive 5–20 s late
+  (the CDN lags too). The stream-based "skip polling" logic from the cost review therefore left `/live` blind. New
+  strategy (uncommitted when parked, in `web/src/lib/live.ts`): uncached reads, poll 3 s during a vote, 8 s idle,
+  visible tabs only, and a 30 s fast boost after pressing Send to the people. **Not verified yet**: in the last test the
+  phone view still showed an older "last verdict" (Maupay) while two newer Gordon rounds existed. Could be stale dev
+  HMR or a query problem.
+- **A start through a redirected page** (`/vote` → `/live` mid-request) left a fresh instance parked in `varRoom`
+  without `recommend`, and the next press recommended it. Check whether an aborted client request can cut a route short.
+- Gordon has now been overturned twice (loop 3 is next). A third overturn abandons it: expected, but check the
+  abandoned copy on screen.
+
 ## Judge testing (decided session 3)
 
 Judges test on their own time and can't log in to the Dashboard, so the VAR Room can't be the only way to start a

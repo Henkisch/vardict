@@ -3,21 +3,20 @@
 import {createClient} from '@sanity/client'
 import {useEffect, useState} from 'react'
 
-// Public, token-free client: the production dataset is public, so browsers read it directly. The API CDN has
-// a 4x bigger Free quota than the live API, and Live Content API events refetch past it when content changes.
-export const client = createClient({
+// Public, token-free clients: the production dataset is public, so browsers read it directly.
+const config = {
   projectId: process.env.NEXT_PUBLIC_SANITY_PROJECT_ID!,
   dataset: process.env.NEXT_PUBLIC_SANITY_DATASET!,
   apiVersion: '2026-03-01',
-  useCdn: true,
-})
+}
+// Reads skip the API CDN: the CDN and the Live Content API both lag by 5–20 s (measured session 3), most of a 30 s
+// window. Cost per visible tab: ~1,200 requests/h during a vote, ~450/h idle (Free: 250k/month). Hidden tabs: none.
+export const client = createClient({...config, useCdn: false})
 
-// Polling is the safety net, not the transport. Every request counts against the Free plan's monthly quota, so
-// it runs only while the tab is visible and the event stream has been quiet, fast only while something is live.
 const FAST_POLL_MS = 3_000
-const SLOW_POLL_MS = 20_000
-const STREAM_HEALTHY_MS = 10_000
+const IDLE_POLL_MS = 8_000
 
+// Every request counts against the Free plan's monthly quota, so hidden tabs don't poll at all.
 export function useLiveQuery<T>(query: string, params: Record<string, unknown> = {}, {fast = false} = {}) {
   const [data, setData] = useState<T | undefined>()
   const key = JSON.stringify(params)
@@ -25,10 +24,7 @@ export function useLiveQuery<T>(query: string, params: Record<string, unknown> =
   useEffect(() => {
     let tags: string[] = []
     let cancelled = false
-    let lastEventAt = 0
-    let lastLoadAt = 0
     const load = async (lastLiveEventId?: string) => {
-      lastLoadAt = Date.now()
       const response = await client
         .fetch<T>(query, JSON.parse(key), {filterResponse: false, lastLiveEventId})
         .catch(() => undefined)
@@ -37,19 +33,17 @@ export function useLiveQuery<T>(query: string, params: Record<string, unknown> =
       setData(response.result)
     }
     void load()
-    const poll = setInterval(() => {
-      if (document.visibilityState !== 'visible') return
-      const now = Date.now()
-      if (now - lastEventAt < STREAM_HEALTHY_MS) return
-      if (now - lastLoadAt >= (fast ? FAST_POLL_MS : SLOW_POLL_MS)) void load()
-    }, 1_000)
+    const poll = setInterval(
+      () => document.visibilityState === 'visible' && void load(),
+      fast ? FAST_POLL_MS : IDLE_POLL_MS,
+    )
     const onVisible = () => document.visibilityState === 'visible' && void load()
     document.addEventListener('visibilitychange', onVisible)
+    // A bonus, not the transport: events arrive, just late.
     const subscription = client.live.events().subscribe({
       next: (event) => {
-        lastEventAt = Date.now()
         if (event.type === 'message' && event.tags.some((tag) => tags.includes(tag))) void load(event.id)
-        if (event.type === 'welcome' || event.type === 'restart' || event.type === 'reconnect') void load()
+        if (event.type === 'restart' || event.type === 'reconnect') void load()
       },
       error: () => {},
     })
@@ -92,8 +86,15 @@ export function useCloseWhenCounting(counting: boolean) {
 // The big screen's and phone's shared state. Polls fast only while a referendum has no result yet.
 export function useLiveState<T extends {referendum: {result?: string} | null}>(query: string) {
   const [fast, setFast] = useState(false)
+  // A screen that just pressed Send to the people polls fast for 30 s, until its round shows up.
+  const [boosted, setBoosted] = useState(false)
   const state = useLiveQuery<T>(query, {}, {fast})
   const live = Boolean(state?.referendum && !state.referendum.result)
-  if (live !== fast) setFast(live)
-  return state
+  if ((live || boosted) !== fast) setFast(live || boosted)
+  useEffect(() => {
+    if (!boosted) return
+    const id = setTimeout(() => setBoosted(false), 30_000)
+    return () => clearTimeout(id)
+  }, [boosted])
+  return {state, boost: () => setBoosted(true)}
 }

@@ -18,7 +18,7 @@ const RESULT_COPY = {
 } as const
 
 export default function LivePage() {
-  const state = useLiveState<LiveState>(LIVE_QUERY)
+  const {state, boost} = useLiveState<LiveState>(LIVE_QUERY)
   const now = useNow()
   const ref = state?.referendum
   const closesAt = ref ? Date.parse(ref.closesAt) : 0
@@ -33,6 +33,7 @@ export default function LivePage() {
   async function sendToThePeople() {
     setStarting(true)
     setStartMessage(undefined)
+    boost()
     const response = await fetch('/api/start', {method: 'POST'})
     const body = await response.json().catch(() => ({}))
     setStarting(false)
@@ -139,7 +140,7 @@ export default function LivePage() {
             {voting ? (
               <>
                 <div className="flex flex-col gap-2">
-                  <p className="text-sm text-muted">Vote here, or on your phone. Your vote counts ×{HUMAN_VOTE_WEIGHT}.</p>
+                  <p className="text-sm text-muted">Your vote counts ×{HUMAN_VOTE_WEIGHT} against the simulated crowd.</p>
                   <VoteButtons key={ref._id} referendumId={ref._id} size="panel" />
                 </div>
                 <QrCode />

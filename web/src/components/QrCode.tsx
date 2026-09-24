@@ -3,8 +3,8 @@
 import QRCode from 'qrcode'
 import {useEffect, useState} from 'react'
 
-// A QR code pointing at /vote on whatever host serves this page.
-export function QrCode({path = '/vote'}: {path?: string}) {
+// A QR code pointing at /live (where you vote) on whatever host serves this page.
+export function QrCode({path = '/live'}: {path?: string}) {
   const [src, setSrc] = useState<string>()
   const [url, setUrl] = useState<string>()
   useEffect(() => {
@@ -15,7 +15,7 @@ export function QrCode({path = '/vote'}: {path?: string}) {
     })
   }, [path])
   return (
-    <figure className="flex flex-col items-center gap-2">
+    <figure className="hidden flex-col items-center gap-2 lg:flex">
       {src ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={src} alt={`QR code for ${url}`} className="h-40 w-40 rounded-md" />
@@ -23,7 +23,7 @@ export function QrCode({path = '/vote'}: {path?: string}) {
         <div className="h-40 w-40 rounded-md bg-pitch" />
       )}
       <figcaption className="text-center text-sm text-muted">
-        Scan to vote
+        Scan to vote on your phone
         <br />
         <span className="text-chalk">{url?.replace(/^https?:\/\//, '')}</span>
       </figcaption>
