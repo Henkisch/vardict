@@ -6,6 +6,10 @@
     "dev:studio": "pnpm --filter studio dev",
     "dev:web": "pnpm --filter web dev",
     "dev:var-room": "pnpm --filter var-room dev",
-    "build": "pnpm -r build"
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "lint": "pnpm -r --if-present lint",
+    "test": "pnpm --filter workflows test",
+    "verify": "pnpm typecheck && pnpm lint && pnpm test && pnpm --filter workflows check"
   }
 }
