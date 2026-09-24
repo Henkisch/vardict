@@ -5,6 +5,7 @@ import {useEffect, useState} from 'react'
 
 import {Bars} from '@/components/Bars'
 import {Clip} from '@/components/Clip'
+import {FitBox} from '@/components/FitBox'
 import {KickOff} from '@/components/KickOff'
 import {QrCode} from '@/components/QrCode'
 import {VarRoomScene} from '@/components/VarRoomScene'
@@ -96,10 +97,10 @@ export default function LivePage() {
   const lost = ref?.shootout.filter((r) => r === 'overturned').length ?? 0
 
   return (
-    <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 px-4 py-6 sm:px-8">
-      <header className="flex flex-wrap items-end justify-between gap-4 border-b border-line pb-4">
+    <main className="mx-auto flex w-full max-w-[1920px] flex-1 flex-col gap-3 px-4 py-3 sm:px-6 lg:h-dvh lg:overflow-hidden">
+      <header className="flex shrink-0 flex-wrap items-center justify-between gap-4 border-b border-line pb-2">
         <div>
-          <h1 className="font-display text-5xl font-extrabold uppercase tracking-wide">
+          <h1 className="font-display text-3xl font-extrabold uppercase tracking-wide">
             VAR<span className="text-var">dict</span>
           </h1>
           <p className="text-muted">The VAR room decides. The people confirm. It takes longer.</p>
@@ -134,8 +135,8 @@ export default function LivePage() {
           <p className="py-16 text-center text-muted">Connecting to the VAR room…</p>
         )
       ) : incident && ref ? (
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
-          <section className="flex min-w-0 flex-col gap-4">
+        <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[minmax(0,1fr)_22rem]">
+          <section className="flex min-h-0 min-w-0 flex-col gap-3">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
               <p className="font-display text-2xl font-bold uppercase tracking-wide">
                 <span style={{color: home?.primaryColor}}>■</span> {home?.shortName} v {away?.shortName}{' '}
@@ -144,11 +145,13 @@ export default function LivePage() {
               </p>
               <p className="text-sm text-muted">{incident.match.competition}</p>
             </div>
-            <Clip clip={incident.clip} fallbackText={incident.fallbackText} />
+            <FitBox ratio={16 / 9} className="w-full lg:flex-1">
+              <Clip clip={incident.clip} fallbackText={incident.fallbackText} />
+            </FitBox>
             {incident.situation && <p className="text-xl leading-snug">{incident.situation}</p>}
           </section>
 
-          <aside className="flex flex-col gap-5 rounded-lg border border-line bg-pitch p-5">
+          <aside className="flex min-h-0 flex-col gap-4 overflow-y-auto rounded-lg border border-line bg-pitch p-5">
             <div>
               <p className="text-xs uppercase tracking-[0.2em] text-muted">The VAR room recommends</p>
               <p className="font-display text-5xl font-extrabold uppercase text-var">

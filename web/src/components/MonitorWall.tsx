@@ -16,6 +16,8 @@ const CHECK: Record<string, string> = {
 
 // The VAR room's wall of screens: the clip at normal speed on the main monitor, and three operator views of the
 // same official clip: slow motion, the key moment on a rewind loop, and a zoomed crop. Phones get the main monitor.
+export const WALL_RATIO = 64 / 27
+
 export function MonitorWall({incident}: {incident: IncidentCard}) {
   const clip = incident.clip
   if (!clip?.youtubeId || !clip.embedAllowed) return <Clip clip={clip} fallbackText={incident.fallbackText} />
@@ -26,17 +28,23 @@ export function MonitorWall({incident}: {incident: IncidentCard}) {
   const loopFrom = Math.max(start, key - 2)
   const loopTo = Math.min(end, key + 2)
 
+  // Every screen is 16:9. Main is 3/4 of the wall's width and the three side screens stack beside it, which
+  // makes the whole wall 64:27 (WALL_RATIO). The parent fits it to the screen with a FitBox.
   return (
-    <div className="grid gap-2 sm:grid-cols-[minmax(0,3fr)_minmax(0,1fr)]">
-      <div className="relative">
+    <div className="grid w-full gap-2 sm:grid-cols-[minmax(0,3fr)_minmax(0,1fr)]">
+      <div className="relative aspect-video sm:row-span-3 sm:aspect-auto">
         <Monitor youtubeId={youtubeId} from={start} to={end} label="Cam 1 · Live" />
         <p className="pointer-events-none absolute inset-x-0 top-10 mx-auto w-fit bg-var px-4 py-1.5 font-display text-lg font-extrabold uppercase tracking-[0.12em] text-ink motion-safe:animate-pulse sm:text-2xl">
           VAR check · {CHECK[incident.incidentType ?? ''] ?? 'Reviewing the decision'}
         </p>
       </div>
-      <div className="hidden flex-col gap-2 sm:flex">
+      <div className="hidden aspect-video sm:block">
         <Monitor youtubeId={youtubeId} from={start} to={end} rate={0.25} label="Slow-mo · 0.25×" />
+      </div>
+      <div className="hidden aspect-video sm:block">
         <Monitor youtubeId={youtubeId} from={loopFrom} to={loopTo} rate={0.5} rewind label="Replay · key moment" />
+      </div>
+      <div className="hidden aspect-video sm:block">
         <Monitor youtubeId={youtubeId} from={loopFrom} to={loopTo} zoom={1.5} label="Zoom · ×1.5" />
       </div>
     </div>

@@ -38,8 +38,8 @@ export function Verdict({round: ref, phase, action}: {round: LiveReferendum; pha
   const copy = copyFor(ref, phase)
   const shootout = ref.round.startsWith('shootout')
   return (
-    <section className="flex flex-col gap-6">
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_24rem]">
+    <section className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_24rem]">
         <div className="flex flex-col justify-center gap-4 rounded-xl border border-line bg-pitch p-6">
           <p className="text-xs uppercase tracking-[0.2em] text-muted">
             {ref.incident.title} · {shootout ? `Penalty ${ref.round.replace('shootout', '')}` : ref.round === 'extraTime' ? 'Extra time' : 'Regular time'}

@@ -22,5 +22,9 @@ export function Clip({clip, fallbackText}: Props) {
       </div>
     )
   }
-  return <Monitor youtubeId={clip.youtubeId} from={clip.startSeconds} to={clip.endSeconds} label="Live" />
+  return (
+    <div className="aspect-video w-full">
+      <Monitor youtubeId={clip.youtubeId} from={clip.startSeconds} to={clip.endSeconds} label="Live" />
+    </div>
+  )
 }

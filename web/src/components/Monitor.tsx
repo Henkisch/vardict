@@ -78,8 +78,8 @@ export function Monitor({youtubeId, from, to, rate = 1, zoom = 1, label, rewind 
   }, [src, from, to, rate, rewind])
 
   return (
-    <div className={`relative overflow-hidden rounded-md border border-line bg-black ${className}`}>
-      <div className="aspect-video w-full" style={zoom !== 1 ? {transform: `scale(${zoom})`} : undefined}>
+    <div className={`relative h-full w-full overflow-hidden rounded-md border border-line bg-black ${className}`}>
+      <div className="h-full w-full" style={zoom !== 1 ? {transform: `scale(${zoom})`} : undefined}>
         {src && (
           <iframe
             ref={frame}
