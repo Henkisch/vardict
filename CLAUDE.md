@@ -322,6 +322,13 @@ Never cut the workflow, /vote or /live.
 | Clips unavailable | Open | fallbackText plus a link out |
 | Vote spam | Open | One vote per round per sessionId; rate-limited /api/vote |
 
+## UI backlog (Henrik, session 3)
+
+- Layout and look pass on /live and /vote later.
+- **VAR Room scene on /live while waiting:** instead of an empty page, show the next incident "on the monitor"
+  (clip, situation line, on-field call, "The VAR room is reviewing…") with the Send to the people button, and the
+  same scene after an overturn ("Back in the VAR room, loop 2 of 3").
+
 ## Judge testing (decided session 3)
 
 Judges test on their own time and can't log in to the Dashboard, so the VAR Room can't be the only way to start a
