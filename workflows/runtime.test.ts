@@ -7,6 +7,7 @@ import {peoplesVar, RULES} from './definitions/peoplesVar'
 import {
   closeWindow,
   createRuntime,
+  DEFINITION,
   runCrowd,
   START_COOLDOWN_SECONDS,
   startNext,
@@ -80,7 +81,10 @@ async function setBotVotes(runtime: Runtime, referendumId: string, uphold: numbe
 }
 
 let voteCounter = 0
-async function castHumanVote(runtime: Runtime, referendumId: string, choice: 'uphold' | 'overturn') {
+// castAt defaults to "now" on the bench's clock, which in every existing test is still well before the
+// referendum's closesAt (the bench clock only moves when a test calls bench.advance()). Step 4's own test
+// passes an explicit castAt after closesAt to exercise the late-vote filter.
+async function castHumanVote(runtime: Runtime, referendumId: string, choice: 'uphold' | 'overturn', castAt?: string) {
   voteCounter += 1
   await runtime.content.create({
     _id: `vote-${voteCounter}`,
@@ -89,6 +93,37 @@ async function castHumanVote(runtime: Runtime, referendumId: string, choice: 'up
     choice,
     sessionId: `human-${voteCounter}`,
     simulated: false,
+    castAt: castAt ?? new Date(runtime.now()).toISOString(),
+  })
+}
+
+// Wraps the content client so the NEXT `.commit()` on a patch of `documentId` rejects once, as if it lost an
+// `ifRevisionId` race (e.g. to the bot crowd incrementing botVotes on the same document) - then behaves
+// normally again. Returns the spy so a test can restore it.
+function makeNextPatchCommitFailOnce(client: SanityClient, documentId: string) {
+  const originalPatch = client.patch.bind(client)
+  let armed = true
+  return vi.spyOn(client, 'patch').mockImplementation((selector: unknown, ...rest: unknown[]) => {
+    const builder = (originalPatch as (...args: unknown[]) => any)(selector, ...rest)
+    if (armed && selector === documentId) {
+      armed = false
+      // The fake client's chain methods (set/ifRevisionId/...) return the same closed-over builder object,
+      // not `this` - so wrapping only has any effect if every chain call keeps returning the proxy too,
+      // otherwise the chain escapes the wrapper after the first `.set()`/`.ifRevisionId()` call.
+      const wrapped: any = new Proxy(builder, {
+        get(target, prop, receiver) {
+          if (prop === 'commit') return () => Promise.reject(new Error('simulated ifRevisionId conflict'))
+          const value = Reflect.get(target, prop, receiver)
+          if (typeof value !== 'function') return value
+          return (...args: unknown[]) => {
+            const result = value.apply(target, args)
+            return result === target ? receiver : result
+          }
+        },
+      })
+      return wrapped
+    }
+    return builder
   })
 }
 
@@ -187,6 +222,9 @@ describe('runtime', () => {
     const second = await closeWindow(runtime, instanceId, Date.parse(ref.closesAt) + 5_000)
     // The stage has already moved on to 'upheld' (terminal), so the second call sees a non-voting stage.
     expect(['alreadyClosed', 'notVoting']).toContain(second.status)
+    // changed by plan 003: result is written from the engine's own record after the action, not before, but
+    // a second call still finds it there (either healed by syncResults or simply already correct).
+    expect((await referendum()).result).toBe('upheld')
   })
 
   test('shootout: rounds accumulate a score, 3 wins upholds', async () => {
@@ -279,5 +317,141 @@ describe('runtime', () => {
     )
     expect(after.botVotes.uphold + after.botVotes.overturn).toBe(60)
     expect(after.botVotes.waves).toBe(plan.length)
+  })
+
+  test('a stage whose open effect never ran gets its ballot on the next closeWindow', async () => {
+    const {runtime} = await setup()
+    const {instance} = await runtime.engine.startInstance({
+      definition: DEFINITION,
+      initialFields: [
+        {type: 'subject', name: 'subject', value: {id: `dataset:${PROJECT}:production:incident-1`, type: 'incident'}},
+      ],
+    })
+    // Fires the human `recommend` transition but never drains effects, leaving the referendum stage's
+    // open-referendum effect queued and unrun - the crash this plan's drain-first step is meant to recover from.
+    await runtime.engine.fireAction({instanceId: instance._id, activity: 'review', action: 'recommend'})
+    const referendumCountBefore = await runtime.content.fetch<number>('count(*[_type == "referendum"])')
+    expect(referendumCountBefore).toBe(0)
+
+    const result = await closeWindow(runtime, instance._id, Date.parse(T0))
+    expect(result.status).toBe('stillOpen')
+    const ref = await latestReferendum(runtime, instance._id)
+    expect(ref).toBeTruthy()
+  })
+
+  test('closing writes the result after the workflow records it', async () => {
+    const {runtime, instanceId, referendum, stage} = await start()
+    const ref = await referendum()
+    await setBotVotes(runtime, ref._id, 34, 26) // 34/60 = 56.7%
+    const fireSpy = vi.spyOn(runtime.engine, 'fireAction')
+    const patchSpy = vi.spyOn(runtime.content, 'patch')
+
+    await closeWindow(runtime, instanceId, Date.parse(ref.closesAt))
+
+    // The close action fired before the referendum's own `result` field was patched.
+    const closeCallOrder = fireSpy.mock.invocationCallOrder[0]
+    const resultPatchIndex = patchSpy.mock.calls.findIndex((call) => (call[0] as unknown) === ref._id)
+    expect(resultPatchIndex).toBeGreaterThanOrEqual(0)
+    expect(patchSpy.mock.invocationCallOrder[resultPatchIndex]).toBeGreaterThan(closeCallOrder)
+
+    expect((await referendum()).result).toBe('upheld')
+    expect(await stage()).toBe('upheld')
+  })
+
+  test('a referendum left without result is healed', async () => {
+    const {runtime, instanceId, referendum} = await start()
+    const ref = await referendum()
+    await setBotVotes(runtime, ref._id, 34, 26)
+    await closeWindow(runtime, instanceId, Date.parse(ref.closesAt))
+    expect((await referendum()).result).toBe('upheld')
+
+    await runtime.content.patch(ref._id).unset(['result']).commit()
+    // GROQ projects a missing field as null, not undefined.
+    expect((await referendum()).result ?? null).toBeNull()
+
+    // The stage is now terminal ('upheld'), so this hits the notVoting branch, which heals every past visit.
+    const healed = await closeWindow(runtime, instanceId, Date.parse(ref.closesAt) + 5_000)
+    expect(healed.status).toBe('notVoting')
+    expect((await referendum()).result).toBe('upheld')
+  })
+
+  test('closing a window whose result is already synced writes nothing (Free-plan request budget)', async () => {
+    // /api/tick is polled every few seconds by every open screen while a round is live, and the Sanity
+    // project has a hard Free-plan request quota, so a closeWindow call that finds nothing to heal must not
+    // spend a write - not even a no-op patch - re-confirming a result that's already there.
+    const {runtime, instanceId, referendum} = await start()
+    const ref = await referendum()
+    await setBotVotes(runtime, ref._id, 34, 26)
+    await closeWindow(runtime, instanceId, Date.parse(ref.closesAt))
+    expect((await referendum()).result).toBe('upheld')
+
+    const patchSpy = vi.spyOn(runtime.content, 'patch')
+    const transactionSpy = vi.spyOn(runtime.content, 'transaction')
+    const second = await closeWindow(runtime, instanceId, Date.parse(ref.closesAt) + 5_000)
+    expect(['alreadyClosed', 'notVoting']).toContain(second.status)
+    expect(patchSpy).not.toHaveBeenCalled()
+    expect(transactionSpy).not.toHaveBeenCalled()
+  })
+
+  test('two concurrent closes: neither rejects, the instance advances once, one referendum result', async () => {
+    const {runtime, instanceId, referendum, stage} = await start()
+    const ref = await referendum()
+    await setBotVotes(runtime, ref._id, 34, 26)
+
+    const results = await Promise.all([
+      closeWindow(runtime, instanceId, Date.parse(ref.closesAt)),
+      closeWindow(runtime, instanceId, Date.parse(ref.closesAt)),
+    ])
+    for (const result of results) expect(['closed', 'alreadyClosed']).toContain(result.status)
+
+    expect(await stage()).toBe('upheld')
+    const referendumCount = await runtime.content.fetch<number>('count(*[_type == "referendum"])')
+    expect(referendumCount).toBe(1)
+    expect((await referendum()).result).toBe('upheld')
+  })
+
+  test('a redelivered extend does not extend the window twice', async () => {
+    const {runtime, instanceId, referendum} = await start()
+    const ref = await referendum()
+    await setBotVotes(runtime, ref._id, 6, 4) // 10 heads, under RULES.quorum (20)
+
+    const results = await Promise.all([
+      closeWindow(runtime, instanceId, Date.parse(ref.closesAt)),
+      closeWindow(runtime, instanceId, Date.parse(ref.closesAt)),
+    ])
+    for (const result of results) expect(result.status).toBe('extended')
+
+    const after = await referendum()
+    expect(Date.parse(after.closesAt)).toBe(Date.parse(ref.closesAt) + RULES.quorumExtensionSeconds * 1000)
+  })
+
+  test('extend retries once after losing a revision race (e.g. to the bot crowd) and still moves closesAt by exactly 15s', async () => {
+    const {runtime, instanceId, referendum} = await start()
+    const ref = await referendum()
+    await setBotVotes(runtime, ref._id, 6, 4) // under RULES.quorum (20)
+
+    const patchSpy = makeNextPatchCommitFailOnce(runtime.content, ref._id)
+    const result = await closeWindow(runtime, instanceId, Date.parse(ref.closesAt))
+    expect(result.status).toBe('extended')
+    expect(patchSpy).toHaveBeenCalledTimes(2) // the failed attempt, then the retry
+
+    const after = await referendum()
+    expect(Date.parse(after.closesAt)).toBe(Date.parse(ref.closesAt) + RULES.quorumExtensionSeconds * 1000)
+    patchSpy.mockRestore()
+  })
+
+  test('a human vote written after closesAt is not counted', async () => {
+    const {runtime, instanceId, referendum} = await start()
+    const ref = await referendum()
+    await setBotVotes(runtime, ref._id, 30, 30) // 50/50 on its own
+    // Cast after the window's closesAt - /api/vote's own open-check should have refused this, but a request
+    // that slipped in right at the deadline must not be allowed to swing the result after the fact.
+    await castHumanVote(runtime, ref._id, 'uphold', new Date(Date.parse(ref.closesAt) + 5_000).toISOString())
+
+    const result = await closeWindow(runtime, instanceId, Date.parse(ref.closesAt))
+    expect(result).toMatchObject({status: 'closed', upholdPct: 50, votes: 60})
+    // Not `referendum()`: a tooClose result opens extra time's own referendum, which is now the latest one.
+    const closed = await runtime.content.fetch<{result?: string}>('*[_id == $id][0]{result}', {id: ref._id})
+    expect(closed.result).toBe('tooClose')
   })
 })

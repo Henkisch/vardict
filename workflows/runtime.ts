@@ -68,12 +68,28 @@ function handlers(content: SanityClient, now: () => number, onOpened: (referendu
     return {ops: [stageField('referendumId', doc._id), stageField('closesAt', doc.closesAt)]}
   }
 
+  // At-least-once delivery can call this twice for the same window; `extended` makes the second call a no-op
+  // instead of pushing closesAt out again.
   const extend: EffectHandler = async (params) => {
     const id = String(params.referendumId)
-    const {closesAt} = await content.fetch<{closesAt: string}>('*[_id == $id][0]{closesAt}', {id})
-    const next = new Date(Date.parse(closesAt) + Number(params.seconds) * 1000).toISOString()
-    await content.patch(id).set({closesAt: next}).commit()
-    return {ops: [stageField('closesAt', next)]}
+    const seconds = Number(params.seconds)
+    // One retry: the bot crowd patches this same document's botVotes counters throughout the window, so our
+    // ifRevisionId commit can lose a race to a wave landing at the same moment. Re-reading and retrying once
+    // beats leaving the stage marked `extended` with a closesAt that never actually moved.
+    for (let attempt = 0; ; attempt++) {
+      const {_rev, closesAt, extended} = await content.fetch<{_rev: string; closesAt: string; extended?: boolean}>(
+        '*[_id == $id][0]{_rev, closesAt, extended}',
+        {id},
+      )
+      if (extended === true) return {ops: [stageField('closesAt', closesAt)]}
+      const next = new Date(Date.parse(closesAt) + seconds * 1000).toISOString()
+      try {
+        await content.patch(id).set({closesAt: next, extended: true}).ifRevisionId(_rev).commit()
+        return {ops: [stageField('closesAt', next)]}
+      } catch (error) {
+        if (attempt >= 1) throw error
+      }
+    }
   }
 
   // The people upheld the VAR's recommendation, so it becomes the final call.
@@ -153,46 +169,118 @@ export type CloseResult =
   | {status: 'notVoting' | 'stillOpen' | 'alreadyClosed'; stage: string}
   | {status: 'extended' | 'closed'; stage: string; upholdPct: number; votes: number}
 
+// The same thresholds closeActions() in the definition routes on, mirrored here so we can label a referendum
+// with the outcome the engine itself will record for that stage visit.
+function resultFor(stageName: string, upholdPct: number): 'upheld' | 'overturned' | 'tooClose' {
+  if (stageName === 'shootout') return upholdPct > 50 ? 'upheld' : 'overturned'
+  return upholdPct > RULES.upheldAbove ? 'upheld' : upholdPct < RULES.overturnedBelow ? 'overturned' : 'tooClose'
+}
+
+// `result` on a referendum is a projection of the engine's own record, never written independently of it.
+// Walks every stage visit the instance has ever had (not just the current one) and, for any visit whose fields
+// carry both a referendumId and a decided upholdPct, makes sure that referendum's `result` matches — filling
+// in only what's missing. This runs on every closeWindow call (including the "nothing to do" branches), and
+// closeWindow itself is polled every few seconds by every open screen on a Free-plan request quota, so it must
+// cost zero writes once a run's referendums already have their results. One fetch finds which of this
+// instance's decided referendums are actually still missing a result, and (only when that set is non-empty)
+// one transaction patches exactly those.
+async function syncResults(content: SanityClient, instance: Awaited<ReturnType<Engine['getInstance']>>) {
+  const decided = new Map<string, 'upheld' | 'overturned' | 'tooClose'>()
+  for (const visit of instance.stages as unknown as {name: string; fields?: {name: string; value?: unknown}[]}[]) {
+    const fields = Object.fromEntries((visit.fields ?? []).map((f) => [f.name, f.value]))
+    if (fields.referendumId == null || fields.upholdPct == null) continue
+    decided.set(String(fields.referendumId), resultFor(visit.name, Number(fields.upholdPct)))
+  }
+  if (decided.size === 0) return
+
+  const missing = await content.fetch<string[]>(
+    '*[_id in $ids && !defined(result)]._id',
+    {ids: [...decided.keys()]},
+  )
+  if (missing.length === 0) return
+
+  const tx = content.transaction()
+  for (const id of missing) tx.patch(content.patch(id).setIfMissing({result: decided.get(id)!}))
+  await tx.commit()
+}
+
 // Called by /api/tick when a countdown hits zero. Safe to call twice or too early.
 export async function closeWindow(
   {engine, content, now: runtimeNow}: Runtime,
   instanceId: string,
   now = runtimeNow(),
 ): Promise<CloseResult> {
+  // Retries a stuck open-* effect (e.g. a caller fired `recommend` but crashed before draining), so a stage
+  // that never got its ballot recovers here instead of hanging forever.
+  await engine.drainEffects({instanceId}).catch((error) => console.warn('drain before close failed', instanceId, error))
+
   const instance = await engine.getInstance({instanceId})
   const stage = instance.currentStage
-  if (!['referendum', 'extraTime', 'shootout'].includes(stage)) return {status: 'notVoting', stage}
+  if (!['referendum', 'extraTime', 'shootout'].includes(stage)) {
+    await syncResults(content, instance) // heals any earlier visit left without a result by a crash
+    return {status: 'notVoting', stage}
+  }
 
   const fields = currentStageFields(instance)
-  if (fields.upholdPct != null) return {status: 'alreadyClosed', stage}
-  if (!fields.referendumId || !fields.closesAt) return {status: 'stillOpen', stage} // ballot not open yet
-  if (now < Date.parse(String(fields.closesAt))) return {status: 'stillOpen', stage}
-
+  if (fields.upholdPct != null) {
+    await syncResults(content, instance)
+    return {status: 'alreadyClosed', stage}
+  }
+  if (!fields.referendumId) return {status: 'stillOpen', stage} // ballot not open yet
   const referendumId = String(fields.referendumId)
-  const tally = await countVotes(content, referendumId)
+
+  // The stage field's closesAt lags until the extend effect completes; the referendum document is patched
+  // immediately, so use whichever is later to decide whether the window has actually closed.
+  const refDoc = await content.fetch<{closesAt?: string}>('*[_id == $id][0]{closesAt}', {id: referendumId})
+  const stageClosesAt = fields.closesAt ? Date.parse(String(fields.closesAt)) : undefined
+  const docClosesAt = refDoc?.closesAt ? Date.parse(refDoc.closesAt) : undefined
+  const known = [stageClosesAt, docClosesAt].filter((v): v is number => v != null)
+  if (known.length === 0) return {status: 'stillOpen', stage} // ballot not open yet
+  const closesAtMs = Math.max(...known)
+  if (now < closesAtMs) return {status: 'stillOpen', stage}
+  const closesAtIso = new Date(closesAtMs).toISOString()
+
+  const tally = await countVotes(content, referendumId, closesAtIso)
   // Quorum counts heads; the split counts humans at their weight.
   const upholdPct = tally.weightedTotal ? Math.round((tally.uphold / tally.weightedTotal) * 1000) / 10 : 50
 
   if (tally.bots + tally.humans < RULES.quorum && !fields.extended) {
-    await engine.fireAction({instanceId, activity: 'count', action: 'extend'})
+    await engine.fireAction({
+      instanceId,
+      activity: 'count',
+      action: 'extend',
+      // Two callers can race to extend the same window; the engine replays instead of extending twice.
+      idempotencyKey: `extend-${referendumId}`,
+    })
     await engine.drainEffects({instanceId})
     return {status: 'extended', stage, upholdPct, votes: tally.bots + tally.humans}
   }
 
   const action = stage === 'shootout' ? (upholdPct > 50 ? 'roundWon' : 'roundLost') : 'closeVote'
-  const result =
-    stage === 'shootout'
-      ? upholdPct > 50 ? 'upheld' : 'overturned'
-      : upholdPct > RULES.upheldAbove ? 'upheld' : upholdPct < RULES.overturnedBelow ? 'overturned' : 'tooClose'
-  await content.patch(referendumId).set({result}).commit()
-  await engine.fireAction({
-    instanceId,
-    activity: 'count',
-    action,
-    params: {upholdPct, votes: tally.bots + tally.humans},
-    // Two callers can close the same window; the engine replays instead of double-counting.
-    idempotencyKey: `close-${referendumId}`,
-  })
+  try {
+    await engine.fireAction({
+      instanceId,
+      activity: 'count',
+      action,
+      params: {upholdPct, votes: tally.bots + tally.humans},
+      // Two callers can close the same window; the engine replays instead of double-counting.
+      idempotencyKey: `close-${referendumId}`,
+    })
+  } catch (error) {
+    // Another caller may have closed this same window between our read and our write. Re-check before
+    // deciding this call genuinely failed.
+    const reread = await engine.getInstance({instanceId})
+    const reFields = currentStageFields(reread)
+    if (reFields.upholdPct != null || reread.currentStage !== stage) {
+      await syncResults(content, reread)
+      return {status: 'alreadyClosed', stage}
+    }
+    throw error
+  }
+  // The referendum's `result` is written from the engine's own record, after the action that decided it -
+  // never before, so a failed action never leaves a referendum that looks closed while the workflow hasn't moved.
+  const after = await engine.getInstance({instanceId})
+  await syncResults(content, after)
   // Opens the next round's referendum, or writes the final call.
   await engine.drainEffects({instanceId})
   return {status: 'closed', stage, upholdPct, votes: tally.bots + tally.humans}
@@ -218,16 +306,18 @@ export const emptyBotVotes = (): BotVotes & {_type: string} => ({
   byPersona: Object.fromEntries(PERSONAS.map((p) => [p, {uphold: 0, overturn: 0}])) as BotVotes['byPersona'],
 })
 
-// Weighted uphold/overturn (a human counts RULES.humanVoteWeight) and heads.
-async function countVotes(content: SanityClient, referendumId: string) {
+// Weighted uphold/overturn (a human counts RULES.humanVoteWeight) and heads. Only counts human votes cast at
+// or before `closesAt` - a request that slipped past /api/vote's open-check right at the deadline still
+// shouldn't move the result after the fact.
+async function countVotes(content: SanityClient, referendumId: string, closesAt: string) {
   const t = await content.fetch<{botsUp: number; botsDown: number; humansUp: number; humansDown: number}>(
     `*[_id == $id][0]{
       "botsUp": coalesce(botVotes.uphold, 0),
       "botsDown": coalesce(botVotes.overturn, 0),
-      "humansUp": count(*[_type == "vote" && referendum._ref == $id && choice == "uphold"]),
-      "humansDown": count(*[_type == "vote" && referendum._ref == $id && choice == "overturn"])
+      "humansUp": count(*[_type == "vote" && referendum._ref == $id && choice == "uphold" && dateTime(castAt) <= dateTime($closesAt)]),
+      "humansDown": count(*[_type == "vote" && referendum._ref == $id && choice == "overturn" && dateTime(castAt) <= dateTime($closesAt)])
     }`,
-    {id: referendumId},
+    {id: referendumId, closesAt},
   )
   const w = RULES.humanVoteWeight
   const uphold = t.botsUp + w * t.humansUp
