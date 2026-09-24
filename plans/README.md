@@ -13,7 +13,7 @@ real Sanity project and the public site — don't run them without the operator'
 | Plan | Title | Priority | Effort | Depends on | Status |
 |------|-------|----------|--------|------------|--------|
 | 001 | One command verifies every package | P1 | S | — | DONE (branch `advisor/001-verification-baseline-2` @ 68956d2, reviewed; not merged) |
-| 002 | Runtime testable in memory + characterization tests | P1 | M | 001 | TODO |
+| 002 | Runtime testable in memory + characterization tests | P1 | M | 001 | DONE (branch `advisor/002-runtime-test-seam` @ 0a4c7e8, on top of 001; reviewed, not merged) |
 | 003 | A vote window always closes exactly once; result matches the workflow | P1 | S | 002 | TODO |
 | 004 | Bot crowd never loses a wave, never runs twice, always closes | P1 | S | 002, 003 | TODO |
 | 005 | Starting a run is serialized, idempotent, operator-only picks | P1 | M | 002, 003 | TODO |
