@@ -1,6 +1,7 @@
 import {createClient} from '@sanity/client'
 
 import {INCIDENT_QUERY, LIVE_QUERY, type IncidentResult, type LiveState} from '@/lib/queries'
+import {runPhase} from '@/lib/run-status'
 
 // One token-free client per server instance, reused across requests (the dataset is public, so no write
 // token belongs here). useCdn: false because the CDN itself lags 5-20 s (measured session 3) - freshness
@@ -28,8 +29,12 @@ export async function GET(request: Request) {
       console.error('live fetch failed', error)
       return Response.json(null, {status: 502, headers: {'Cache-Control': 'no-store'}})
     }
-    const counting = result.referendum && !result.referendum.result
-    const cache = counting
+    // Between-rounds (tooClose, or a shootout round still running) must stay as fresh as a live round, not
+    // just an open one: shootout rounds are 10 s windows, so a 5 s edge cache plus the client's 3 s poll can
+    // otherwise show the next round most of a round late.
+    const phase = runPhase(result.referendum, Date.now())
+    const live = phase === 'voting' || phase === 'counting' || phase === 'between'
+    const cache = live
       ? 'public, s-maxage=1, stale-while-revalidate=1'
       : 'public, s-maxage=5, stale-while-revalidate=5'
     return Response.json(result, {headers: {'Cache-Control': cache}})
