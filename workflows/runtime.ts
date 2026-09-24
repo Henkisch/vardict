@@ -19,6 +19,10 @@ export type RuntimeConfig = {
   // How a newly opened referendum gets its crowd. Default: run it in the background here. The web app instead
   // starts each round's crowd in its own request, so one dying function can't take the rest of the run with it.
   startCrowd?: (referendumId: string) => void
+  // A base client to build content/workflows clients from. Tests pass a test bench's fake client.
+  client?: SanityClient
+  // Clock. Tests pass a bench's controllable clock so time-based behaviour is deterministic.
+  now?: () => number
 }
 
 export type Runtime = {
@@ -29,6 +33,7 @@ export type Runtime = {
   contentDataset: string
   tag: string
   background: (task: () => Promise<void>) => void
+  now: () => number
 }
 
 // Effect params carry documents as global references: dataset:<project>:<dataset>:<id>.
@@ -40,12 +45,12 @@ const stageField = (field: string, value: unknown) => ({
   value: {type: 'literal' as const, value},
 })
 
-function handlers(content: SanityClient, onOpened: (referendumId: string) => void) {
+function handlers(content: SanityClient, now: () => number, onOpened: (referendumId: string) => void) {
   // Creates the referendum document the phones vote on. Idempotent on the effect key (at-least-once delivery).
   const open: EffectHandler = async (params, ctx) => {
-    const now = Date.now()
+    const opensAt = now()
     const referendumId = `referendum-${ctx.effectKey.replace(/[^a-zA-Z0-9_-]/g, '-')}`
-    const closesAt = new Date(now + Number(params.windowSeconds) * 1000).toISOString()
+    const closesAt = new Date(opensAt + Number(params.windowSeconds) * 1000).toISOString()
     const doc = await content.createIfNotExists({
       _id: referendumId,
       _type: 'referendum',
@@ -55,7 +60,7 @@ function handlers(content: SanityClient, onOpened: (referendumId: string) => voi
       round: params.round,
       loop: Number(params.loop),
       threshold: RULES.upheldAbove / 100,
-      windowOpensAt: new Date(now).toISOString(),
+      windowOpensAt: new Date(opensAt).toISOString(),
       closesAt,
       botVotes: emptyBotVotes(),
     })
@@ -97,25 +102,31 @@ export function createRuntime({
   tag = 'dev',
   background = (task) => void task().catch((error) => console.error('background task failed', error)),
   startCrowd,
+  client,
+  now = Date.now,
 }: RuntimeConfig): Runtime {
-  const base = createClient({projectId, token, apiVersion: '2025-02-19', useCdn: false})
+  const base = client ?? createClient({projectId, token, apiVersion: '2025-02-19', useCdn: false})
   const content = base.withConfig({dataset: contentDataset})
   const workflows = base.withConfig({dataset: workflowsDataset})
   const engine = createEngine({
     client: workflows,
     tag,
+    // Same seam as `now`: omitted `now` defaults to Date.now, so this is real wall-clock time in production,
+    // same as never passing `clock`. Tests inject `now` from a bench's frozen/controllable clock, so the
+    // engine's own timestamps (startedAt, completedAt, $now) line up with the times our own handlers stamp.
+    clock: () => new Date(now()).toISOString(),
     workflowResource: {type: 'dataset', id: `${projectId}.${workflowsDataset}`},
     // The subject (incident) lives in the content dataset; the engine only accepts refs it can resolve.
     resourceClients: (gdr) =>
       gdr.scheme === 'dataset' && gdr.projectId === projectId && gdr.dataset === contentDataset ? content : undefined,
     // The crowd needs the finished runtime, which doesn't exist yet while the engine is being built.
     effects: {
-      handlers: handlers(content, (referendumId) =>
+      handlers: handlers(content, now, (referendumId) =>
         startCrowd ? startCrowd(referendumId) : background(() => runCrowd(runtime, referendumId)),
       ),
     },
   })
-  const runtime: Runtime = {engine, content, workflows, projectId, contentDataset, tag, background}
+  const runtime: Runtime = {engine, content, workflows, projectId, contentDataset, tag, background, now}
   return runtime
 }
 
@@ -143,7 +154,11 @@ export type CloseResult =
   | {status: 'extended' | 'closed'; stage: string; upholdPct: number; votes: number}
 
 // Called by /api/tick when a countdown hits zero. Safe to call twice or too early.
-export async function closeWindow({engine, content}: Runtime, instanceId: string, now = Date.now()): Promise<CloseResult> {
+export async function closeWindow(
+  {engine, content, now: runtimeNow}: Runtime,
+  instanceId: string,
+  now = runtimeNow(),
+): Promise<CloseResult> {
   const instance = await engine.getInstance({instanceId})
   const stage = instance.currentStage
   if (!['referendum', 'extraTime', 'shootout'].includes(stage)) return {status: 'notVoting', stage}
@@ -259,7 +274,7 @@ export async function startNext(runtime: Runtime, pick?: string): Promise<StartR
     `*[_type == "sanity.workflow.instance" && tag == $wfTag && defined(completedAt)] | order(completedAt desc)[0]{completedAt}`,
     {wfTag: tag},
   )
-  const since = last ? (Date.now() - Date.parse(last.completedAt)) / 1000 : Infinity
+  const since = last ? (runtime.now() - Date.parse(last.completedAt)) / 1000 : Infinity
   if (!replacing && since < START_COOLDOWN_SECONDS) return {status: 'coolingDown', retryInSeconds: Math.ceil(START_COOLDOWN_SECONDS - since)}
 
   // Counted from stored runs, so it holds across serverless instances (an in-memory limiter wouldn't).
