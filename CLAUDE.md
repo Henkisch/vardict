@@ -30,6 +30,9 @@ Pitch: "Football fixed VAR. We fixed it with democracy. Now it's slower and less
   honest, including failures.
 - **Verify, don't assume.** When an assumption below turns out wrong, stop, tell Henrik, update this file, and
   log it.
+- **Git (session 3):** work on `main`. Vercel project `henrik-larsson/vardict` is connected to GitHub
+  (`Henkisch/vardict`): **a push to `main` is a production deploy** of https://live-vardict.vercel.app, so ask
+  Henrik before pushing. Commit locally freely.
 - **Never commit secrets.** Tokens go in `.env.local` files, which are gitignored. Provide `.env.example` files.
   The write token must never reach browser code.
 
