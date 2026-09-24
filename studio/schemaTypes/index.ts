@@ -6,5 +6,6 @@ import {team} from './documents/team'
 import {law} from './documents/law'
 import {referendum} from './documents/referendum'
 import {vote} from './documents/vote'
+import {punditLine} from './documents/punditLine'
 
-export const schemaTypes = [incident, match, team, law, referendum, vote, clip, outcry]
+export const schemaTypes = [incident, match, team, law, punditLine, referendum, vote, clip, outcry]

@@ -56,3 +56,46 @@ body {
     transform: scale(1);
   }
 }
+
+/* Floodlit night match: glare from the four light towers, a darker middle. */
+.stadium {
+  background:
+    radial-gradient(60rem 40rem at 0% -10%, rgb(255 244 214 / 0.13), transparent 60%),
+    radial-gradient(60rem 40rem at 100% -10%, rgb(255 244 214 / 0.13), transparent 60%),
+    radial-gradient(50rem 30rem at 0% 110%, rgb(255 244 214 / 0.06), transparent 60%),
+    radial-gradient(50rem 30rem at 100% 110%, rgb(255 244 214 / 0.06), transparent 60%),
+    var(--ink);
+}
+
+/* The jumbotron: LED dots over a black panel with a faint glow. */
+.jumbotron {
+  position: relative;
+  background: #050806;
+  box-shadow: 0 0 0 1px rgb(245 180 0 / 0.25), 0 0 40px rgb(245 180 0 / 0.08);
+}
+.jumbotron::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background-image: radial-gradient(rgb(0 0 0 / 0.55) 1px, transparent 1.4px);
+  background-size: 4px 4px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .ticker-in {
+    animation: ticker-in 500ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+}
+
+@keyframes ticker-in {
+  from {
+    opacity: 0;
+    transform: translateX(2rem);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}

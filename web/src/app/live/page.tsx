@@ -1,12 +1,14 @@
 'use client'
 
 import Link from 'next/link'
-import {useEffect, useState} from 'react'
+import {useEffect, useState, useSyncExternalStore} from 'react'
 
 import {Bars} from '@/components/Bars'
 import {Clip} from '@/components/Clip'
+import {EnterStadium} from '@/components/EnterStadium'
 import {FitBox} from '@/components/FitBox'
 import {KickOff} from '@/components/KickOff'
+import {PunditTicker} from '@/components/PunditTicker'
 import {QrCode} from '@/components/QrCode'
 import {VarRoomScene} from '@/components/VarRoomScene'
 import {Verdict} from '@/components/Verdict'
@@ -14,6 +16,7 @@ import {VoteButtons} from '@/components/VoteButtons'
 import {useCloseWhenCounting, useLiveState, useNow} from '@/lib/live'
 import {CALL_LABELS, HUMAN_VOTE_WEIGHT, roundLabel, type LiveState} from '@/lib/queries'
 import {runPhase} from '@/lib/run-status'
+import {cue, setIntensity, setMuted, startStadium} from '@/lib/stadium-audio'
 
 export default function LivePage() {
   const now = useNow()
@@ -38,6 +41,7 @@ export default function LivePage() {
     setKickingOff({from: ref?._id})
   }
   async function whistle() {
+    cue('whistle')
     boost()
     const response = await fetch('/api/start', {method: 'POST'}).catch(() => undefined)
     const body = response ? await response.json().catch(() => ({})) : {}
@@ -77,6 +81,73 @@ export default function LivePage() {
 
   const parked = phase === 'parked'
   const decided = phase === 'decided'
+
+  // Enter the stadium: shown once per browser session. The click also starts the sound (autoplay policy).
+  const sessionEntered = useSyncExternalStore(noop, readEntered, () => true)
+  const [enteredNow, setEnteredNow] = useState(false)
+  const [soundOn, setSoundOn] = useState(false)
+  const [muted, setMutedState] = useState(false)
+  function enter() {
+    void startStadium()
+    setSoundOn(true)
+    setEnteredNow(true)
+    try {
+      sessionStorage.setItem(ENTERED_KEY, '1')
+    } catch {
+      // Private mode or blocked storage: the intro just shows again next visit.
+    }
+  }
+  function toggleSound() {
+    if (!soundOn) {
+      void startStadium()
+      setSoundOn(true)
+      return
+    }
+    setMuted(!muted)
+    setMutedState(!muted)
+  }
+
+  // The crowd follows the vote: louder the closer it is, loudest while counting, quiet between votes.
+  const total = ref ? ref.uphold + ref.overturn : 0
+  const upholdPct = total ? (ref!.uphold / total) * 100 : 50
+  useEffect(() => {
+    if (!soundOn) return
+    const tension = 1 - Math.min(1, Math.abs(upholdPct - 50) / 25)
+    setIntensity(voting ? 0.4 + 0.45 * tension : counting ? 0.85 : 0.12)
+  }, [soundOn, voting, counting, upholdPct])
+
+  // And reacts once to each result: a gasp at too close, a roar at a decision, the full-time whistle at the end.
+  const verdictKey = showVerdict && ref?.result ? `${ref._id}:${ref.result}` : undefined
+  useEffect(() => {
+    if (!soundOn || !verdictKey || !ref?.result) return
+    if (ref.result === 'tooClose') cue('gasp')
+    else if (phase === 'decided') {
+      cue('fullTime')
+      cue(ref.result === 'upheld' ? 'roar' : 'groan')
+    } else cue('roar')
+    // One reaction per result: keyed on verdictKey only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [verdictKey, soundOn])
+
+  // What the pundits talk about right now.
+  const trigger = kickingOff
+    ? 'kickoff'
+    : voting || counting
+      ? 'voting'
+      : showVerdict && ref?.result
+        ? ref.round.startsWith('shootout') && between
+          ? ref.result === 'upheld'
+            ? 'penaltyScored'
+            : 'penaltySaved'
+          : ref.result === 'tooClose'
+            ? 'tooClose'
+            : phase === 'decided'
+              ? ref.result === 'upheld'
+                ? 'upheld'
+                : 'abandoned'
+              : 'overturned'
+        : 'review'
+  const tickerIncident = showVerdict || voting || counting || parked ? ref?.incident._id : state?.next?._id
   const start = <StartButton onClick={press} busy={Boolean(kickingOff)} message={startMessage} />
   const nextLabel =
     ref?.round === 'regular' ? 'Go to extra time' : ref?.round === 'extraTime' ? 'Penalties!' : 'Take the next penalty'
@@ -97,6 +168,7 @@ export default function LivePage() {
   const lost = ref?.shootout.filter((r) => r === 'overturned').length ?? 0
 
   return (
+    <div className="stadium flex min-h-dvh flex-col">
     <main className="mx-auto flex w-full max-w-[1920px] flex-1 flex-col gap-3 px-4 py-3 sm:px-6 lg:h-dvh lg:overflow-hidden">
       <header className="flex shrink-0 flex-wrap items-baseline justify-between gap-x-6 gap-y-1 border-b border-line pb-2">
         <div className="flex flex-wrap items-baseline gap-x-4">
@@ -105,11 +177,21 @@ export default function LivePage() {
           </h1>
           <p className="text-lg text-muted">VAR, finally in the fans&apos; hands.</p>
         </div>
-        <Link href="/incidents" className="font-display text-lg font-bold uppercase tracking-[0.15em] text-muted hover:text-chalk">
-          Results →
-        </Link>
+        <div className="flex items-baseline gap-5">
+          <button
+            type="button"
+            onClick={toggleSound}
+            className="font-display text-lg font-bold uppercase tracking-[0.15em] text-muted hover:text-chalk"
+          >
+            {!soundOn ? '🔈 Sound on' : muted ? '🔇 Unmute' : '🔊 Mute'}
+          </button>
+          <Link href="/incidents" className="font-display text-lg font-bold uppercase tracking-[0.15em] text-muted hover:text-chalk">
+            Results →
+          </Link>
+        </div>
       </header>
 
+      {!sessionEntered && !enteredNow && state && <EnterStadium fixtures={state.fixtures} onEnter={enter} />}
       {kickingOff && <KickOff onWhistle={whistle} />}
 
       {showVerdict && ref ? (
@@ -172,7 +254,9 @@ export default function LivePage() {
               </p>
             )}
 
-            <Bars uphold={ref.uphold} overturn={ref.overturn} />
+            <div className="jumbotron rounded-lg p-3">
+              <Bars uphold={ref.uphold} overturn={ref.overturn} />
+            </div>
 
             {counting && <p className="font-display text-3xl font-bold uppercase text-var">Counting…</p>}
 
@@ -192,8 +276,20 @@ export default function LivePage() {
           </aside>
         </div>
       ) : null}
+      {state && <PunditTicker lines={state.pundits} trigger={trigger} incidentId={tickerIncident} />}
     </main>
+    </div>
   )
+}
+
+const ENTERED_KEY = 'vardict-entered'
+const noop = () => () => {}
+function readEntered() {
+  try {
+    return sessionStorage.getItem(ENTERED_KEY) === '1'
+  } catch {
+    return false
+  }
 }
 
 function StartButton({

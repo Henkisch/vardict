@@ -38,8 +38,16 @@ export const LIVE_QUERY = `{
   "democracySeconds": math::sum(*[_type == "incident"].realDelaySeconds)
     + coalesce(math::sum(*[_type == "referendum" && defined(result)]{
         "s": dateTime(closesAt) - dateTime(windowOpensAt)
-      }.s), 0)
+      }.s), 0),
+  // The pundit ticker's lines (Studio: Pundit lines), and the fixture list for the Enter the stadium intro.
+  "pundits": *[_type == "punditLine"]{_id, text, pundit, trigger, "incident": incident._ref},
+  "fixtures": *[_type == "incident"] | order(match->date asc){
+    _id, title, "home": match->homeTeam->name, "away": match->awayTeam->name, "competition": match->competition
+  }
 }`
+
+export type PunditLine = {_id: string; text: string; pundit: string; trigger: string; incident?: string}
+export type Fixture = {_id: string; title: string; home: string; away: string; competition: string}
 
 export type Team = {name: string; shortName: string; primaryColor?: string}
 
@@ -87,7 +95,13 @@ export type IncidentCard = {
     match: {competition: string; homeTeam: Team; awayTeam: Team}
 }
 
-export type LiveState = {referendum: LiveReferendum | null; next: IncidentCard | null; democracySeconds: number}
+export type LiveState = {
+  referendum: LiveReferendum | null
+  next: IncidentCard | null
+  democracySeconds: number
+  pundits: PunditLine[]
+  fixtures: Fixture[]
+}
 
 export function roundLabel(round: string) {
   if (round === 'regular') return 'Regular time'

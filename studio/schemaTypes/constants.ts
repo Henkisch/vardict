@@ -53,3 +53,23 @@ export const titleFor = (list: {title: string; value: string}[], value?: string)
 
 // Clips longer than this don't fit the big screen's attention span, or ours.
 export const MAX_CLIP_SECONDS = 30
+
+// Fictional pundits for the ticker on /live.
+export const PUNDITS = [
+  {title: 'The Gaffer (ex-manager, blames the system)', value: 'gaffer'},
+  {title: 'The Stat Guy (xG for everything)', value: 'stats'},
+  {title: 'The Old Pro (it was better before VAR)', value: 'oldPro'},
+]
+
+// When a pundit line plays, keyed to what just happened on /live.
+export const PUNDIT_TRIGGERS = [
+  {title: 'VAR room: reviewing', value: 'review'},
+  {title: 'Kick-off: the vote opens', value: 'kickoff'},
+  {title: 'During the vote', value: 'voting'},
+  {title: 'Too close to call', value: 'tooClose'},
+  {title: 'Penalty scored (uphold)', value: 'penaltyScored'},
+  {title: 'Penalty saved (overturn)', value: 'penaltySaved'},
+  {title: 'Upheld', value: 'upheld'},
+  {title: 'Overturned', value: 'overturned'},
+  {title: 'Match abandoned', value: 'abandoned'},
+]

@@ -30,7 +30,10 @@ function copyFor(ref: LiveReferendum, phase: Phase): Copy {
   return {
     headline: `Overturned${how}`,
     tone: 'text-overturn',
-    next: `Back to the VAR room for another look (loop ${ref.loop + 1} of ${LOOP_CAP}).`,
+    next:
+      ref.loop + 1 >= LOOP_CAP
+        ? 'Back to the VAR room. One more overturn and the match is abandoned.'
+        : 'Back to the VAR room for another look.',
   }
 }
 
