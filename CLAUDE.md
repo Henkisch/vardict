@@ -349,8 +349,14 @@ In code:
   still close open windows.
 - A round costs roughly 30 server-side API requests (11 waves × read + patch, plus closing).
 
+**Open decision (parked by Henrik, session 3): cap Vercel spend.** Spend Management is per *team* and its Pause
+action pauses **every** project on the team, and Henrik runs other projects on `henrik-larsson`. The account can't
+create Hobby teams (new teams are always Pro). Leaning towards: **move VARdict to a separate Vercel account (Hobby,
+no billing)**. If so: transfer the project, re-link the CLI, check env vars, domain, CORS, the git connection and
+Hobby's function duration limit (our maxDuration is 300/90 s). Alternatives: a spend webhook that pauses only
+VARdict, or alerts only plus `VARDICT_PAUSED`. Don't turn on "Pause Production Deployments" on `henrik-larsson`.
+
 Henrik to do in dashboards (can't be done from code):
-- Vercel → Settings → Billing → **Spend Management**: set a spend amount and choose to pause projects when it's hit.
 - Optional: a Vercel Firewall rate-limit rule on `/api/start` and `/api/vote`.
 - Sanity sends usage emails at 80% and 100% to admins automatically.
 
