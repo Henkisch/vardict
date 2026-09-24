@@ -1,6 +1,5 @@
 'use client'
 
-import Link from 'next/link'
 import {useState} from 'react'
 
 import {Bars} from '@/components/Bars'
@@ -10,21 +9,18 @@ import {VarRoomScene} from '@/components/VarRoomScene'
 import {VoteButtons} from '@/components/VoteButtons'
 import {useCloseWhenCounting, useLiveState, useNow} from '@/lib/live'
 import {CALL_LABELS, formatClock, HUMAN_VOTE_WEIGHT, LIVE_QUERY, roundLabel, type LiveState} from '@/lib/queries'
-
-const RESULT_COPY = {
-  upheld: {title: 'Upheld', body: 'The people have spoken. The call stands.', tone: 'text-uphold'},
-  overturned: {title: 'Overturned', body: 'Back to the VAR room.', tone: 'text-overturn'},
-  tooClose: {title: 'Too close to call', body: 'Democracy needs more time.', tone: 'text-var'},
-} as const
+import {runPhase} from '@/lib/run-status'
 
 export default function LivePage() {
-  const {state, boost} = useLiveState<LiveState>(LIVE_QUERY)
   const now = useNow()
+  const {state, boost} = useLiveState<LiveState>(LIVE_QUERY, (s) => runPhase(s?.referendum, now))
   const ref = state?.referendum
   const closesAt = ref ? Date.parse(ref.closesAt) : 0
   const secondsLeft = ref && !ref.result ? Math.max(0, (closesAt - now) / 1000) : 0
-  const voting = Boolean(ref && !ref.result && secondsLeft > 0)
-  const counting = Boolean(ref && !ref.result && secondsLeft === 0)
+  const phase = runPhase(ref, now)
+  const voting = phase === 'voting'
+  const counting = phase === 'counting'
+  const between = phase === 'between'
 
   useCloseWhenCounting(counting)
 
@@ -47,9 +43,8 @@ export default function LivePage() {
 
   // Between votes the big screen shows the VAR room. A run that was just overturned (and isn't at the loop cap)
   // is back there for another look; otherwise the next incident in line is on the monitor.
-  const finished = Boolean(ref?.result && ref.result !== 'tooClose')
-  const parked = finished && ref?.result === 'overturned' && ref.loop < 3 && !ref.incident.finalCall
-  const waitingOn = !ref ? state?.next : finished ? (parked ? ref.incident : state?.next) : undefined
+  const parked = phase === 'parked'
+  const decided = phase === 'decided'
   const start = <StartButton onClick={sendToThePeople} busy={starting} message={startMessage} />
 
   const incident = ref?.incident
@@ -75,8 +70,19 @@ export default function LivePage() {
         </div>
       </header>
 
-      {waitingOn ? (
-        <VarRoomScene incident={waitingOn} loop={parked && ref ? ref.loop + 1 : undefined} last={ref ?? undefined} start={start} />
+      {parked && ref ? (
+        <VarRoomScene incident={ref.incident} loop={ref.loop + 1} start={start} />
+      ) : decided ? (
+        state?.next ? (
+          <VarRoomScene incident={state.next} last={ref ?? undefined} start={start} />
+        ) : state ? (
+          <section className="flex flex-1 flex-col items-center justify-center gap-4 py-16 text-center">
+            <p className="font-display text-4xl font-extrabold uppercase">Every call has been confirmed</p>
+            <p className="max-w-xl text-muted">The people have upheld all five. Democracy is complete, and slower.</p>
+          </section>
+        ) : (
+          <p className="py-16 text-center text-muted">Connecting to the VAR room…</p>
+        )
       ) : incident && ref ? (
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
           <section className="flex min-w-0 flex-col gap-4">
@@ -121,23 +127,13 @@ export default function LivePage() {
 
             <Bars uphold={ref.uphold} overturn={ref.overturn} />
 
-            {ref.result ? (
-              <div>
-                <p className={`font-display text-4xl font-extrabold uppercase ${RESULT_COPY[ref.result].tone}`}>
-                  {RESULT_COPY[ref.result].title}
-                </p>
-                <p className="text-muted">{RESULT_COPY[ref.result].body}</p>
-                {ref.result !== 'tooClose' && (
-                  <Link href={`/incidents/${incident.slug}`} className="text-sm text-var underline">
-                    Every round of this incident
-                  </Link>
-                )}
-              </div>
-            ) : counting ? (
+            {counting ? (
               <p className="font-display text-3xl font-bold uppercase text-var">Counting…</p>
+            ) : between ? (
+              <p className="text-center text-muted">The next round opens in a moment.</p>
             ) : null}
 
-            {voting ? (
+            {voting && (
               <>
                 <div className="flex flex-col gap-2">
                   <p className="text-sm text-muted">Your vote counts ×{HUMAN_VOTE_WEIGHT} against the simulated crowd.</p>
@@ -145,10 +141,6 @@ export default function LivePage() {
                 </div>
                 <QrCode />
               </>
-            ) : ref.result === 'tooClose' || counting ? (
-              <p className="text-center text-muted">The next round opens in a moment.</p>
-            ) : (
-              start
             )}
             <p className="text-xs text-muted">
               {ref.humans} human and {ref.bots} simulated {ref.bots === 1 ? 'vote' : 'votes'} this round. Humans are
@@ -156,14 +148,7 @@ export default function LivePage() {
             </p>
           </aside>
         </div>
-      ) : state ? (
-        <section className="flex flex-1 flex-col items-center justify-center gap-4 py-16 text-center">
-          <p className="font-display text-4xl font-extrabold uppercase">Every call has been confirmed</p>
-          <p className="max-w-xl text-muted">The people have upheld all five. Democracy is complete, and slower.</p>
-        </section>
-      ) : (
-        <p className="py-16 text-center text-muted">Connecting to the VAR room…</p>
-      )}
+      ) : null}
     </main>
   )
 }
