@@ -4,8 +4,8 @@ import {useEffect, useState} from 'react'
 
 const BEAT_MS = 600
 
-// The breath before every vote: 3, 2, 1, whistle. Calls `onWhistle` once at the end, then stays up (showing
-// "Kick-off") until the parent unmounts it, which covers the second or two before the new round shows up.
+// The breath before every vote: 3, 2, 1. Calls `onWhistle` once at the end, then stays up until the parent
+// unmounts it, which covers the moment before the new round shows up.
 export function KickOff({onWhistle}: {onWhistle: () => void}) {
   const [count, setCount] = useState(3)
 
@@ -26,11 +26,12 @@ export function KickOff({onWhistle}: {onWhistle: () => void}) {
       aria-live="assertive"
       className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-ink/90 backdrop-blur-sm"
     >
-      <p className="text-sm uppercase tracking-[0.3em] text-muted">The referee checks the watch</p>
-      <p key={count} className="kickoff-beat font-display text-[12rem] font-extrabold leading-none text-var tabular">
-        {count > 0 ? count : 'Peep!'}
-      </p>
-      {count === 0 && <p className="font-display text-2xl font-bold uppercase">Kick-off</p>}
+      <p className="font-display text-3xl font-bold uppercase tracking-[0.2em] text-muted">Get ready to vote</p>
+      {count > 0 && (
+        <p key={count} className="kickoff-beat font-display text-[12rem] font-extrabold leading-none text-var tabular">
+          {count}
+        </p>
+      )}
     </div>
   )
 }

@@ -41,9 +41,8 @@ export default function LivePage() {
     setKickingOff({from: ref?._id})
     void startNextRound()
   }
-  function whistle() {
-    cue('whistle')
-  }
+  // Nothing to do at the end of the countdown: the round appears when it's open.
+  function whistle() {}
   async function startNextRound() {
     boost()
     const response = await fetch('/api/start', {method: 'POST'}).catch(() => undefined)
@@ -122,15 +121,13 @@ export default function LivePage() {
     setIntensity(voting ? 0.4 + 0.45 * tension : counting ? 0.85 : 0.12)
   }, [soundOn, voting, counting, upholdPct])
 
-  // And reacts once to each result: a gasp at too close, a roar at a decision, the full-time whistle at the end.
+  // And reacts once to each result: an "ooh" at too close, a roar at a decision.
   const verdictKey = showVerdict && ref?.result ? `${ref._id}:${ref.result}` : undefined
   useEffect(() => {
     if (!soundOn || !verdictKey || !ref?.result) return
     if (ref.result === 'tooClose') cue('gasp')
-    else if (phase === 'decided') {
-      cue('fullTime')
-      cue(ref.result === 'upheld' ? 'roar' : 'groan')
-    } else cue('roar')
+    else if (phase === 'decided') cue(ref.result === 'upheld' ? 'roar' : 'groan')
+    else cue('roar')
     // One reaction per result: keyed on verdictKey only.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [verdictKey, soundOn])
