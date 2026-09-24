@@ -56,3 +56,12 @@ export function rateLimited(key: string, limit: number, windowMs: number) {
 
 export const clientKey = (request: Request) =>
   request.headers.get('x-forwarded-for')?.split(',')[0].trim() || request.headers.get('x-real-ip') || 'local'
+
+// /api/start and /api/tick are public (judges press the button), and the VAR Room calls them from the Sanity
+// Dashboard's origin, so they answer any origin. No cookies or credentials are involved.
+export const CORS = {
+  'access-control-allow-origin': '*',
+  'access-control-allow-methods': 'POST, OPTIONS',
+  'access-control-allow-headers': 'content-type',
+}
+export const preflight = () => new Response(null, {status: 204, headers: CORS})

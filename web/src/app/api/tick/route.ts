@@ -1,6 +1,6 @@
 import {closeWindow, liveInstances} from 'workflows/runtime'
 
-import {clientKey, getRuntime, rateLimited} from '@/lib/runtime'
+import {clientKey, CORS, getRuntime, preflight, rateLimited} from '@/lib/runtime'
 
 // The bot crowd keeps running after the response: a full run (regular, extra time, 5 shootout rounds) is ~2 min.
 export const maxDuration = 300
@@ -9,11 +9,13 @@ export const maxDuration = 300
 // Room and by the bot crowd. Too early or twice is harmless: closeWindow checks the clock and the stage.
 export async function POST(request: Request) {
   if (rateLimited(`tick:${clientKey(request)}`, 30, 60_000)) {
-    return Response.json({status: 'rateLimited'}, {status: 429})
+    return Response.json({status: 'rateLimited'}, {status: 429, headers: CORS})
   }
   const runtime = getRuntime()
   const [live] = await liveInstances(runtime)
-  if (!live) return Response.json({status: 'idle'})
+  if (!live) return Response.json({status: 'idle'}, {headers: CORS})
   const result = await closeWindow(runtime, live._id)
-  return Response.json({instanceId: live._id, ...result})
+  return Response.json({instanceId: live._id, ...result}, {headers: CORS})
 }
+
+export const OPTIONS = preflight

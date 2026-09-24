@@ -1,20 +1,179 @@
-/* Container styling for the app */
-.app-container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 2rem;
-  font-family:
-    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans',
-    'Helvetica Neue', sans-serif;
+/* The VAR Room: an operator console, same stadium-at-night palette as the public screens. */
+:root {
+  --ink: #0b0f0c;
+  --pitch: #11281c;
+  --line: #24473a;
+  --chalk: #eef3ec;
+  --muted: #9db3a6;
+  --var: #f5b400;
+  --uphold: #2fbf71;
+  --overturn: #e5484d;
+  color-scheme: dark;
 }
-
-/* Basic reset */
 * {
   box-sizing: border-box;
 }
-
 body {
   margin: 0;
+  background: var(--ink);
+  color: var(--chalk);
+  font: 15px/1.45 system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+.pad {
+  padding: 2rem;
+}
+.room {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1.5rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+.room-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 1rem;
+}
+h1 {
+  margin: 0;
+  font-size: 2.2rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+h2 {
+  margin: 0 0 0.75rem;
+  font-size: 0.8rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.accent {
+  color: var(--var);
+}
+.muted {
+  color: var(--muted);
+  margin: 0;
+}
+.small {
+  font-size: 0.85rem;
+}
+.room-grid {
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+}
+.stage {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.dot {
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+  background: var(--overturn);
+  box-shadow: 0 0 0 4px rgb(229 72 77 / 0.25);
+}
+.incidents {
+  list-style: none;
+  margin: 0;
   padding: 0;
-  background-color: #f9f9f9;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.incident {
+  background: var(--pitch);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0.9rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.incident-head {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+.badge {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  border: 1px solid var(--var);
+  color: var(--var);
+  border-radius: 999px;
+  padding: 0.05rem 0.5rem;
+}
+.row {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+button {
+  background: var(--var);
+  color: var(--ink);
+  border: 0;
+  border-radius: 6px;
+  padding: 0.5rem 0.9rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+button:disabled {
+  opacity: 0.6;
+}
+button:focus-visible {
+  outline: 3px solid var(--chalk);
+  outline-offset: 2px;
+}
+.live {
+  background: var(--pitch);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.big {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+}
+.bar {
+  height: 1.2rem;
+  background: var(--overturn);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.bar-fill {
+  height: 100%;
+  background: var(--uphold);
+  transition: width 400ms ease-out;
+}
+.personas {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+.personas th,
+.personas td {
+  text-align: left;
+  padding: 0.3rem 0.4rem;
+  border-bottom: 1px solid var(--line);
+}
+.personas th {
+  color: var(--muted);
+  font-weight: 500;
 }
