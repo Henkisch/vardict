@@ -366,3 +366,14 @@ uploads, which the clip rules ban, so an agent is checking the results for offic
 - **Caps from data, not memory:** runs per 24 h and human votes per round are counted from stored documents,
   because serverless instances don't share memory. Plus a `VARDICT_PAUSED` kill switch.
 - Left for Henrik: Vercel spend management (a dashboard setting).
+
+### UI: the VAR Room on the big screen; first DEV draft
+
+- Henrik: "we want a VAR-room displayed once we're waiting for their call". Between votes `/live` now shows the next
+  incident, or an overturned one back for another loop, on a VAR monitor. The monitor shows the on-field call and
+  the recommendation, has the button, and has a strip with the last verdict. It was checked at 1440 px and 390 px;
+  the monitor bar wrapped on phones and was fixed.
+- Voting moved onto `/live` too (Henrik: "can we integrate the voting on the actual page"), so a judge alone at a
+  desktop can play. `/vote` stays as the phone view.
+- Wrote the first full DEV draft in `SUBMISSION.md` from this log. The TODOs are the video, screenshots, making the
+  repo public, and the agent session.
