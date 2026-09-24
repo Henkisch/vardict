@@ -18,7 +18,7 @@ real Sanity project and the public site — don't run them without the operator'
 | 004 | Bot crowd never loses a wave, never runs twice, always closes | P1 | S | 002, 003 | DONE (branch `advisor/004-crowd-robust` @ 430a19f; reviewed; not merged) |
 | 005 | Starting a run is serialized, idempotent, operator-only picks | P1 | M | 002, 003 | DONE (branch `advisor/005-start-flow-safe` @ 8915cd3; reviewed; not merged; needs VARDICT_OPERATOR_KEY + SANITY_APP_OPERATOR_KEY) |
 | 006 | `/live` always shows the round that's actually happening | P1 | S | — | DONE (branch `advisor/006-live-state-logic` @ 385346c; reviewed; no web test runner, see notes; not merged) |
-| 007 | All screens share one cached read (quota) | P1 | M | 006 | TODO |
+| 007 | All screens share one cached read (quota) | P1 | M | 006 | DONE (branch `advisor/007-shared-live-read` @ 912894c; reviewed after 1 revision; step 5 cache check pending deploy; not merged) |
 | 008 | Public API routes reject cross-site/oversized/malformed requests | P2 | S | 005 | DONE (branch `advisor/008-api-hardening` @ 9601749; reviewed after 1 revision; not merged) |
 | 009 | All confirmed → new season instead of a 500 | P1 | S | 005, 006 | TODO |
 | 010 | `/incidents` results overview + "Abandoned" | P2 | S | 007 | TODO |
