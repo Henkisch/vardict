@@ -6,15 +6,15 @@ import {useEffect, useState, useSyncExternalStore} from 'react'
 import {Bars} from '@/components/Bars'
 import {Clip} from '@/components/Clip'
 import {EnterStadium} from '@/components/EnterStadium'
-import {FitBox} from '@/components/FitBox'
 import {KickOff} from '@/components/KickOff'
+import {MatchScene} from '@/components/MatchScene'
 import {PunditTicker} from '@/components/PunditTicker'
 import {StepIndicator, type Step} from '@/components/StepIndicator'
 import {VarRoomScene} from '@/components/VarRoomScene'
 import {Verdict} from '@/components/Verdict'
 import {VoteButtons} from '@/components/VoteButtons'
 import {useCloseWhenCounting, useLiveState, useNow} from '@/lib/live'
-import {CALL_LABELS, HUMAN_VOTE_WEIGHT, roundLabel, type LiveState} from '@/lib/queries'
+import {HUMAN_VOTE_WEIGHT, roundLabel, type LiveState} from '@/lib/queries'
 import {runPhase} from '@/lib/run-status'
 import {cue, setIntensity, setMuted, startStadium} from '@/lib/stadium-audio'
 
@@ -180,10 +180,6 @@ export default function LivePage() {
   )
 
   const incident = ref?.incident
-  const home = incident?.match.homeTeam
-  const away = incident?.match.awayTeam
-  const won = ref?.shootout.filter((r) => r === 'upheld').length ?? 0
-  const lost = ref?.shootout.filter((r) => r === 'overturned').length ?? 0
 
   return (
     <div className="stadium flex min-h-dvh flex-col">
@@ -233,57 +229,23 @@ export default function LivePage() {
           <p className="py-16 text-center text-muted">Connecting to the VAR room…</p>
         )
       ) : incident && ref ? (
-        <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[minmax(0,1fr)_22rem]">
-          <section className="flex min-h-0 min-w-0 flex-col gap-3">
-            <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <p className="font-display text-2xl font-bold uppercase tracking-wide">
-                <span style={{color: home?.primaryColor}}>■</span> {home?.shortName} v {away?.shortName}{' '}
-                <span style={{color: away?.primaryColor}}>■</span>
-                <span className="ml-3 text-muted">{incident.minute}&apos;</span>
-              </p>
-              <p className="text-sm text-muted">{incident.match.competition}</p>
-            </div>
-            <FitBox ratio={16 / 9} className="w-full lg:flex-1">
-              <Clip clip={incident.clip} fallbackText={incident.fallbackText} />
-            </FitBox>
-            {incident.situation && <p className="text-xl leading-snug">{incident.situation}</p>}
-          </section>
-
-          <aside className="flex min-h-0 flex-col gap-4 overflow-y-auto rounded-lg border border-line bg-pitch p-5">
-            <div>
-              <p className="text-xs uppercase tracking-[0.2em] text-muted">The VAR room recommends</p>
-              <p className="font-display text-5xl font-extrabold uppercase text-var">
-                {CALL_LABELS[incident.varRecommendation] ?? incident.varRecommendation}
-              </p>
-              <p className="text-sm text-muted">
-                On the pitch: {CALL_LABELS[incident.originalCall] ?? incident.originalCall}
-              </p>
-            </div>
-
-            <div className="flex items-baseline justify-between">
-              <p className="font-display text-xl font-bold uppercase">{roundLabel(ref.round)}</p>
-              {(voting || counting) && (
-                <p className="font-display text-5xl font-extrabold tabular">
-                  {Math.ceil(secondsLeft)}
-                  <span className="text-xl text-muted">s</span>
-                </p>
-              )}
-            </div>
-            {ref.round.startsWith('shootout') && (
-              <p className="font-display text-2xl font-bold tabular">
-                Shootout <span className="text-uphold">{won}</span> – <span className="text-overturn">{lost}</span>
-                <span className="ml-2 text-base font-medium text-muted">first to 3</span>
-              </p>
-            )}
-
-            <div className="jumbotron rounded-lg p-3">
-              <Bars uphold={ref.uphold} overturn={ref.overturn} />
-            </div>
-
-            {counting && <p className="font-display text-3xl font-bold uppercase text-var">Counting…</p>}
-
-            {voting && (
-              <div className="flex flex-col gap-2">
+        <MatchScene
+          incident={incident}
+          barLeft={<>Fans vote · {roundLabel(ref.round)}</>}
+          barRight={
+            voting || counting ? (
+              <span className="font-display text-2xl font-extrabold text-chalk">{Math.ceil(secondsLeft)}s</span>
+            ) : undefined
+          }
+          media={<Clip clip={incident.clip} fallbackText={incident.fallbackText} />}
+          mediaRatio={16 / 9}
+          actionLabel={voting ? 'Your vote · keep the VAR\'s call or overturn it?' : 'The fans have voted'}
+          action={
+            <div className="flex flex-col gap-2">
+              <div className="jumbotron rounded-lg p-2">
+                <Bars uphold={ref.uphold} overturn={ref.overturn} size="small" />
+              </div>
+              {voting ? (
                 <VoteButtons
                   key={ref._id}
                   referendumId={ref._id}
@@ -294,13 +256,15 @@ export default function LivePage() {
                     setTimeout(refresh, 4000)
                   }}
                 />
-                <p className="text-sm text-muted">
-                  Your vote counts ×{HUMAN_VOTE_WEIGHT} against {ref.bots} simulated fans.
-                </p>
-              </div>
-            )}
-          </aside>
-        </div>
+              ) : (
+                <p className="font-display text-3xl font-bold uppercase text-var">Counting…</p>
+              )}
+              <p className="text-xs text-muted">
+                Your vote counts ×{HUMAN_VOTE_WEIGHT} against {ref.bots} simulated fans.
+              </p>
+            </div>
+          }
+        />
       ) : null}
       {state && <PunditTicker lines={state.pundits} trigger={trigger} incidentId={tickerIncident} />}
     </main>

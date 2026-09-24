@@ -551,6 +551,12 @@ async function startNextLocked(runtime: Runtime, pick?: string): Promise<StartRe
 
   if (replacing) {
     await engine.abortInstance({instanceId: live!._id})
+    // An aborted run can leave a round without a result, which screens would show as "counting" forever.
+    const open = await content.fetch<string[]>(
+      '*[_type == "referendum" && workflowInstanceId == $id && !defined(result)]._id',
+      {id: live!._id},
+    )
+    for (const id of open) await content.patch(id).set({result: 'noVotes'}).commit()
   }
 
   // Next in line: the incident whose last referendum is oldest (never-voted first). Upheld incidents are done.
