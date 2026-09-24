@@ -38,6 +38,8 @@ export const CHOICES = [
   {title: 'Overturn', value: 'overturn'},
 ]
 
+// Values must match workflows/shared.ts PERSONAS (studio has no dependency on workflows, so this stays a
+// copy; titles are Studio-only display strings, not shared with the other packages).
 export const PERSONAS = [
   {title: 'Home fan', value: 'homeFan'},
   {title: 'Away fan', value: 'awayFan'},

@@ -7,11 +7,10 @@
 // parked:   overturned and back in the VAR room for another loop.
 // decided:  upheld, overturned at the loop cap (abandoned), a shootout that's been won or lost outright, or no
 //           referendum at all.
-export type Phase = 'voting' | 'counting' | 'between' | 'parked' | 'decided'
 
-// Keep in sync with workflows/definitions/peoplesVar.ts RULES.
-const SHOOTOUT_ROUNDS_TO_WIN = 3
-const LOOP_CAP = 3
+import {LOOP_CAP, SHOOTOUT_ROUNDS_TO_WIN} from 'workflows/shared'
+
+export type Phase = 'voting' | 'counting' | 'between' | 'parked' | 'decided'
 
 export type RunRef = {
   result?: string

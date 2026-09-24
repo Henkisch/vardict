@@ -9,14 +9,16 @@ import {
   defineWorkflow,
 } from '@sanity/workflow-engine/define'
 
+import {HUMAN_VOTE_WEIGHT, LOOP_CAP, SHOOTOUT_ROUNDS_TO_WIN} from '../shared'
+
 // The rules of the People's VAR. Percentages are the share of votes to UPHOLD the VAR recommendation.
 export const RULES = {
   upheldAbove: 55,
   overturnedBelow: 45,
-  shootoutRoundsToWin: 3,
+  shootoutRoundsToWin: SHOOTOUT_ROUNDS_TO_WIN,
   quorum: 20,
   // Real people are rare at a demo, so each human vote counts as this many bot votes. Shown on screen.
-  humanVoteWeight: 20,
+  humanVoteWeight: HUMAN_VOTE_WEIGHT,
   // Cost guards (Free plan quotas): runs started per rolling 24 h, human votes per referendum.
   maxRunsPerDay: 40,
   maxHumanVotesPerRound: 300,
@@ -24,7 +26,7 @@ export const RULES = {
   maxHumanVotesPerDay: 3000,
   quorumExtensionSeconds: 15,
   // Trips back to the VAR room before the match is abandoned.
-  loopCap: 3,
+  loopCap: LOOP_CAP,
 } as const
 
 type VoteStage = 'referendum' | 'extraTime' | 'shootout'

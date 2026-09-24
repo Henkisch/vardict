@@ -1,5 +1,6 @@
 // The simulated crowd. Pure and seeded: the same incident, round and loop always produce the same crowd,
-// so demo runs are repeatable. Every vote it produces is flagged simulated by the runner.
+// so demo runs are repeatable. Bots aren't vote documents - each planned vote becomes one atomic increment
+// on the referendum's botVotes counters (see runtime.ts's applyWave), never anything flagged `simulated`.
 
 export type Choice = 'uphold' | 'overturn'
 export type Persona = 'homeFan' | 'awayFan' | 'neutral' | 'pundit' | 'chaos'

@@ -17,6 +17,7 @@ type Round = {
   personas: Persona[]
 }
 
+// Must match workflows/shared.ts PERSONAS (see the comment on CALL_LABELS in ../api.ts for why this isn't an import).
 const PERSONAS = ['homeFan', 'awayFan', 'neutral', 'pundit', 'chaos']
 // One entry per persona, read from the referendum's counters.
 const PERSONA_COUNTERS = PERSONAS.map(
