@@ -145,12 +145,17 @@ export async function closeWindow({engine, content}: Runtime, instanceId: string
   if (now < Date.parse(String(fields.closesAt))) return {status: 'stillOpen', stage}
 
   const referendumId = String(fields.referendumId)
-  const tally = await content.fetch<{uphold: number; total: number}>(
+  const tally = await content.fetch<{uphold: number; total: number; weightedUphold: number; weightedTotal: number}>(
     `{"uphold": count(*[_type == "vote" && referendum._ref == $id && choice == "uphold"]),
-      "total": count(*[_type == "vote" && referendum._ref == $id])}`,
-    {id: referendumId},
+      "total": count(*[_type == "vote" && referendum._ref == $id]),
+      "weightedUphold": count(*[_type == "vote" && referendum._ref == $id && choice == "uphold" && simulated == true])
+        + $w * count(*[_type == "vote" && referendum._ref == $id && choice == "uphold" && simulated != true]),
+      "weightedTotal": count(*[_type == "vote" && referendum._ref == $id && simulated == true])
+        + $w * count(*[_type == "vote" && referendum._ref == $id && simulated != true])}`,
+    {id: referendumId, w: RULES.humanVoteWeight},
   )
-  const upholdPct = tally.total ? Math.round((tally.uphold / tally.total) * 1000) / 10 : 50
+  // Quorum counts heads; the split counts humans at their weight.
+  const upholdPct = tally.weightedTotal ? Math.round((tally.weightedUphold / tally.weightedTotal) * 1000) / 10 : 50
 
   if (tally.total < RULES.quorum && !fields.extended) {
     await engine.fireAction({instanceId, activity: 'count', action: 'extend'})

@@ -15,6 +15,8 @@ export const RULES = {
   overturnedBelow: 45,
   shootoutRoundsToWin: 3,
   quorum: 20,
+  // Real people are rare at a demo, so each human vote counts as this many bot votes. Shown on screen.
+  humanVoteWeight: 10,
   quorumExtensionSeconds: 15,
   // Trips back to the VAR room before the match is abandoned.
   loopCap: 3,

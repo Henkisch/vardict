@@ -1,26 +1,43 @@
 @import "tailwindcss";
 
+/* One deliberate look: a stadium screen at night. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --ink: #0b0f0c;
+  --pitch: #11281c;
+  --line: #24473a;
+  --chalk: #eef3ec;
+  --muted: #9db3a6;
+  --var: #f5b400;
+  --uphold: #2fbf71;
+  --overturn: #e5484d;
+  color-scheme: dark;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-ink: var(--ink);
+  --color-pitch: var(--pitch);
+  --color-line: var(--line);
+  --color-chalk: var(--chalk);
+  --color-muted: var(--muted);
+  --color-var: var(--var);
+  --color-uphold: var(--uphold);
+  --color-overturn: var(--overturn);
+  --font-sans: var(--font-barlow), system-ui, sans-serif;
+  --font-display: var(--font-condensed), "Arial Narrow", system-ui, sans-serif;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--ink);
+  color: var(--chalk);
+  font-family: var(--font-sans);
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .bar {
+    transition: width 600ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
 }

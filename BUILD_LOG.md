@@ -287,3 +287,29 @@ uploads, which the clip rules ban, so an agent is checking the results for offic
   cleaned up after. The whole run worked the first time. The bench tests had already flushed out the
   mistakes.
 - Also saved Henrik's DEV post template as `SUBMISSION.md`, with notes on where each section's content comes from.
+
+### Routes, crowd, the public screens
+
+- `/api/start` and `/api/tick` are thin wrappers around the runtime. Tested live: start, "busy" on a second
+  press, `stillOpen` before the clock runs out, and a real quorum extension after 30 s with zero votes.
+- **Crowd decision:** the brief left open whether the bot crowd runs as a Sanity Function or in Next.js. We chose
+  Next.js `after()`. A Function's default 10 s timeout and the Blueprint deploy were more moving parts than a
+  30 s window needs. The crowd is a pure, seeded plan (60 votes: 21 home fans, 21 away fans, 12 neutrals, a
+  5-pundit bloc in the last 5 s, 1 chaos voter), unit-tested. After its last wave it closes the window itself,
+  which opens the next round, whose crowd starts from the open effect. A whole run plays out from one button press.
+  First autopilot run on Pickford: 52% (too close) → extra time 42% → overturned.
+- **/live and /vote** read the public dataset straight from the browser with the Live Content API (sync tags,
+  refetch on matching events), with polling as a fallback. The first screenshot of /live showed the clip playing
+  at the right moment and the bars moving live. `/api/vote` locks one vote per session and round through the
+  document id (`vote-<referendum>-<session>`).
+- **Henrik tried to vote and couldn't.** The server log showed no `/api/vote` request at all, so the tap never
+  left the page. Most likely the 15 s extra-time window had already closed, or he wasn't on a device that
+  could reach localhost. A scripted tap in the real page returned 200 and "Your vote". Lesson: the phone test
+  has to happen on a public URL.
+- **Henrik's idea: human votes weigh more.** At a demo there are a handful of humans against 60 bots, so a real
+  vote would be noise. Now one human vote counts as ten, in both the server tally and the live bars, and the
+  screens say so. It suits the premise: democracy, but some votes count more.
+- **Vercel:** the first `vercel link` hit a 403 in the wrong team scope. Linked to Henrik's personal team, set the
+  root directory to `web` (the app imports the `workflows` workspace package) and the env vars. The production
+  deploy itself was blocked by Claude Code's permission check ("Production Deploy"). That's fair, it's
+  outward-facing, so Henrik runs it.

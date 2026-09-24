@@ -191,6 +191,7 @@ Rules (defaults, may change after the first test):
 | Extra-time window | 15 s |
 | Shootout | 5 rounds of 10 s, best of 5 |
 | Quorum | 20 votes per round, else the window extends once by 15 s |
+| Human vote weight | 1 human vote = 10 bot votes (Henrik, session 3: few real voters). Quorum counts heads; the split counts weight. Shown on /live and /vote |
 | Loop cap | 3 trips to VarRoom, then Abandoned |
 
 Built and bench-tested in session 3: `workflows/definitions/peoplesVar.ts` (deployed name **`peoples-var`**, names
@@ -295,8 +296,8 @@ Clip rules (strict):
 | Sep 24 | Setup and risk check | ✅ Sep 23: project + datasets created, Workflows proven end to end, App SDK reads live in the Dashboard |
 | Sep 25 | Schema + Studio | All six types live; clip input previews a clip; 2 incidents entered |
 | Sep 27 | Workflow + Functions | ✅ Sep 24: peoplesVar passes tests for every path; v2 deployed; runtime (`workflows/runtime.ts`) ran a full live shootout on `t2sbu6uu`. Routes /api/start + /api/tick still to do |
-| Sep 28 | Bot crowd | Seeded personas move the bars; votes flagged simulated |
-| Sep 30 | VAR Room + /vote + /live | Operator starts a referendum in the VAR Room; phone votes via /api/vote show up live on /live |
+| Sep 28 | Bot crowd | ✅ Sep 24: seeded crowd (`workflows/crowd.ts`), runs via Next `after()` (decided: not a Sanity Function), chains rounds |
+| Sep 30 | VAR Room + /vote + /live | /vote, /live, /api/vote working locally (Live Content API + poll fallback) Sep 24. VAR Room app still to do. Vercel project `henrik-larsson/vardict` (root dir `web`); prod deploy needs Henrik's go |
 | Oct 1 | Content + results | All 5 incidents in; results pages and democracy clock done |
 | Oct 2 | Deploy + dress rehearsal | Full run of all 5 incidents on deployed apps; seeds chosen |
 | Oct 3 | Demo + writeup | Video recorded; post drafted from BUILD_LOG.md |
