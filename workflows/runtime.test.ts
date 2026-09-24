@@ -5,9 +5,11 @@ import {describe, expect, test, vi} from 'vitest'
 import {planCrowd, waves} from './crowd'
 import {peoplesVar, RULES} from './definitions/peoplesVar'
 import {
+  closeUntilDone,
   closeWindow,
   createRuntime,
   DEFINITION,
+  openReferendum,
   runCrowd,
   START_COOLDOWN_SECONDS,
   startNext,
@@ -37,7 +39,16 @@ function incidentDoc(overrides: Record<string, unknown> = {}): Doc {
   }
 }
 
-async function setup(documents: Doc[] = [incidentDoc()]) {
+type SetupOptions = {
+  // runCrowd/closeUntilDone wait via `runtime.sleep`, whose default is a real timer - but T0 sits days in
+  // the future relative to the real wall clock, so a test that needs those waits to actually finish (not
+  // hang on a real multi-day setTimeout) opts into this: `sleep` resolves at once and instead advances the
+  // bench's own clock by the requested amount, so `runtime.now()` (what closeWindow checks closesAt against)
+  // moves exactly as far as production's real timer would have made it wait.
+  instantSleep?: boolean
+}
+
+async function setup(documents: Doc[] = [incidentDoc()], options: SetupOptions = {}) {
   const bench = createBench({
     now: T0,
     workflowResource: {type: 'dataset', id: `${PROJECT}.workflows`},
@@ -55,6 +66,14 @@ async function setup(documents: Doc[] = [incidentDoc()]) {
     background: (task) => void tasks.push(task()),
     // Tests drive votes directly; the one runCrowd test below builds its own runtime with the default background.
     startCrowd: () => {},
+    ...(options.instantSleep
+      ? {
+          sleep: (ms: number) => {
+            bench.advance(ms)
+            return Promise.resolve()
+          },
+        }
+      : {}),
   })
   await runtime.engine.deployDefinitions({expectedMinReaderModel: 10, definitions: [peoplesVar]})
   for (const doc of documents) await runtime.content.createIfNotExists(doc)
@@ -128,8 +147,8 @@ function makeNextPatchCommitFailOnce(client: SanityClient, documentId: string) {
 }
 
 // Starts the (single, by default) seeded incident's run and hands back the instance id plus helpers scoped to it.
-async function start(documents?: Doc[]) {
-  const {bench, runtime, tasks} = await setup(documents)
+async function start(documents?: Doc[], options?: SetupOptions) {
+  const {bench, runtime, tasks} = await setup(documents, options)
   const result = await startNext(runtime)
   if (result.status !== 'started') throw new Error(`setup: expected 'started', got '${result.status}'`)
   return {
@@ -292,7 +311,9 @@ describe('runtime', () => {
   })
 
   test('runCrowd releases every planned vote across the window', async () => {
-    const {runtime, referendum} = await start()
+    // instantSleep: runCrowd's own waits advance the bench's clock instead of blocking on a real timer -
+    // T0 is days in the future on the real wall clock, so a real-timer wait would just hang the test.
+    const {runtime, referendum} = await start(undefined, {instantSleep: true})
     const ref = await referendum()
 
     // What crowd.ts itself would plan for this referendum, independent of runCrowd — used below to check
@@ -301,15 +322,7 @@ describe('runtime', () => {
       planCrowd({round: ref.round, loop: 1, windowSeconds: 30, recommendationFavours: 'home', outcryLevel: 3, seed: 1}),
     )
 
-    vi.useFakeTimers()
-    try {
-      vi.setSystemTime(new Date(ref.closesAt).getTime() - 30_000) // = windowOpensAt
-      const promise = runCrowd(runtime, ref._id)
-      await vi.advanceTimersByTimeAsync(35_000)
-      await promise
-    } finally {
-      vi.useRealTimers()
-    }
+    await runCrowd(runtime, ref._id)
 
     const after = await runtime.content.fetch<{botVotes: {uphold: number; overturn: number; waves: number}}>(
       '*[_id == $id][0]{botVotes}',
@@ -317,6 +330,63 @@ describe('runtime', () => {
     )
     expect(after.botVotes.uphold + after.botVotes.overturn).toBe(60)
     expect(after.botVotes.waves).toBe(plan.length)
+  })
+
+  test('a conflicting wave is retried, not skipped', async () => {
+    const {runtime, referendum} = await start(undefined, {instantSleep: true})
+    const ref = await referendum()
+
+    const plan = waves(
+      planCrowd({round: ref.round, loop: 1, windowSeconds: 30, recommendationFavours: 'home', outcryLevel: 3, seed: 1}),
+    )
+    // The first commit against this referendum (some wave's very first attempt) loses its `ifRevisionId`
+    // race once, as if it collided with another write - then behaves normally again.
+    const patchSpy = makeNextPatchCommitFailOnce(runtime.content, ref._id)
+
+    await runCrowd(runtime, ref._id)
+
+    const after = await runtime.content.fetch<{botVotes: {uphold: number; overturn: number; waves: number}}>(
+      '*[_id == $id][0]{botVotes}',
+      {id: ref._id},
+    )
+    // Nothing lost: every planned vote still landed, and every wave is accounted for in `waves` - the old
+    // code would have skipped the conflicting wave's votes for good instead of retrying it.
+    expect(after.botVotes.uphold + after.botVotes.overturn).toBe(60)
+    expect(after.botVotes.waves).toBe(plan.length)
+    patchSpy.mockRestore()
+  })
+
+  test('an under-quorum round still gets closed by its crowd', async () => {
+    // Exercises the same closing loop runCrowd calls at its tail, directly - forcing an under-quorum first
+    // close (as if the crowd's writes were lost) the way the plan describes, rather than waiting on the real
+    // ~60-vote crowd (which is always well over quorum on its own).
+    const {runtime, instanceId, referendum} = await start(undefined, {instantSleep: true})
+    const ref = await referendum()
+    await setBotVotes(runtime, ref._id, 6, 4) // 10 heads, under RULES.quorum (20)
+
+    const result = await closeUntilDone(runtime, ref._id, instanceId)
+
+    // The old code called closeWindow exactly once at the crowd's tail: an under-quorum round would extend
+    // and then just hang, never actually closing.
+    expect(result?.status).toBe('closed')
+    expect((await referendum()).result).toBeDefined()
+  })
+
+  test('a redelivered open effect does not start a second crowd', async () => {
+    const {runtime} = await setup()
+    let opened = 0
+    const onOpened = () => {
+      opened += 1
+    }
+    const params = {incidentId: `dataset:${PROJECT}:production:incident-1`, round: 'regular', loop: 1, windowSeconds: 30}
+
+    const first = await openReferendum(runtime.content, runtime.now, 'redelivered-key', 'instance-x', params, onOpened)
+    const second = await openReferendum(runtime.content, runtime.now, 'redelivered-key', 'instance-x', params, onOpened)
+
+    expect(opened).toBe(1)
+    expect(second).toEqual(first)
+    const referendumCount = await runtime.content.fetch<number>('count(*[_type == "referendum"])')
+    expect(referendumCount).toBe(1)
   })
 
   test('a stage whose open effect never ran gets its ballot on the next closeWindow', async () => {
