@@ -25,6 +25,8 @@ export const LIVE_QUERY = `{
     "humans": count(*[_type == "vote" && references(^._id)]),
     "shootout": *[_type == "referendum" && workflowInstanceId == ^.workflowInstanceId && loop == ^.loop
       && round match "shootout*" && defined(result)] | order(windowOpensAt asc).result,
+    // Every round of this run, for the workflow path on the verdict screen.
+    "run": *[_type == "referendum" && workflowInstanceId == ^.workflowInstanceId] | order(windowOpensAt asc){round, loop, result},
     incident->${INCIDENT_CARD}
   },
   // Who the VAR room is looking at while nothing is live: next in line, same order as /api/start picks.
@@ -52,8 +54,11 @@ export type LiveReferendum = {
   bots: number
   humans: number
   shootout: ('upheld' | 'overturned')[]
+  run: RunRound[]
   incident: IncidentCard
 }
+
+export type RunRound = {round: string; loop: number; result?: 'upheld' | 'overturned' | 'tooClose'}
 
 export type IncidentCard = {
     _id: string

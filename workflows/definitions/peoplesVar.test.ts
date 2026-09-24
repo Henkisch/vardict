@@ -15,6 +15,8 @@ async function start() {
   const id = instance._id
   const stage = () => bench.currentStage(id)
   const recommend = () => bench.fireAction({instanceId: id, activity: 'review', action: 'recommend'})
+  // Every voting stage waits for a person to open its ballot (Experience v3): nothing opens by itself.
+  const kickOff = () => bench.fireAction({instanceId: id, activity: 'ballot', action: 'open'})
   const close = (upholdPct: number, votes = 60) =>
     bench.fireAction({instanceId: id, activity: 'count', action: 'closeVote', params: {upholdPct, votes}})
   const round = (won: boolean) =>
@@ -25,7 +27,7 @@ async function start() {
       params: {upholdPct: won ? 70 : 30, votes: 60},
     })
   const pendingEffects = async () => (await bench.listPendingEffects({instanceId: id})).map((e) => e.name)
-  return {bench, id, stage, recommend, close, round, pendingEffects}
+  return {bench, id, stage, recommend, kickOff, close, round, pendingEffects}
 }
 
 describe('peoplesVar', () => {
@@ -34,10 +36,12 @@ describe('peoplesVar', () => {
     expect(await stage()).toBe('varRoom')
   })
 
-  test('recommend opens the referendum and queues the ballot', async () => {
-    const {stage, recommend, pendingEffects, bench, id} = await start()
+  test('recommend moves to the referendum, which waits for its kick-off', async () => {
+    const {stage, recommend, kickOff, pendingEffects, bench, id} = await start()
     await recommend()
     expect(await stage()).toBe('referendum')
+    expect(await pendingEffects()).toEqual([]) // no ballot until someone presses
+    await kickOff()
     expect(await pendingEffects()).toEqual(['open-referendum'])
     const [effect] = await bench.listPendingEffects({instanceId: id})
     expect(effect.params).toMatchObject({incidentId: expect.stringMatching(/:incident-diaz$/), round: 'regular', windowSeconds: 30, loop: 1})
@@ -108,24 +112,31 @@ describe('peoplesVar', () => {
     }
   })
 
-  test('extra time opens a 15 s window', async () => {
-    const {recommend, close, bench, id} = await start()
+  test('extra time waits for its kick-off, then opens a 15 s window', async () => {
+    const {recommend, kickOff, close, bench, id, pendingEffects} = await start()
     await recommend()
+    await kickOff()
     await close(50)
+    expect(await pendingEffects()).toEqual(['open-referendum']) // extra time's ballot isn't open yet
+    await kickOff()
     const pending = await bench.listPendingEffects({instanceId: id})
     expect(pending.at(-1)?.params).toMatchObject({round: 'extraTime', windowSeconds: 15})
   })
 
   test('shootout: 3 rounds won upholds, with one ballot per round', async () => {
-    const {bench, id, stage, recommend, close, round} = await start()
+    const {bench, id, stage, recommend, kickOff, close, round} = await start()
     await recommend()
+    await kickOff()
     await close(50)
+    await kickOff()
     await close(50)
     expect(await stage()).toBe('shootout')
-    await round(true)
-    await round(false)
-    await round(true)
+    for (const won of [true, false, true]) {
+      await kickOff() // Take the next penalty
+      await round(won)
+    }
     expect(await stage()).toBe('shootout')
+    await kickOff()
     await round(true)
     expect(await stage()).toBe('upheld')
 

@@ -40,4 +40,19 @@ body {
   .bar {
     transition: width 600ms cubic-bezier(0.2, 0.8, 0.2, 1);
   }
+  /* Each kick-off number punches in. */
+  .kickoff-beat {
+    animation: kickoff-beat 800ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+}
+
+@keyframes kickoff-beat {
+  from {
+    opacity: 0;
+    transform: scale(1.6);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }

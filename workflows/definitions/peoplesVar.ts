@@ -126,9 +126,11 @@ function voteStage(stage: VoteStage, title: string, tooClose: string) {
         name: 'ballot',
         title: 'Open the vote',
         actions: [
+          // Fired by a person (Send to the people, Go to extra time, Take the next penalty), never by the
+          // cascade: every round waits for a press (Experience v3, session 4).
           defineAction({
             name: 'open',
-            when: 'true',
+            title: 'Kick off',
             status: 'done',
             effects: [
               defineEffect({

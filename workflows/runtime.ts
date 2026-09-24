@@ -173,8 +173,9 @@ export function createRuntime({
   return runtime
 }
 
-// Start a run for an incident and send it straight to the people.
-export async function sendToThePeople({engine, projectId, contentDataset}: Runtime, incidentId: string) {
+// Start a run for an incident, record the VAR's call and open the first vote: one press of Send to the people.
+export async function sendToThePeople(runtime: Runtime, incidentId: string) {
+  const {engine, projectId, contentDataset} = runtime
   const {instance} = await engine.startInstance({
     definition: DEFINITION,
     initialFields: [
@@ -191,7 +192,28 @@ export async function sendToThePeople({engine, projectId, contentDataset}: Runti
     idempotencyKey: `recommend-${instance._id}-${visits}`,
   })
   await engine.drainEffects({instanceId: instance._id})
+  await kickOff(runtime, instance._id)
   return instance._id
+}
+
+const VOTE_STAGES = ['referendum', 'extraTime', 'shootout']
+
+// Opens the current voting stage's ballot: the referendum document, its window and its bot crowd. Every voting
+// stage waits for this (Experience v3): the cascade never opens a round, a person does. Keyed by the stage visit
+// (its position in the instance's stage list), so a double press or a retry replays instead of opening twice.
+// Returns false when there's nothing to kick off (not a voting stage, or its ballot is already open).
+export async function kickOff({engine}: Runtime, instanceId: string): Promise<boolean> {
+  const instance = await engine.getInstance({instanceId})
+  if (!VOTE_STAGES.includes(instance.currentStage)) return false
+  if (currentStageFields(instance).referendumId != null) return false
+  await engine.fireAction({
+    instanceId,
+    activity: 'ballot',
+    action: 'open',
+    idempotencyKey: `open-${instanceId}-${instance.stages.length}`,
+  })
+  await engine.drainEffects({instanceId})
+  return true
 }
 
 // The current stage visit's fields, as the engine stores them.
@@ -201,7 +223,8 @@ function currentStageFields(instance: Awaited<ReturnType<Engine['getInstance']>>
 }
 
 export type CloseResult =
-  | {status: 'notVoting' | 'stillOpen' | 'alreadyClosed'; stage: string}
+  // waiting: a voting stage whose ballot hasn't been kicked off yet (the run is on the verdict screen).
+  | {status: 'notVoting' | 'stillOpen' | 'alreadyClosed' | 'waiting'; stage: string}
   | {status: 'extended' | 'closed'; stage: string; upholdPct: number; votes: number}
 
 // The same thresholds closeActions() in the definition routes on, mirrored here so we can label a referendum
@@ -261,7 +284,7 @@ export async function closeWindow(
     await syncResults(content, instance)
     return {status: 'alreadyClosed', stage}
   }
-  if (!fields.referendumId) return {status: 'stillOpen', stage} // ballot not open yet
+  if (!fields.referendumId) return {status: 'waiting', stage} // ballot not kicked off yet
   const referendumId = String(fields.referendumId)
 
   // The stage field's closesAt lags until the extend effect completes; the referendum document is patched
@@ -316,7 +339,7 @@ export async function closeWindow(
   // never before, so a failed action never leaves a referendum that looks closed while the workflow hasn't moved.
   const after = await engine.getInstance({instanceId})
   await syncResults(content, after)
-  // Opens the next round's referendum, or writes the final call.
+  // Writes the final call if this round decided it. The next round's ballot waits for a press (kickOff).
   await engine.drainEffects({instanceId})
   return {status: 'closed', stage, upholdPct, votes: tally.bots + tally.humans}
 }
@@ -375,6 +398,8 @@ export type StartResult =
   // newSeason: true only when every incident had a final call and this press reset them all to start again.
   | {status: 'started'; instanceId: string; incidentId: string; newSeason?: true}
   | {status: 'recommended'; instanceId: string; incidentId: string}
+  // A voting stage was waiting for its press (Go to extra time, Take the next penalty): its ballot is now open.
+  | {status: 'kickedOff'; instanceId: string; incidentId: string; stage: string}
   // instanceId is present for a genuinely busy live instance, absent for the lock-not-acquired /
   // recommend-failed variants (stage: 'starting') - both just mean "press again shortly".
   | {status: 'busy'; instanceId?: string; stage: string}
@@ -443,9 +468,26 @@ async function startNextLocked(runtime: Runtime, pick?: string): Promise<StartRe
   }
 
   const [live] = await liveInstances(runtime)
-  if (live && live.currentStage !== 'varRoom') return {status: 'busy', instanceId: live._id, stage: live.currentStage}
-  // The operator picked a different incident: the parked run gives way (aborted runs keep their rounds).
+  // A voting stage whose ballot isn't open yet is waiting for a press, not busy: the run sits on the verdict
+  // screen until someone presses Go to extra time / Take the next penalty.
+  let waiting = false
+  if (live && live.currentStage !== 'varRoom') {
+    const instance = await engine.getInstance({instanceId: live._id})
+    waiting = VOTE_STAGES.includes(live.currentStage) && currentStageFields(instance).referendumId == null
+    if (!waiting) return {status: 'busy', instanceId: live._id, stage: live.currentStage}
+  }
+  // The operator picked a different incident: the parked or waiting run gives way (aborted runs keep their rounds).
   const replacing = Boolean(live && pick && docId(live.subjectId) !== pick)
+
+  if (live && !replacing && waiting) {
+    try {
+      await kickOff(runtime, live._id)
+    } catch (error) {
+      console.warn('kick-off failed, left for the next press', live._id, error)
+      return {status: 'busy', stage: 'starting'}
+    }
+    return {status: 'kickedOff', instanceId: live._id, incidentId: docId(live.subjectId), stage: live.currentStage}
+  }
 
   if (live && !replacing) {
     const instance = await engine.getInstance({instanceId: live._id})
@@ -458,6 +500,9 @@ async function startNextLocked(runtime: Runtime, pick?: string): Promise<StartRe
         idempotencyKey: `recommend-${live._id}-${visits}`,
       })
       await engine.drainEffects({instanceId: live._id})
+      // One press: the VAR's call is recorded and the vote opens. If this part fails, the run waits in the
+      // referendum stage and the next press takes the kick-off branch above.
+      await kickOff(runtime, live._id)
     } catch (error) {
       // Leave the instance parked; the next press retries the same idempotency key and recovers it.
       console.warn('recommend failed, left for the next press', live._id, error)
@@ -624,14 +669,16 @@ export async function closeUntilDone(
       console.warn('crowd close failed', referendumId, attempt, error)
       continue
     }
-    if (result.status === 'closed' || result.status === 'alreadyClosed' || result.status === 'notVoting') return result
+    if (result.status === 'closed' || result.status === 'alreadyClosed' || result.status === 'notVoting' || result.status === 'waiting') {
+      return result
+    }
     // 'extended' or 'stillOpen': the window moved (or hadn't opened yet when we checked); loop and re-read closesAt.
   }
   return undefined
 }
 
-// Releases about 60 seeded bot votes in waves across the window, then closes the window. Closing it can open the
-// next round, whose own crowd starts from the open effect, so a whole run plays out without a browser.
+// Releases about 60 seeded bot votes in waves across the window, then closes the window. The next round doesn't
+// open by itself: it waits for a press, and its own crowd starts from its open effect.
 export async function runCrowd(runtime: Runtime, referendumId: string) {
   const {content} = runtime
   const ref = await content.fetch<CrowdReferendum>(

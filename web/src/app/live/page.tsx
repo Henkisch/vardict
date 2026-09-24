@@ -1,12 +1,14 @@
 'use client'
 
 import Link from 'next/link'
-import {useState} from 'react'
+import {useEffect, useState} from 'react'
 
 import {Bars} from '@/components/Bars'
 import {Clip} from '@/components/Clip'
+import {KickOff} from '@/components/KickOff'
 import {QrCode} from '@/components/QrCode'
 import {VarRoomScene} from '@/components/VarRoomScene'
+import {Verdict} from '@/components/Verdict'
 import {VoteButtons} from '@/components/VoteButtons'
 import {useCloseWhenCounting, useLiveState, useNow} from '@/lib/live'
 import {CALL_LABELS, formatClock, HUMAN_VOTE_WEIGHT, roundLabel, type LiveState} from '@/lib/queries'
@@ -25,28 +27,67 @@ export default function LivePage() {
 
   useCloseWhenCounting(counting)
 
+  // Experience v3: nothing moves on by itself. Every press (Send to the people, Go to extra time, Take the next
+  // penalty, Start a new season) runs the 3-2-1 kick-off, then asks the server to open the next vote.
   const [startMessage, setStartMessage] = useState<string>()
-  const [starting, setStarting] = useState(false)
-  async function sendToThePeople() {
-    setStarting(true)
+  const [kickingOff, setKickingOff] = useState<{from?: string} | null>(null)
+  function press() {
+    if (kickingOff) return
     setStartMessage(undefined)
-    boost()
-    const response = await fetch('/api/start', {method: 'POST'})
-    const body = await response.json().catch(() => ({}))
-    setStarting(false)
-    if (body.status === 'busy') setStartMessage('A vote is already live.')
-    else if (body.status === 'coolingDown') setStartMessage(`The VAR room needs ${body.retryInSeconds} more seconds.`)
-    else if (body.status === 'rateLimited') setStartMessage('Easy. Try again in a minute.')
-    else if (body.status === 'dailyLimit') setStartMessage('The VAR room has done enough for today. Come back tomorrow.')
-    else if (body.status === 'paused') setStartMessage('The VAR room is closed for now.')
-    else if (!response.ok) setStartMessage('Something went wrong. Try again.')
+    setKickingOff({from: ref?._id})
   }
+  async function whistle() {
+    boost()
+    const response = await fetch('/api/start', {method: 'POST'}).catch(() => undefined)
+    const body = response ? await response.json().catch(() => ({})) : {}
+    const message =
+      body.status === 'busy'
+        ? 'A vote is already live.'
+        : body.status === 'coolingDown'
+          ? `The VAR room needs ${body.retryInSeconds} more seconds.`
+          : body.status === 'rateLimited'
+            ? 'Easy. Try again in a minute.'
+            : body.status === 'dailyLimit'
+              ? 'The VAR room has done enough for today. Come back tomorrow.'
+              : body.status === 'paused'
+                ? 'The VAR room is closed for now.'
+                : !response?.ok
+                  ? 'Something went wrong. Try again.'
+                  : undefined
+    if (message) {
+      setKickingOff(null)
+      setStartMessage(message)
+    }
+  }
+  // The kick-off stays up until the new round is on screen (or 10 s, if it never shows).
+  if (kickingOff && ref && ref._id !== kickingOff.from && voting) setKickingOff(null)
+  useEffect(() => {
+    if (!kickingOff) return
+    const id = setTimeout(() => setKickingOff(null), 10_000)
+    return () => clearTimeout(id)
+  }, [kickingOff])
 
-  // Between votes the big screen shows the VAR room. A run that was just overturned (and isn't at the loop cap)
-  // is back there for another look; otherwise the next incident in line is on the monitor.
+  // A result holds on the verdict screen until someone presses. Rounds this tab watched live get their verdict;
+  // a visitor arriving later goes straight to the VAR room (except mid-run, where the verdict carries the button).
+  const [watched, setWatched] = useState<string>()
+  const [acknowledged, setAcknowledged] = useState<string>()
+  if ((voting || counting) && ref && watched !== ref._id) setWatched(ref._id)
+  const showVerdict = Boolean(ref?.result && (between || (ref._id === watched && acknowledged !== ref._id)))
+
   const parked = phase === 'parked'
   const decided = phase === 'decided'
-  const start = <StartButton onClick={sendToThePeople} busy={starting} message={startMessage} />
+  const start = <StartButton onClick={press} busy={Boolean(kickingOff)} message={startMessage} />
+  const nextLabel =
+    ref?.round === 'regular' ? 'Go to extra time' : ref?.round === 'extraTime' ? 'Penalties!' : 'Take the next penalty'
+  const verdictAction = between ? (
+    <StartButton onClick={press} busy={Boolean(kickingOff)} message={startMessage} label={nextLabel} />
+  ) : (
+    <StartButton
+      onClick={() => setAcknowledged(ref?._id)}
+      busy={false}
+      label={parked ? 'Back to the VAR room' : 'Next incident'}
+    />
+  )
 
   const incident = ref?.incident
   const home = incident?.match.homeTeam
@@ -74,7 +115,11 @@ export default function LivePage() {
         </div>
       </header>
 
-      {parked && ref ? (
+      {kickingOff && <KickOff onWhistle={whistle} />}
+
+      {showVerdict && ref ? (
+        <Verdict round={ref} phase={phase} action={verdictAction} />
+      ) : parked && ref ? (
         <VarRoomScene incident={ref.incident} loop={ref.loop + 1} start={start} />
       ) : decided ? (
         state?.next ? (
@@ -83,7 +128,7 @@ export default function LivePage() {
           <section className="flex flex-1 flex-col items-center justify-center gap-4 py-16 text-center">
             <p className="font-display text-4xl font-extrabold uppercase">Every call has been confirmed</p>
             <p className="max-w-xl text-muted">The people have upheld all five. Democracy is complete, and slower.</p>
-            <StartButton onClick={sendToThePeople} busy={starting} message={startMessage} label="Start a new season" />
+            <StartButton onClick={press} busy={Boolean(kickingOff)} message={startMessage} label="Start a new season" />
           </section>
         ) : (
           <p className="py-16 text-center text-muted">Connecting to the VAR room…</p>
@@ -132,11 +177,7 @@ export default function LivePage() {
 
             <Bars uphold={ref.uphold} overturn={ref.overturn} />
 
-            {counting ? (
-              <p className="font-display text-3xl font-bold uppercase text-var">Counting…</p>
-            ) : between ? (
-              <p className="text-center text-muted">The next round opens in a moment.</p>
-            ) : null}
+            {counting && <p className="font-display text-3xl font-bold uppercase text-var">Counting…</p>}
 
             {voting && (
               <>

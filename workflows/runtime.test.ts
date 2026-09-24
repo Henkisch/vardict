@@ -199,16 +199,30 @@ describe('runtime', () => {
     expect(await stage()).toBe('varRoom')
   })
 
-  test('exactly 50% is too close: extra time opens a second referendum', async () => {
+  test('exactly 50% is too close: extra time waits for its press, then opens a second referendum', async () => {
     const {runtime, instanceId, referendum, stage} = await start()
     const first = await referendum()
     await setBotVotes(runtime, first._id, 30, 30)
     const result = await closeWindow(runtime, instanceId, Date.parse(first.closesAt))
     expect(result.status).toBe('closed')
     expect(await stage()).toBe('extraTime')
+    // Experience v3: nothing opens by itself. The run waits on the verdict screen until someone presses.
+    expect((await referendum())._id).toBe(first._id)
+    expect(await closeWindow(runtime, instanceId, Date.parse(first.closesAt) + 60_000)).toEqual({status: 'waiting', stage: 'extraTime'})
+    expect(await startNext(runtime)).toEqual({status: 'kickedOff', instanceId, incidentId: 'incident-1', stage: 'extraTime'})
     const second = await referendum()
     expect(second._id).not.toBe(first._id)
     expect(second.round).toBe('extraTime')
+  })
+
+  test('a double press on Go to extra time opens one ballot, not two', async () => {
+    const {runtime, instanceId, referendum} = await start()
+    const first = await referendum()
+    await setBotVotes(runtime, first._id, 30, 30)
+    await closeWindow(runtime, instanceId, Date.parse(first.closesAt))
+    expect(await startNext(runtime)).toMatchObject({status: 'kickedOff'})
+    expect(await startNext(runtime)).toEqual({status: 'busy', instanceId, stage: 'extraTime'})
+    expect(await runtime.content.fetch<number>('count(*[_type == "referendum"])')).toBe(2)
   })
 
   test('under quorum extends the window once, then the window must close', async () => {
@@ -253,6 +267,7 @@ describe('runtime', () => {
     await setBotVotes(runtime, ref._id, 30, 30) // regular: too close
     await closeWindow(runtime, instanceId, Date.parse(ref.closesAt))
     expect(await stage()).toBe('extraTime')
+    await startNext(runtime) // Go to extra time
 
     ref = await referendum()
     await setBotVotes(runtime, ref._id, 30, 30) // extra time: too close
@@ -261,6 +276,7 @@ describe('runtime', () => {
 
     const roundOutcomes = [true, false, true, true] // win, lose, win, win: 3 wins reached on the 4th round
     for (const won of roundOutcomes) {
+      expect(await startNext(runtime)).toMatchObject({status: 'kickedOff', stage: 'shootout'}) // Take the next penalty
       ref = await referendum()
       const votes = won ? {uphold: 31, overturn: 30} : {uphold: 29, overturn: 31}
       await setBotVotes(runtime, ref._id, votes.uphold, votes.overturn)
@@ -502,7 +518,7 @@ describe('runtime', () => {
     expect(referendumCount).toBe(1)
   })
 
-  test('a stage whose open effect never ran gets its ballot on the next closeWindow', async () => {
+  test('a kicked-off stage whose open effect never ran gets its ballot on the next closeWindow', async () => {
     const {runtime} = await setup()
     const {instance} = await runtime.engine.startInstance({
       definition: DEFINITION,
@@ -510,9 +526,10 @@ describe('runtime', () => {
         {type: 'subject', name: 'subject', value: {id: `dataset:${PROJECT}:production:incident-1`, type: 'incident'}},
       ],
     })
-    // Fires the human `recommend` transition but never drains effects, leaving the referendum stage's
-    // open-referendum effect queued and unrun - the crash this plan's drain-first step is meant to recover from.
+    // Fires `recommend` and the kick-off but never drains effects, leaving the open-referendum effect queued
+    // and unrun - the crash closeWindow's drain-first step is meant to recover from.
     await runtime.engine.fireAction({instanceId: instance._id, activity: 'review', action: 'recommend'})
+    await runtime.engine.fireAction({instanceId: instance._id, activity: 'ballot', action: 'open'})
     const referendumCountBefore = await runtime.content.fetch<number>('count(*[_type == "referendum"])')
     expect(referendumCountBefore).toBe(0)
 
