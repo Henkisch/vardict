@@ -44,9 +44,8 @@ plan uses the command this plan creates as its verification gate.
   `@sanity/workflow-engine-test`.
 - `workflows/` has **no `tsconfig.json`**. The files that must type-check: `runtime.ts`, `crowd.ts`, `crowd.test.ts`,
   `definitions/peoplesVar.ts`, `definitions/peoplesVar.test.ts`, `sanity.workflow.ts`, `scripts/*.ts`.
-  These compile today with:
-  `npx tsc --noEmit --module preserve --moduleResolution bundler --target es2023 --strict --skipLibCheck --types node runtime.ts`
-  (run from `workflows/`). `scripts/*.ts` use top-level `await` and `process.env`.
+  They compile with web's TypeScript (5.9.3) using the settings in Step 1. `workflows` has no `typescript`
+  dependency of its own. `scripts/*.ts` use top-level `await` and `process.env`.
 - `web/package.json` — scripts `dev`, `build`, `start`, `lint` (`eslint`). No `typecheck`. `web/tsconfig.json` exists.
 - `var-room/package.json` — scripts `build`, `deploy`, `dev`, `start`. Has `eslint.config.mjs` and `tsconfig.json`
   but no `lint`/`typecheck` scripts.
