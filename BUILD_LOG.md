@@ -451,3 +451,36 @@ cached (`x-vercel-cache: HIT`) after the next deploy.
   keeps its own copies with "must match" comments.
 - Plans 001–011 are all on `main`; 007–011 go live with the next push. After it: redeploy the Studio schema (the vote
   type changed) and check that `/api/live` is cached.
+
+### Evening, session 4: the walkthrough turns into Experience v3
+
+- **What Henrik saw:** "so much stuff happening automagically", an autoplaying clip, and a two-minute cascade of
+  rounds after one press. He asked me to question him about vibe first, then build. A few rounds of multiple-choice
+  questions settled it (recorded in CLAUDE.md "Experience v3"): a step-by-step match, a VAR monitor wall, a floodlit
+  stadium with crowd sound, a pundit ticker, and the App SDK console as "Stockley Park".
+- **Step by step (workflow v3):** the ballot's `open` action lost its `when`, so a person kicks off every voting
+  stage. The runtime got `kickOff`. `/live` got a verdict screen that holds each result, and a "path through the
+  workflow" strip with the real stage names (Henrik's payoff idea).
+- **Monitor wall:** four players of the same official clip (1×, 0.25×, a rewind loop on the key moment, a ×1.5 zoom),
+  looped through the YouTube IFrame API. This also fixed clips running past `endSeconds`. The layout was iterated
+  live with Henrik's screenshots: full width, a 100vh app shell, then 16:9 everywhere. CSS container-height units
+  resolved to 0 in the nested flex layout, so a ResizeObserver `FitBox` sizes the wall. Players render at 1280×720
+  and scale down, because YouTube's small-player interface flashed a big pause circle on every loop.
+- **Stadium:** an Enter the stadium intro, a floodlit background, and jumbotron bars. The pundit ticker reads a new
+  `punditLine` type from Sanity (26 lines, written by us). The first crowd sound was synthesised with Web Audio, and
+  Henrik: "doesn't sound like a crowd, and when muting, still sounds 😂". Muting was broken because Fast Refresh
+  orphaned the audio context. It's now a real recording: Austria v Sweden at Ernst Happel Stadium (Work With Sounds
+  / Torsten Nilsson, CC BY 4.0), plus a CC0 whistle, credited in `web/public/sounds/CREDITS.md`.
+- **Scope cuts Henrik made while playing it:** five penalties became one sudden-death penalty ("we cant do 5 fkin
+  penalties"). The windows went from 30/15/10 s to 20/10/8 s. "The fans' call is final": overturned is terminal and
+  writes the on-field call, so loops and "abandoned" are gone. A round with no human vote goes back to the VAR room
+  (no decision). A human vote closes the round early. That's **workflow v4**.
+- **Things I got wrong and fixed:** "Real check 01:00" meant nothing to a viewer. The countdown started before the
+  round existed, so the old screen flashed back. It's now timed by the round's `windowOpensAt`, with a 3 s head
+  start. The local crowd called port 3000 while dev ran on 3100, so no bots ever joined. And deploying new runtime
+  code before v4 left a v3 run stuck on "Counting…", which I aborted and voided.
+- **Asked twice, answered no:** a route per step. `/live` stays one route that follows the run; the address bar
+  mirrors the step as `?step=`.
+- Deployed: code pushed by Henrik, workflow v4, Studio schema (Pundit lines, Key moment).
+- **Next session:** Henrik plays a full round and reports. Then animations between states (hold the old state until
+  the transition plays), the workflow-path layout, Stockley Park (the App SDK console), and polish.
