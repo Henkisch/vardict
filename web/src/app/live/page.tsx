@@ -260,6 +260,7 @@ export default function LivePage() {
                 <p className="font-display text-3xl font-bold uppercase text-var">Counting…</p>
               )}
               <p className="text-xs text-muted">
+                Over 55% keeps it · under 45% overturns · in between: {ref.round === 'regular' ? 'extra time' : 'a sudden-death penalty'}.
                 Your vote counts ×{HUMAN_VOTE_WEIGHT} against {ref.bots} simulated fans.
               </p>
             </div>

@@ -34,12 +34,7 @@ export function VarRoomScene({incident, start}: Props) {
       media={<MonitorWall incident={incident} />}
       mediaRatio={WALL_RATIO}
       actionLabel="Your call · keep it or overturn it?"
-      action={
-        <>
-          {start}
-          <p className="text-xs text-muted">Over 55% keeps it · under 45% overturns · in between: extra time</p>
-        </>
-      }
+      action={start}
     />
   )
 }
