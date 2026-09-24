@@ -388,6 +388,16 @@ control → stadium intro, look, sound, jumbotron, pundit ticker → Stockley Pa
 video and post → Oct 4 publish. If behind, cut in this order: the Teletext page, split-flap, the phone flag in the
 crowd, the zoomed monitor, the pundit ticker. Never cut the step-by-step flow.
 
+**Payoff (Henrik):** show which workflow stages the run walked through. Done as a "path through the workflow" strip on
+the verdict screen, with the real stage names (`varRoom → referendum → extraTime → shootout → upheld/abandoned`) and
+one line explaining each stage. Derived from the run's public referendums.
+
+**Status:** step 1 (step-by-step flow) is live: `peoples-var` **v3** deployed (the ballot's `open` action has no `when`,
+so a person kicks off every voting stage), plus `kickOff` in the runtime, the kick-off overlay, the verdict screen and the
+path strip. It was verified on production with Pickford: regular time too close → Go to extra time → overturned → Back
+to the VAR room. Known issue: the first "Send to the people" took ~13 s before the round showed up (start + recommend
++ open on the server, then polling), while later presses took ~3 s.
+
 Still open: loose ends in `plans/README.md` (season reset vs results wording, a clean slate before judging).
 
 ## Cost guards (cost review, session 3)
