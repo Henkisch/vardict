@@ -65,3 +65,10 @@ export const CORS = {
   'access-control-allow-headers': 'content-type',
 }
 export const preflight = () => new Response(null, {status: 204, headers: CORS})
+
+// Kill switch: set VARDICT_PAUSED=1 in Vercel to stop new runs, votes and crowds without a deploy.
+// Windows already open can still be closed, so nothing is left hanging.
+export const paused = () =>
+  process.env.VARDICT_PAUSED === '1'
+    ? Response.json({status: 'paused'}, {status: 503, headers: CORS})
+    : undefined

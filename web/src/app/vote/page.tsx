@@ -2,11 +2,11 @@
 
 import {Bars} from '@/components/Bars'
 import {VoteButtons} from '@/components/VoteButtons'
-import {useCloseWhenCounting, useLiveQuery, useNow} from '@/lib/live'
+import {useCloseWhenCounting, useLiveState, useNow} from '@/lib/live'
 import {CALL_LABELS, HUMAN_VOTE_WEIGHT, LIVE_QUERY, roundLabel, type LiveState} from '@/lib/queries'
 
 export default function VotePage() {
-  const state = useLiveQuery<LiveState>(LIVE_QUERY)
+  const state = useLiveState<LiveState>(LIVE_QUERY)
   const now = useNow()
   const ref = state?.referendum
   const secondsLeft = ref && !ref.result ? Math.max(0, (Date.parse(ref.closesAt) - now) / 1000) : 0

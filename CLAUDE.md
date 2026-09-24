@@ -55,7 +55,7 @@ Pitch: "Football fixed VAR. We fixed it with democracy. Now it's slower and less
 - One workflow, `peoplesVar`: VAR room, public referendum, extra time, shootout, loop back on overturn
 - VAR Room (App SDK): Henrik's private operator console
 - Public Next.js site: phone voting (`/vote`), live big screen (`/live`), results pages
-- Simulated crowd with fixed personas; every bot vote flagged `simulated: true`
+- Simulated crowd with fixed personas, kept apart as counters on the referendum (`botVotes`), shown openly
 - "Time added by democracy" clock, computed with GROQ (never stored)
 - Custom Studio input that previews a clip at the chosen start and end
 
@@ -149,8 +149,8 @@ data; it is shown to judges through the demo video and screenshots, since they c
 | match | homeTeam, awayTeam (refs), competition, date, venue, score | |
 | team | name, shortName, primaryColor | Colors used in the voting UI |
 | law | number, title, summary | IFAB Laws of the Game, summaries in our own words |
-| referendum | incident (ref), round, threshold, windowOpensAt, closesAt, result | Rounds: regular, extraTime, shootout1 to shootout5 |
-| vote | referendum (ref), choice, sessionId, simulated, persona, castAt | choice: uphold or overturn. persona only on bot votes |
+| referendum | incident (ref), round, loop, threshold, windowOpensAt, closesAt, result, workflowInstanceId, botVotes | Rounds: regular, extraTime, shootout1 to shootout5. **botVotes = the simulated crowd as counters** (uphold, overturn, waves, byPersona.*), one atomic `inc` per wave |
+| vote | referendum (ref), choice, sessionId, simulated, castAt | **Human votes only** (session 3). choice: uphold or overturn. `_id = vote-<referendum>-<session>` is the one-vote lock |
 
 Objects:
 - `clip`: youtubeId, startSeconds, endSeconds, channel, official (boolean), embedAllowed (boolean)
@@ -162,7 +162,7 @@ Enums:
 
 Derived, never stored:
 - Democracy clock = sum of all incidents' realDelaySeconds + all closed referendums' window lengths
-- Vote split per referendum = counted from vote documents
+- Vote split per referendum = referendum.botVotes counters + human vote documents × humanVoteWeight
 
 Validation:
 - clip.endSeconds > startSeconds, and the clip is max 30 seconds
@@ -246,7 +246,10 @@ Crowd personas (fixed, not tunable):
 How it runs:
 1. A referendum opens and a Document Function fires.
 2. The Function releases about 60 bot votes in waves across the window.
-3. Each bot vote gets `simulated: true` and its persona.
+3. Each wave is one atomic `inc` on `referendum.botVotes` (totals + per persona), guarded by a wave counter and
+   `ifRevisionId`. **Changed session 3 (Henrik):** bots used to be one document each (~60 per round); counters
+   cost 1 document per round and let screens read a number instead of counting documents. Trade-off: bots no
+   longer go through the same path as human votes.
 4. A fixed random seed per incident makes demo runs repeatable. At least one incident must reach the shootout.
 
 Function limits to design around: default timeout 10 s (raise it in the Blueprint; the crowd must outlive a
@@ -329,31 +332,27 @@ Never cut the workflow, /vote or /live.
   (clip, situation line, on-field call, "The VAR room is reviewing…") with the Send to the people button, and the
   same scene after an overturn ("Back in the VAR room, loop 2 of 3").
 
-## Cost review session (planned, Henrik session 3)
+## Cost guards (cost review, session 3)
 
-Goal: nothing in VARdict can cost Henrik money or blow a free quota, even if the link spreads or someone scripts it.
-Output: numbers per quota, hard caps in code, a cleanup routine, and a BUILD_LOG entry.
+What we're on: **Sanity Free**, which has hard caps and no overage, so it can't cost money. At a cap the API returns 402
+and the demo stops loading until the 1st (UTC): 250k API requests, 1M CDN requests, 10k documents, 1k live
+connections per dataset, 100 GB bandwidth. **Vercel team `henrik-larsson` is on Pro**, which bills overage, so this is
+where money can go.
 
-1. **Check what we're actually on.** Sanity Free plan quotas (API requests, CDN requests, bandwidth, documents,
-   live connections) and whether going over bills or blocks. Vercel team `henrik-larsson`: Hobby or Pro, function
-   invocations, active CPU / duration, and what happens at the limit. Read current pricing pages, not memory.
-2. **Measure one run.** Count the requests and documents one full run creates (start → shootout) and what one
-   open screen costs per hour. Known suspects:
-   - `/live` and `/vote` poll **uncached every 3 s** (~1,200 requests/hour per open screen) on top of the Live
-     Content API. Likely the biggest cost. Candidates: poll only while the event stream is silent, use the CDN
-     between votes, stop polling when the tab is hidden or nothing is live.
-   - About 60 vote documents per round, maybe ~400 per run. At a 10k document limit that's roughly 25 runs.
-   - Workflow instance docs and their history in `workflows`.
-   - Every bot round keeps a Vercel function alive for ~45 s.
-3. **Hard caps, enforced from data rather than in-memory limiters** (serverless instances don't share memory):
-   - Runs per day (e.g. 50) and the existing cooldown between runs, read from the workflows dataset.
-   - Human votes per referendum (e.g. 500) and per IP per hour.
-   - Consider Vercel Firewall rate-limit rules or BotID for `/api/start` and `/api/vote`.
-4. **Retention:** a cleanup script (or `reset.ts` with an age filter) that deletes votes and referendums from old runs
-   and aborted instances. Decide whether to keep aggregated results for the results pages before deleting votes.
-5. **Kill switch:** an env var (e.g. `VARDICT_PAUSED=1`) that makes `/api/start` and `/api/vote` refuse, so Henrik
-   can freeze the demo from the Vercel dashboard without a deploy.
-6. **Alerts:** usage alerts or spend caps in Sanity and Vercel, if the plans have them.
+In code:
+- **Screens** read through the API CDN and the Live Content API. They poll only while the tab is visible and the event
+  stream has been quiet for 10 s: every 3 s while a round has no result, otherwise every 20 s.
+- **Bots are counters**, one document per round instead of ~60.
+- **Caps read from data:** 40 runs per rolling 24 h (`dailyLimit`), 300 human votes per round (`full`), one live run,
+  a 10 s cooldown. There's also an in-memory per-IP limit (weak on serverless, kept as a speed bump).
+- **Kill switch:** `VARDICT_PAUSED=1` in Vercel env makes `/api/start`, `/api/vote` and `/api/crowd` answer 503. Ticks
+  still close open windows.
+- A round costs roughly 30 server-side API requests (11 waves × read + patch, plus closing).
+
+Henrik to do in dashboards (can't be done from code):
+- Vercel → Settings → Billing → **Spend Management**: set a spend amount and choose to pause projects when it's hit.
+- Optional: a Vercel Firewall rate-limit rule on `/api/start` and `/api/vote`.
+- Sanity sends usage emails at 80% and 100% to admins automatically.
 
 ## Judge testing (decided session 3)
 

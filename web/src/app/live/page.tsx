@@ -7,7 +7,7 @@ import {Bars} from '@/components/Bars'
 import {Clip} from '@/components/Clip'
 import {QrCode} from '@/components/QrCode'
 import {VoteButtons} from '@/components/VoteButtons'
-import {useCloseWhenCounting, useLiveQuery, useNow} from '@/lib/live'
+import {useCloseWhenCounting, useLiveState, useNow} from '@/lib/live'
 import {CALL_LABELS, formatClock, HUMAN_VOTE_WEIGHT, LIVE_QUERY, roundLabel, type LiveState} from '@/lib/queries'
 
 const RESULT_COPY = {
@@ -17,7 +17,7 @@ const RESULT_COPY = {
 } as const
 
 export default function LivePage() {
-  const state = useLiveQuery<LiveState>(LIVE_QUERY)
+  const state = useLiveState<LiveState>(LIVE_QUERY)
   const now = useNow()
   const ref = state?.referendum
   const closesAt = ref ? Date.parse(ref.closesAt) : 0
@@ -38,6 +38,8 @@ export default function LivePage() {
     if (body.status === 'busy') setStartMessage('A vote is already live.')
     else if (body.status === 'coolingDown') setStartMessage(`The VAR room needs ${body.retryInSeconds} more seconds.`)
     else if (body.status === 'rateLimited') setStartMessage('Easy. Try again in a minute.')
+    else if (body.status === 'dailyLimit') setStartMessage('The VAR room has done enough for today. Come back tomorrow.')
+    else if (body.status === 'paused') setStartMessage('The VAR room is closed for now.')
     else if (!response.ok) setStartMessage('Something went wrong. Try again.')
   }
 

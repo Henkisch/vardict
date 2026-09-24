@@ -57,6 +57,7 @@ function handlers(content: SanityClient, onOpened: (referendumId: string) => voi
       threshold: RULES.upheldAbove / 100,
       windowOpensAt: new Date(now).toISOString(),
       closesAt,
+      botVotes: emptyBotVotes(),
     })
     onOpened(doc._id)
     return {ops: [stageField('referendumId', doc._id), stageField('closesAt', doc.closesAt)]}
@@ -153,22 +154,14 @@ export async function closeWindow({engine, content}: Runtime, instanceId: string
   if (now < Date.parse(String(fields.closesAt))) return {status: 'stillOpen', stage}
 
   const referendumId = String(fields.referendumId)
-  const tally = await content.fetch<{uphold: number; total: number; weightedUphold: number; weightedTotal: number}>(
-    `{"uphold": count(*[_type == "vote" && referendum._ref == $id && choice == "uphold"]),
-      "total": count(*[_type == "vote" && referendum._ref == $id]),
-      "weightedUphold": count(*[_type == "vote" && referendum._ref == $id && choice == "uphold" && simulated == true])
-        + $w * count(*[_type == "vote" && referendum._ref == $id && choice == "uphold" && simulated != true]),
-      "weightedTotal": count(*[_type == "vote" && referendum._ref == $id && simulated == true])
-        + $w * count(*[_type == "vote" && referendum._ref == $id && simulated != true])}`,
-    {id: referendumId, w: RULES.humanVoteWeight},
-  )
+  const tally = await countVotes(content, referendumId)
   // Quorum counts heads; the split counts humans at their weight.
-  const upholdPct = tally.weightedTotal ? Math.round((tally.weightedUphold / tally.weightedTotal) * 1000) / 10 : 50
+  const upholdPct = tally.weightedTotal ? Math.round((tally.uphold / tally.weightedTotal) * 1000) / 10 : 50
 
-  if (tally.total < RULES.quorum && !fields.extended) {
+  if (tally.bots + tally.humans < RULES.quorum && !fields.extended) {
     await engine.fireAction({instanceId, activity: 'count', action: 'extend'})
     await engine.drainEffects({instanceId})
-    return {status: 'extended', stage, upholdPct, votes: tally.total}
+    return {status: 'extended', stage, upholdPct, votes: tally.bots + tally.humans}
   }
 
   const action = stage === 'shootout' ? (upholdPct > 50 ? 'roundWon' : 'roundLost') : 'closeVote'
@@ -181,13 +174,50 @@ export async function closeWindow({engine, content}: Runtime, instanceId: string
     instanceId,
     activity: 'count',
     action,
-    params: {upholdPct, votes: tally.total},
+    params: {upholdPct, votes: tally.bots + tally.humans},
     // Two callers can close the same window; the engine replays instead of double-counting.
     idempotencyKey: `close-${referendumId}`,
   })
   // Opens the next round's referendum, or writes the final call.
   await engine.drainEffects({instanceId})
-  return {status: 'closed', stage, upholdPct, votes: tally.total}
+  return {status: 'closed', stage, upholdPct, votes: tally.bots + tally.humans}
+}
+
+export const PERSONAS = ['homeFan', 'awayFan', 'neutral', 'pundit', 'chaos'] as const
+
+// Bots aren't documents: each wave is one atomic `inc` on the referendum's counters (1 document per round instead
+// of ~60, and screens read the counters instead of counting documents). Humans stay documents: the document id is
+// what enforces one vote per phone per round.
+export type BotVotes = {
+  uphold: number
+  overturn: number
+  waves: number
+  byPersona: Record<(typeof PERSONAS)[number], {uphold: number; overturn: number}>
+}
+
+export const emptyBotVotes = (): BotVotes & {_type: string} => ({
+  _type: 'botVotes',
+  uphold: 0,
+  overturn: 0,
+  waves: 0,
+  byPersona: Object.fromEntries(PERSONAS.map((p) => [p, {uphold: 0, overturn: 0}])) as BotVotes['byPersona'],
+})
+
+// Weighted uphold/overturn (a human counts RULES.humanVoteWeight) and heads.
+async function countVotes(content: SanityClient, referendumId: string) {
+  const t = await content.fetch<{botsUp: number; botsDown: number; humansUp: number; humansDown: number}>(
+    `*[_id == $id][0]{
+      "botsUp": coalesce(botVotes.uphold, 0),
+      "botsDown": coalesce(botVotes.overturn, 0),
+      "humansUp": count(*[_type == "vote" && referendum._ref == $id && choice == "uphold"]),
+      "humansDown": count(*[_type == "vote" && referendum._ref == $id && choice == "overturn"])
+    }`,
+    {id: referendumId},
+  )
+  const w = RULES.humanVoteWeight
+  const uphold = t.botsUp + w * t.humansUp
+  const overturn = t.botsDown + w * t.humansDown
+  return {uphold, overturn, weightedTotal: uphold + overturn, bots: t.botsUp + t.botsDown, humans: t.humansUp + t.humansDown}
 }
 
 type InstanceRow = {_id: string; currentStage: string; subjectId: string; completedAt?: string; startedAt: string}
@@ -207,6 +237,7 @@ export type StartResult =
   | {status: 'started' | 'recommended'; instanceId: string; incidentId: string}
   | {status: 'busy'; instanceId: string; stage: string}
   | {status: 'coolingDown'; retryInSeconds: number}
+  | {status: 'dailyLimit'; limit: number}
 
 // The "Send to the people" button: one live vote at a time. A run parked in the VAR room (after an overturn)
 // is sent back to the people; otherwise the next incident in line starts a fresh run.
@@ -230,6 +261,13 @@ export async function startNext(runtime: Runtime, pick?: string): Promise<StartR
   )
   const since = last ? (Date.now() - Date.parse(last.completedAt)) / 1000 : Infinity
   if (!replacing && since < START_COOLDOWN_SECONDS) return {status: 'coolingDown', retryInSeconds: Math.ceil(START_COOLDOWN_SECONDS - since)}
+
+  // Counted from stored runs, so it holds across serverless instances (an in-memory limiter wouldn't).
+  const startedToday = await workflows.fetch<number>(
+    `count(*[_type == "sanity.workflow.instance" && tag == $wfTag && dateTime(startedAt) > dateTime(now()) - 60*60*24])`,
+    {wfTag: tag},
+  )
+  if (startedToday >= RULES.maxRunsPerDay) return {status: 'dailyLimit', limit: RULES.maxRunsPerDay}
 
   // Next in line: the incident whose last referendum is oldest (never-voted first). Upheld incidents are done.
   const incidentId =
@@ -270,31 +308,36 @@ export async function runCrowd(runtime: Runtime, referendumId: string) {
   const opensAt = Date.parse(ref.windowOpensAt)
   const windowSeconds = (Date.parse(ref.closesAt) - opensAt) / 1000
   const plan = planCrowd({...ref, windowSeconds})
-  let index = 0
-  for (const wave of waves(plan)) {
+  const planned = waves(plan)
+  for (const [index, wave] of planned.entries()) {
     await sleepUntil(opensAt + wave.atMs)
-    const tally = wave.votes.some((v) => v.choice === null)
-      ? await content.fetch<{uphold: number; overturn: number}>(
-          `{"uphold": count(*[_type == "vote" && referendum._ref == $id && choice == "uphold"]),
-            "overturn": count(*[_type == "vote" && referendum._ref == $id && choice == "overturn"])}`,
-          {id: referendumId},
-        )
-      : undefined
-    const tx = content.transaction()
+    const now = await content.fetch<{_rev: string; result?: string; botVotes?: BotVotes; humansUp: number; humansDown: number}>(
+      `*[_id == $id][0]{_rev, result, botVotes,
+        "humansUp": count(*[_type == "vote" && referendum._ref == $id && choice == "uphold"]),
+        "humansDown": count(*[_type == "vote" && referendum._ref == $id && choice == "overturn"])}`,
+      {id: referendumId},
+    )
+    if (now.result) return // closed already
+    // Waves are numbered, so a restarted crowd (at-least-once effects) skips what's been counted.
+    if ((now.botVotes?.waves ?? 0) > index) continue
+    const upSoFar = (now.botVotes?.uphold ?? 0) + RULES.humanVoteWeight * now.humansUp
+    const downSoFar = (now.botVotes?.overturn ?? 0) + RULES.humanVoteWeight * now.humansDown
+    const inc: Record<string, number> = {}
+    const add = (path: string) => (inc[path] = (inc[path] ?? 0) + 1)
     for (const vote of wave.votes) {
-      tx.createIfNotExists({
-        // Deterministic ids: a crowd that runs twice (at-least-once effects) can't double-vote.
-        _id: `vote-bot-${referendumId}-${index++}`,
-        _type: 'vote',
-        referendum: {_type: 'reference', _ref: referendumId},
-        choice: vote.choice ?? chaosChoice(tally!.uphold, tally!.overturn),
-        sessionId: `bot-${vote.persona}`,
-        simulated: true,
-        persona: vote.persona,
-        castAt: new Date().toISOString(),
-      })
+      const choice = vote.choice ?? chaosChoice(upSoFar, downSoFar)
+      add(`botVotes.${choice}`)
+      add(`botVotes.byPersona.${vote.persona}.${choice}`)
     }
-    await tx.commit()
+    await content
+      .patch(referendumId)
+      .setIfMissing({botVotes: emptyBotVotes()})
+      .inc(inc)
+      .set({'botVotes.waves': index + 1})
+      // Fails if anything else changed the counters since the read; the next wave re-reads.
+      .ifRevisionId(now._rev)
+      .commit()
+      .catch((error: unknown) => console.warn('crowd wave skipped', referendumId, index, error))
   }
   // The window may have been extended; wait for the real close, then close it.
   const {closesAt} = await content.fetch<{closesAt: string}>('*[_id == $id][0]{closesAt}', {id: referendumId})

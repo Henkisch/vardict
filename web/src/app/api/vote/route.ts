@@ -1,10 +1,14 @@
-import {clientKey, getRuntime, rateLimited} from '@/lib/runtime'
+import {RULES} from 'workflows/rules'
+
+import {clientKey, getRuntime, paused, rateLimited} from '@/lib/runtime'
 
 const SESSION = /^[a-zA-Z0-9-]{16,64}$/
 
 // One vote per phone per round. The phone sends a random session id it keeps in localStorage; nothing
 // identifying is stored, because the production dataset (and so every vote) is public.
 export async function POST(request: Request) {
+  const off = paused()
+  if (off) return off
   if (rateLimited(`vote:${clientKey(request)}`, 20, 60_000)) {
     return Response.json({status: 'rateLimited'}, {status: 429})
   }
@@ -19,14 +23,18 @@ export async function POST(request: Request) {
   }
 
   const {content} = getRuntime()
-  const referendum = await content.fetch<{closesAt: string; result?: string} | null>(
-    '*[_type == "referendum" && _id == $id][0]{closesAt, result}',
+  const referendum = await content.fetch<{closesAt: string; result?: string; humans: number} | null>(
+    `*[_type == "referendum" && _id == $id][0]{closesAt, result,
+      "humans": count(*[_type == "vote" && referendum._ref == $id && simulated != true])}`,
     {id: referendumId},
   )
   if (!referendum) return Response.json({status: 'notFound'}, {status: 404})
   if (referendum.result || Date.now() >= Date.parse(referendum.closesAt)) {
     return Response.json({status: 'closed'}, {status: 409})
   }
+
+  // Caps the documents one round can create; fresh session ids would otherwise be unlimited.
+  if (referendum.humans >= RULES.maxHumanVotesPerRound) return Response.json({status: 'full'}, {status: 429})
 
   // The id is the lock: a second vote from the same session in the same round hits the same document.
   const id = `vote-${referendumId}-${sessionId}`

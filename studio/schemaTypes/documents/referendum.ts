@@ -1,6 +1,6 @@
 import {defineField, defineType} from 'sanity'
 import {ClockIcon} from '@sanity/icons/Clock'
-import {REFERENDUM_RESULTS, ROUNDS, titleFor} from '../constants'
+import {PERSONAS, REFERENDUM_RESULTS, ROUNDS, titleFor} from '../constants'
 
 // Written by the peoplesVar workflow, not by hand. Read-only in the Studio.
 export const referendum = defineType({
@@ -61,6 +61,32 @@ export const referendum = defineType({
       type: 'string',
       description: 'The peoples-var run that opened this referendum. Written by the workflow.',
       readOnly: true,
+    }),
+    defineField({
+      name: 'botVotes',
+      title: 'Simulated crowd',
+      type: 'object',
+      description:
+        'The bot crowd as counters (one atomic increment per wave), not vote documents. Humans are vote documents.',
+      readOnly: true,
+      fields: [
+        {name: 'uphold', type: 'number'},
+        {name: 'overturn', type: 'number'},
+        {name: 'waves', type: 'number', description: 'Waves counted so far; a restarted crowd skips these.'},
+        {
+          name: 'byPersona',
+          type: 'object',
+          fields: PERSONAS.map(({title, value}) => ({
+            name: value,
+            title,
+            type: 'object',
+            fields: [
+              {name: 'uphold', type: 'number'},
+              {name: 'overturn', type: 'number'},
+            ],
+          })),
+        },
+      ],
     }),
     defineField({
       name: 'result',

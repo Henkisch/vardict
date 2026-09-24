@@ -17,6 +17,9 @@ export const RULES = {
   quorum: 20,
   // Real people are rare at a demo, so each human vote counts as this many bot votes. Shown on screen.
   humanVoteWeight: 20,
+  // Cost guards (Free plan quotas): runs started per rolling 24 h, human votes per referendum.
+  maxRunsPerDay: 40,
+  maxHumanVotesPerRound: 300,
   quorumExtensionSeconds: 15,
   // Trips back to the VAR room before the match is abandoned.
   loopCap: 3,

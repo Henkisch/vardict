@@ -1,6 +1,7 @@
 // GROQ for the public screens. The vote split and the democracy clock are always derived, never stored.
 
-// Weighted split: a human vote counts this many times. Keep in sync with RULES.humanVoteWeight (workflows).
+// Weighted split: a human vote counts this many times. Bots are counters on the referendum (botVotes), humans
+// are vote documents. Keep in sync with RULES.humanVoteWeight (workflows).
 export const HUMAN_VOTE_WEIGHT = 20
 
 const team = '{name, shortName, primaryColor}'
@@ -8,12 +9,10 @@ const team = '{name, shortName, primaryColor}'
 export const LIVE_QUERY = `{
   "referendum": *[_type == "referendum"] | order(windowOpensAt desc)[0]{
     _id, round, loop, windowOpensAt, closesAt, result, workflowInstanceId,
-    "uphold": count(*[_type == "vote" && references(^._id) && choice == "uphold" && simulated == true])
-      + ${HUMAN_VOTE_WEIGHT} * count(*[_type == "vote" && references(^._id) && choice == "uphold" && simulated != true]),
-    "overturn": count(*[_type == "vote" && references(^._id) && choice == "overturn" && simulated == true])
-      + ${HUMAN_VOTE_WEIGHT} * count(*[_type == "vote" && references(^._id) && choice == "overturn" && simulated != true]),
-    "bots": count(*[_type == "vote" && references(^._id) && simulated == true]),
-    "humans": count(*[_type == "vote" && references(^._id) && simulated != true]),
+    "uphold": coalesce(botVotes.uphold, 0) + ${HUMAN_VOTE_WEIGHT} * count(*[_type == "vote" && references(^._id) && choice == "uphold"]),
+    "overturn": coalesce(botVotes.overturn, 0) + ${HUMAN_VOTE_WEIGHT} * count(*[_type == "vote" && references(^._id) && choice == "overturn"]),
+    "bots": coalesce(botVotes.uphold, 0) + coalesce(botVotes.overturn, 0),
+    "humans": count(*[_type == "vote" && references(^._id)]),
     "shootout": *[_type == "referendum" && workflowInstanceId == ^.workflowInstanceId && loop == ^.loop
       && round match "shootout*" && defined(result)] | order(windowOpensAt asc).result,
     incident->{
@@ -84,9 +83,9 @@ export function formatClock(totalSeconds: number) {
   return h ? `${h}:${pad(m)}:${pad(sec)}` : `${pad(m)}:${pad(sec)}`
 }
 
-const weighted = (choice: string) =>
-  `count(*[_type == "vote" && references(^._id) && choice == "${choice}" && simulated == true])
-    + ${HUMAN_VOTE_WEIGHT} * count(*[_type == "vote" && references(^._id) && choice == "${choice}" && simulated != true])`
+// Bots are counters on the referendum; humans are vote documents, weighted.
+const weighted = (choice: 'uphold' | 'overturn') =>
+  `coalesce(botVotes.${choice}, 0) + ${HUMAN_VOTE_WEIGHT} * count(*[_type == "vote" && references(^._id) && choice == "${choice}"])`
 
 export const INCIDENT_QUERY = `*[_type == "incident" && slug.current == $slug][0]{
   title, situation, minute, originalCall, varRecommendation, finalCall, controlCase, realDelaySeconds, fallbackText,
@@ -98,7 +97,7 @@ export const INCIDENT_QUERY = `*[_type == "incident" && slug.current == $slug][0
     "seconds": dateTime(closesAt) - dateTime(windowOpensAt),
     "uphold": ${weighted('uphold')},
     "overturn": ${weighted('overturn')},
-    "humans": count(*[_type == "vote" && references(^._id) && simulated != true])
+    "humans": count(*[_type == "vote" && references(^._id)])
   },
   "others": *[_type == "incident" && slug.current != $slug] | order(title asc){title, "slug": slug.current}
 }`

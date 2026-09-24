@@ -18,6 +18,11 @@ type Round = {
 }
 
 const PERSONAS = ['homeFan', 'awayFan', 'neutral', 'pundit', 'chaos']
+// One entry per persona, read from the referendum's counters.
+const PERSONA_COUNTERS = PERSONAS.map(
+  (p) =>
+    `{"persona": "${p}", "uphold": coalesce(botVotes.byPersona.${p}.uphold, 0), "overturn": coalesce(botVotes.byPersona.${p}.overturn, 0)}`,
+).join(', ')
 const PERSONA_LABELS: Record<string, string> = {
   homeFan: 'Home fans',
   awayFan: 'Away fans',
@@ -36,21 +41,17 @@ function useNow() {
 }
 
 // The latest referendum with its crowd broken down by persona: what the operator sees and the public doesn't.
-// Raw GROQ on purpose: counts per persona are aggregates, which handles and projections can't express.
+// Raw GROQ on purpose: human votes are counted from documents, which a projection of one handle can't do.
+// The bots are counters on the referendum (botVotes.byPersona).
 export function LiveRound() {
   const {data} = useQuery<Round | null>({
     query: `*[_type == "referendum"] | order(windowOpensAt desc)[0]{
       _id, round, loop, closesAt, result,
       "title": incident->title, "varRecommendation": incident->varRecommendation,
-      "humansUphold": count(*[_type == "vote" && references(^._id) && simulated != true && choice == "uphold"]),
-      "humansOverturn": count(*[_type == "vote" && references(^._id) && simulated != true && choice == "overturn"]),
-      "personas": $personas[]{
-        "persona": @,
-        "uphold": count(*[_type == "vote" && references(^.^._id) && persona == ^ && choice == "uphold"]),
-        "overturn": count(*[_type == "vote" && references(^.^._id) && persona == ^ && choice == "overturn"])
-      }
+      "humansUphold": count(*[_type == "vote" && references(^._id) && choice == "uphold"]),
+      "humansOverturn": count(*[_type == "vote" && references(^._id) && choice == "overturn"]),
+      "personas": [${PERSONA_COUNTERS}]
     }`,
-    params: {personas: PERSONAS},
   })
   const now = useNow()
   const [closing, setClosing] = useState<string>()

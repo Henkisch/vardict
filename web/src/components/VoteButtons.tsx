@@ -40,7 +40,15 @@ export function VoteButtons({referendumId, size}: {referendumId: string; size: '
         delete next[referendumId]
         return next
       })
-      setError(body.status === 'closed' ? 'Too late: that window has closed.' : 'Your vote didn’t count. Try again.')
+      setError(
+        body.status === 'closed'
+          ? 'Too late: that window has closed.'
+          : body.status === 'full'
+            ? 'This round is full. Catch the next one.'
+            : body.status === 'paused'
+              ? 'Voting is paused.'
+              : 'Your vote didn’t count. Try again.',
+      )
     }
   }
 

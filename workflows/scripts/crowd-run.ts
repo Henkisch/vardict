@@ -17,10 +17,10 @@ while (tasks.length) await tasks.shift()
 
 const rounds = await runtime.content.fetch<{round: string; loop: number; result: string; uphold: number; total: number}[]>(
   `*[_type == "referendum" && workflowInstanceId == $id] | order(windowOpensAt asc){round, loop, result,
-    "uphold": count(*[_type == "vote" && references(^._id) && choice == "uphold"]),
-    "total": count(*[_type == "vote" && references(^._id)])}`,
+    "uphold": coalesce(botVotes.uphold, 0) + count(*[_type == "vote" && references(^._id) && choice == "uphold"]),
+    "total": coalesce(botVotes.uphold, 0) + coalesce(botVotes.overturn, 0) + count(*[_type == "vote" && references(^._id)])}`,
   {id: started.instanceId},
 )
-for (const r of rounds) console.log(`loop ${r.loop} ${r.round}: ${Math.round((100 * r.uphold) / r.total)}% uphold of ${r.total} -> ${r.result}`)
+for (const r of rounds) console.log(`loop ${r.loop} ${r.round}: ${Math.round((100 * r.uphold) / r.total)}% uphold (unweighted) of ${r.total} -> ${r.result}`)
 const instance = await runtime.engine.getInstance({instanceId: started.instanceId})
 console.log('stage:', instance.currentStage)

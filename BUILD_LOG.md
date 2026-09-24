@@ -347,3 +347,22 @@ uploads, which the clip rules ban, so an agent is checking the results for offic
   democracy for that incident, every round grouped by run and loop, the outcry with sources, and a control-case
   line that changes with the verdict. On its first real run the crowd overturned Díaz, 43%. The people got the
   control case right.
+
+### Cost review: bots become counters
+
+- **What we're on:** Sanity Free has hard caps, not overage. At a cap the API answers 402 and the demo stops, but it
+  never bills. Vercel's `henrik-larsson` team turned out to be **Pro**, which does bill overage, so that's where the
+  money risk is.
+- **Biggest leak, and it was mine:** the "always poll every 3 s, no CDN" fix from the stale-screen bug meant about
+  1,200 requests an hour for every open tab. A single forgotten tab would have used up the month's 250k API
+  requests in about nine days. Now: CDN, poll only when the tab is visible and the live stream is quiet, fast only
+  while a round is open.
+- **Documents:** each bot vote was a document, about 60 a round, which would hit the 10k cap after about 25 runs.
+  First plan: freeze the tally at close and delete the bots. Henrik asked "can we count votes in some other smart
+  way?", and that was the better question. Bots don't need to be documents: each wave is one atomic `inc` on the
+  referendum, with a wave counter and `ifRevisionId` so a restarted crowd can't count twice. Humans stay documents,
+  because the document id is the one-vote-per-phone lock. Henrik had all 300 existing bot documents deleted.
+  First run on counters: 2 rounds, 120 bot votes, 2 new documents.
+- **Caps from data, not memory:** runs per 24 h and human votes per round are counted from stored documents,
+  because serverless instances don't share memory. Plus a `VARDICT_PAUSED` kill switch.
+- Left for Henrik: Vercel spend management (a dashboard setting).
