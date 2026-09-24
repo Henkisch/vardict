@@ -72,14 +72,24 @@ function handlers(content: SanityClient, now: () => number, onOpened: (referendu
   // instead of pushing closesAt out again.
   const extend: EffectHandler = async (params) => {
     const id = String(params.referendumId)
-    const {_rev, closesAt, extended} = await content.fetch<{_rev: string; closesAt: string; extended?: boolean}>(
-      '*[_id == $id][0]{_rev, closesAt, extended}',
-      {id},
-    )
-    if (extended === true) return {ops: [stageField('closesAt', closesAt)]}
-    const next = new Date(Date.parse(closesAt) + Number(params.seconds) * 1000).toISOString()
-    await content.patch(id).set({closesAt: next, extended: true}).ifRevisionId(_rev).commit()
-    return {ops: [stageField('closesAt', next)]}
+    const seconds = Number(params.seconds)
+    // One retry: the bot crowd patches this same document's botVotes counters throughout the window, so our
+    // ifRevisionId commit can lose a race to a wave landing at the same moment. Re-reading and retrying once
+    // beats leaving the stage marked `extended` with a closesAt that never actually moved.
+    for (let attempt = 0; ; attempt++) {
+      const {_rev, closesAt, extended} = await content.fetch<{_rev: string; closesAt: string; extended?: boolean}>(
+        '*[_id == $id][0]{_rev, closesAt, extended}',
+        {id},
+      )
+      if (extended === true) return {ops: [stageField('closesAt', closesAt)]}
+      const next = new Date(Date.parse(closesAt) + seconds * 1000).toISOString()
+      try {
+        await content.patch(id).set({closesAt: next, extended: true}).ifRevisionId(_rev).commit()
+        return {ops: [stageField('closesAt', next)]}
+      } catch (error) {
+        if (attempt >= 1) throw error
+      }
+    }
   }
 
   // The people upheld the VAR's recommendation, so it becomes the final call.
@@ -169,14 +179,29 @@ function resultFor(stageName: string, upholdPct: number): 'upheld' | 'overturned
 // `result` on a referendum is a projection of the engine's own record, never written independently of it.
 // Walks every stage visit the instance has ever had (not just the current one) and, for any visit whose fields
 // carry both a referendumId and a decided upholdPct, makes sure that referendum's `result` matches — filling
-// in only what's missing, so a healthy referendum that already has its result is never re-written.
+// in only what's missing. This runs on every closeWindow call (including the "nothing to do" branches), and
+// closeWindow itself is polled every few seconds by every open screen on a Free-plan request quota, so it must
+// cost zero writes once a run's referendums already have their results. One fetch finds which of this
+// instance's decided referendums are actually still missing a result, and (only when that set is non-empty)
+// one transaction patches exactly those.
 async function syncResults(content: SanityClient, instance: Awaited<ReturnType<Engine['getInstance']>>) {
+  const decided = new Map<string, 'upheld' | 'overturned' | 'tooClose'>()
   for (const visit of instance.stages as unknown as {name: string; fields?: {name: string; value?: unknown}[]}[]) {
     const fields = Object.fromEntries((visit.fields ?? []).map((f) => [f.name, f.value]))
     if (fields.referendumId == null || fields.upholdPct == null) continue
-    const result = resultFor(visit.name, Number(fields.upholdPct))
-    await content.patch(String(fields.referendumId)).setIfMissing({result}).commit()
+    decided.set(String(fields.referendumId), resultFor(visit.name, Number(fields.upholdPct)))
   }
+  if (decided.size === 0) return
+
+  const missing = await content.fetch<string[]>(
+    '*[_id in $ids && !defined(result)]._id',
+    {ids: [...decided.keys()]},
+  )
+  if (missing.length === 0) return
+
+  const tx = content.transaction()
+  for (const id of missing) tx.patch(content.patch(id).setIfMissing({result: decided.get(id)!}))
+  await tx.commit()
 }
 
 // Called by /api/tick when a countdown hits zero. Safe to call twice or too early.

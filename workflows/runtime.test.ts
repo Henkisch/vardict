@@ -97,6 +97,36 @@ async function castHumanVote(runtime: Runtime, referendumId: string, choice: 'up
   })
 }
 
+// Wraps the content client so the NEXT `.commit()` on a patch of `documentId` rejects once, as if it lost an
+// `ifRevisionId` race (e.g. to the bot crowd incrementing botVotes on the same document) - then behaves
+// normally again. Returns the spy so a test can restore it.
+function makeNextPatchCommitFailOnce(client: SanityClient, documentId: string) {
+  const originalPatch = client.patch.bind(client)
+  let armed = true
+  return vi.spyOn(client, 'patch').mockImplementation((selector: unknown, ...rest: unknown[]) => {
+    const builder = (originalPatch as (...args: unknown[]) => any)(selector, ...rest)
+    if (armed && selector === documentId) {
+      armed = false
+      // The fake client's chain methods (set/ifRevisionId/...) return the same closed-over builder object,
+      // not `this` - so wrapping only has any effect if every chain call keeps returning the proxy too,
+      // otherwise the chain escapes the wrapper after the first `.set()`/`.ifRevisionId()` call.
+      const wrapped: any = new Proxy(builder, {
+        get(target, prop, receiver) {
+          if (prop === 'commit') return () => Promise.reject(new Error('simulated ifRevisionId conflict'))
+          const value = Reflect.get(target, prop, receiver)
+          if (typeof value !== 'function') return value
+          return (...args: unknown[]) => {
+            const result = value.apply(target, args)
+            return result === target ? receiver : result
+          }
+        },
+      })
+      return wrapped
+    }
+    return builder
+  })
+}
+
 // Starts the (single, by default) seeded incident's run and hands back the instance id plus helpers scoped to it.
 async function start(documents?: Doc[]) {
   const {bench, runtime, tasks} = await setup(documents)
@@ -345,6 +375,24 @@ describe('runtime', () => {
     expect((await referendum()).result).toBe('upheld')
   })
 
+  test('closing a window whose result is already synced writes nothing (Free-plan request budget)', async () => {
+    // /api/tick is polled every few seconds by every open screen while a round is live, and the Sanity
+    // project has a hard Free-plan request quota, so a closeWindow call that finds nothing to heal must not
+    // spend a write - not even a no-op patch - re-confirming a result that's already there.
+    const {runtime, instanceId, referendum} = await start()
+    const ref = await referendum()
+    await setBotVotes(runtime, ref._id, 34, 26)
+    await closeWindow(runtime, instanceId, Date.parse(ref.closesAt))
+    expect((await referendum()).result).toBe('upheld')
+
+    const patchSpy = vi.spyOn(runtime.content, 'patch')
+    const transactionSpy = vi.spyOn(runtime.content, 'transaction')
+    const second = await closeWindow(runtime, instanceId, Date.parse(ref.closesAt) + 5_000)
+    expect(['alreadyClosed', 'notVoting']).toContain(second.status)
+    expect(patchSpy).not.toHaveBeenCalled()
+    expect(transactionSpy).not.toHaveBeenCalled()
+  })
+
   test('two concurrent closes: neither rejects, the instance advances once, one referendum result', async () => {
     const {runtime, instanceId, referendum, stage} = await start()
     const ref = await referendum()
@@ -375,6 +423,21 @@ describe('runtime', () => {
 
     const after = await referendum()
     expect(Date.parse(after.closesAt)).toBe(Date.parse(ref.closesAt) + RULES.quorumExtensionSeconds * 1000)
+  })
+
+  test('extend retries once after losing a revision race (e.g. to the bot crowd) and still moves closesAt by exactly 15s', async () => {
+    const {runtime, instanceId, referendum} = await start()
+    const ref = await referendum()
+    await setBotVotes(runtime, ref._id, 6, 4) // under RULES.quorum (20)
+
+    const patchSpy = makeNextPatchCommitFailOnce(runtime.content, ref._id)
+    const result = await closeWindow(runtime, instanceId, Date.parse(ref.closesAt))
+    expect(result.status).toBe('extended')
+    expect(patchSpy).toHaveBeenCalledTimes(2) // the failed attempt, then the retry
+
+    const after = await referendum()
+    expect(Date.parse(after.closesAt)).toBe(Date.parse(ref.closesAt) + RULES.quorumExtensionSeconds * 1000)
+    patchSpy.mockRestore()
   })
 
   test('a human vote written after closesAt is not counted', async () => {
