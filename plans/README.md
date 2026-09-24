@@ -22,7 +22,7 @@ real Sanity project and the public site — don't run them without the operator'
 | 008 | Public API routes reject cross-site/oversized/malformed requests | P2 | S | 005 | DONE (branch `advisor/008-api-hardening` @ 9601749; reviewed after 1 revision; not merged) |
 | 009 | All confirmed → new season instead of a 500 | P1 | S | 005, 006 | DONE (branch `advisor/009-seasons` @ 9462572; reviewed; not merged) |
 | 010 | `/incidents` results overview + "Abandoned" | P2 | S | 007 | DONE (branch `advisor/010-results-index` @ ec68e73; reviewed; not merged) |
-| 011 | Brief matches code; shared rules in one place | P2 | S | 001–010 | TODO |
+| 011 | Brief matches code; shared rules in one place | P2 | S | 001–010 | DONE (branch `advisor/011-docs-and-constants` @ 9f62a11; reviewed after 1 revision; var-room keeps copies (lockfile); operator: redeploy Studio schema; not merged) |
 | 012 | Spike: "Watch a shootout" replay | P3 | M | 006, 010 | TODO |
 | 013 | VAR Room in the Dashboard + operator controls | P2 | S–M | 005, 009 | TODO |
 | 014 | Link previews show the democracy clock (OG) | P3 | S–M | 010 | TODO |
