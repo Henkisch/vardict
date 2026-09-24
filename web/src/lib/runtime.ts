@@ -14,10 +14,11 @@ export function crowdKey() {
 }
 
 // Where this deployment can reach itself. Preview URLs sit behind Vercel's login, so they run the crowd in-process.
+// Local dev runs the crowd in-process too: the dev server's port isn't reliably known here (it ran on 3100 while
+// this assumed 3000, and no bots ever joined).
 function selfUrl() {
   if (process.env.VERCEL_ENV === 'production') return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
-  if (process.env.VERCEL_ENV) return undefined
-  return `http://localhost:${process.env.PORT ?? 3000}`
+  return undefined
 }
 
 // Each round's crowd gets its own request: one function dying mid-crowd can't strand the rest of the run
