@@ -6,7 +6,7 @@ import {runPhase, type RunRef} from '@/lib/run-status'
 import type {IncidentRound} from '@/lib/queries'
 import {SHOOTOUT_ROUNDS_TO_WIN} from 'workflows/shared'
 
-export type Outcome = 'upheld' | 'abandoned' | 'parked' | 'open' | 'notVoted'
+export type Outcome = 'upheld' | 'overturned' | 'parked' | 'open' | 'notVoted'
 
 // Group rounds into runs (one workflow instance each, spanning every loop within it). Runs never overlap in
 // time (singleSubject: one live run per incident), so this also leaves them in chronological order.
@@ -22,10 +22,9 @@ export function groupRuns(rounds: IncidentRound[]) {
 //   - no rounds                                                              -> notVoted
 //   - one run, regular time, upheld                                         -> upheld
 //   - one run, reaches a shootout, wins it 3-1                              -> upheld
-//   - three runs (loop cap reached within the last one), the third loop's
-//     round overturned                                                      -> abandoned
+//   - one run, overturned in regular time (final, workflow v4)             -> overturned
 //   - one run, latest round is tooClose (between)                           -> open
-//   - one run, overturned below the loop cap (parked, back in the VAR room) -> parked
+//   - one run, last round nobody voted in (back in the VAR room)            -> parked
 
 // The outcome of a single run (one workflowInstanceId), given all of its rounds across every loop it visited.
 export function runOutcome(run: IncidentRound[]): Outcome {
@@ -57,7 +56,7 @@ export function runOutcome(run: IncidentRound[]): Outcome {
   const overturned = last.round.startsWith('shootout')
     ? shootout.filter((r) => r === 'overturned').length >= SHOOTOUT_ROUNDS_TO_WIN
     : last.result === 'overturned'
-  return overturned ? 'abandoned' : 'upheld'
+  return overturned ? 'overturned' : 'upheld'
 }
 
 // The incident's current outcome: whatever its latest run says.
@@ -70,7 +69,7 @@ export function incidentOutcome(rounds: IncidentRound[]): Outcome {
 // Shared display strings for an Outcome - the incident page and the /incidents overview both use these.
 export const OUTCOME_LABEL: Record<Outcome, {label: string; tone: string}> = {
   upheld: {label: 'Upheld', tone: 'text-uphold'},
-  abandoned: {label: 'Abandoned', tone: 'text-overturn'},
+  overturned: {label: 'Overturned', tone: 'text-overturn'},
   parked: {label: 'Back in the VAR room', tone: 'text-var'},
   open: {label: 'Still being decided', tone: 'text-muted'},
   notVoted: {label: 'Not voted yet', tone: 'text-muted'},

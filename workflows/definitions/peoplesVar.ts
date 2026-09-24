@@ -9,7 +9,7 @@ import {
   defineWorkflow,
 } from '@sanity/workflow-engine/define'
 
-import {HUMAN_VOTE_WEIGHT, LOOP_CAP, SHOOTOUT_ROUNDS_TO_WIN, WINDOW_SECONDS} from '../shared'
+import {HUMAN_VOTE_WEIGHT, SHOOTOUT_ROUNDS_TO_WIN, WINDOW_SECONDS} from '../shared'
 
 // The rules of the People's VAR. Percentages are the share of votes to UPHOLD the VAR recommendation.
 export const RULES = {
@@ -25,8 +25,6 @@ export const RULES = {
   // Free plan's 10k document cap, kept far away: a ceiling on human vote documents per rolling 24 h.
   maxHumanVotesPerDay: 3000,
   quorumExtensionSeconds: 15,
-  // Trips back to the VAR room before the match is abandoned.
-  loopCap: LOOP_CAP,
 } as const
 
 type VoteStage = 'referendum' | 'extraTime' | 'shootout'
@@ -39,6 +37,8 @@ export const EFFECTS = {
   open: {referendum: 'open-referendum', extraTime: 'open-extra-time', shootout: 'open-shootout-round'},
   extend: {referendum: 'extend-referendum', extraTime: 'extend-extra-time', shootout: 'extend-shootout-round'},
   finalize: {referendum: 'finalize-referendum', extraTime: 'finalize-extra-time', shootout: 'finalize-shootout'},
+  // The fans overturned it: the on-field call becomes the final call.
+  overrule: {referendum: 'overrule-referendum', extraTime: 'overrule-extra-time', shootout: 'overrule-shootout'},
 } as const satisfies Record<string, Record<VoteStage, string>>
 
 // GROQ for the referendum round name stored on the referendum document.
@@ -117,6 +117,8 @@ function voteStage(stage: VoteStage, title: string, tooClose: string) {
       defineField({type: 'number', name: 'upholdPct'}),
       defineField({type: 'number', name: 'votes'}),
       defineField({type: 'boolean', name: 'extended', initialValue: {type: 'literal', value: false}}),
+      // Set when the window closed without a single human vote: the simulated crowd can't decide alone.
+      defineField({type: 'boolean', name: 'noVotes', initialValue: {type: 'literal', value: false}}),
       // Written by the open-* effect handler.
       defineField({type: 'string', name: 'referendumId'}),
       defineField({type: 'datetime', name: 'closesAt'}),
@@ -152,6 +154,13 @@ function voteStage(stage: VoteStage, title: string, tooClose: string) {
         title: 'Count the votes',
         actions: [
           ...closeActions(stage),
+          // No human voted: no decision. The tick route fires this instead of a close action.
+          defineAction({
+            name: 'noVotes',
+            title: 'No fans voted',
+            ops: [defineOp({type: 'field.set', target: {field: 'noVotes'}, value: {type: 'literal', value: true}})],
+            status: 'done',
+          }),
           // A window that closes under quorum gets one extension; the tick route fires this instead.
           defineAction({
             name: 'extend',
@@ -167,7 +176,8 @@ function voteStage(stage: VoteStage, title: string, tooClose: string) {
           }),
         ],
       }),
-      // Upheld is terminal and can't run work, so the call is written here, in the hop that moves there.
+      // Upheld and overturned are terminal and can't run work, so the final call is written here, in the hop
+      // that moves there: the VAR's call if upheld, the on-field call if the fans overturned it.
       defineActivity({
         name: 'finalize',
         title: 'Write the final call',
@@ -178,34 +188,37 @@ function voteStage(stage: VoteStage, title: string, tooClose: string) {
             status: 'done',
             effects: [defineEffect({name: EFFECTS.finalize[stage], bindings: {incidentId: '$fields.subject._id'}})],
           }),
+          defineAction({
+            name: 'writeOverruledCall',
+            when: LOSS[stage],
+            status: 'done',
+            effects: [defineEffect({name: EFFECTS.overrule[stage], bindings: {incidentId: '$fields.subject._id'}})],
+          }),
         ],
       }),
     ],
     // Declaration order is routing priority.
     transitions: [
       defineTransition({name: 'upheld', to: 'upheld', when: WIN[stage]}),
-      defineTransition({name: 'overturned', to: 'varRoom', when: LOSS[stage]}),
+      defineTransition({name: 'overturned', to: 'overturned', when: LOSS[stage]}),
+      defineTransition({name: 'noDecision', to: 'varRoom', when: '$fields.noVotes == true'}),
       defineTransition({name: stage === 'shootout' ? 'nextRound' : 'tooClose', to: tooClose, when: decided}),
     ],
   })
 }
 
-// Stage visits live in the raw instance snapshot. 1 on the first run through, 2 after one overturn, ...
+// Stage visits live in the raw instance snapshot. 1 on the first run through, 2 after a round nobody voted in, ...
 const VAR_ROOM_VISITS = 'count(*[_id == $self][0].stages[name == "varRoom"])'
 
 export const peoplesVar = defineWorkflow({
   name: 'peoples-var',
   title: "People's VAR",
   description:
-    'The VAR room recommends, the public decides. Too close to call goes to extra time, then a shootout. Overturned goes back to the VAR room.',
+    'The VAR room recommends, the fans decide. Too close to call goes to extra time, then a sudden-death penalty. Overturned means the on-field call stands. A round nobody votes in goes back to the VAR room.',
   initialStage: 'varRoom',
   start: {
     kind: 'interactive',
     requirements: [{type: 'singleSubject', name: 'one-run-per-incident', title: 'This incident is already live'}],
-  },
-  predicates: {
-    // The first visit isn't a loop.
-    loopCapReached: `${VAR_ROOM_VISITS} > ${RULES.loopCap}`,
   },
   fields: [
     defineField({
@@ -232,7 +245,6 @@ export const peoplesVar = defineWorkflow({
         }),
       ],
       transitions: [
-        defineTransition({name: 'abandon', to: 'abandoned', when: '$loopCapReached'}),
         defineTransition({name: 'recommend', to: 'referendum', when: '$allActivitiesDone'}),
       ],
     }),
@@ -240,6 +252,6 @@ export const peoplesVar = defineWorkflow({
     voteStage('extraTime', 'Extra time', 'shootout'),
     voteStage('shootout', 'Shootout', 'shootout'),
     defineStage({name: 'upheld', title: 'Upheld', description: 'The people have spoken. The call stands.'}),
-    defineStage({name: 'abandoned', title: 'Abandoned', description: 'Match to be replayed.'}),
+    defineStage({name: 'overturned', title: 'Overturned', description: 'The fans overruled the VAR. The on-field call stands.'}),
   ],
 })

@@ -71,5 +71,5 @@ export const PUNDIT_TRIGGERS = [
   {title: 'Penalty saved (overturn)', value: 'penaltySaved'},
   {title: 'Upheld', value: 'upheld'},
   {title: 'Overturned', value: 'overturned'},
-  {title: 'Match abandoned', value: 'abandoned'},
+  {title: 'Nobody voted (back to the VAR room)', value: 'noVotes'},
 ]

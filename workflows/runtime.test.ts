@@ -8,6 +8,7 @@ import {
   closeUntilDone,
   closeWindow,
   createRuntime,
+  finishEarly,
   DEFINITION,
   openReferendum,
   runCrowd,
@@ -32,6 +33,7 @@ function incidentDoc(overrides: Record<string, unknown> = {}): Doc {
     _type: 'incident',
     title: 'Test incident',
     varRecommendation: 'noGoal',
+    originalCall: 'goal',
     recommendationFavours: 'home',
     crowdSeed: 1,
     outcry: {level: 3},
@@ -46,6 +48,7 @@ type SetupOptions = {
   // bench's own clock by the requested amount, so `runtime.now()` (what closeWindow checks closesAt against)
   // moves exactly as far as production's real timer would have made it wait.
   instantSleep?: boolean
+  requireHumanVote?: boolean
 }
 
 async function setup(documents: Doc[] = [incidentDoc()], options: SetupOptions = {}) {
@@ -66,6 +69,8 @@ async function setup(documents: Doc[] = [incidentDoc()], options: SetupOptions =
     background: (task) => void tasks.push(task()),
     // Tests drive votes directly; the one runCrowd test below builds its own runtime with the default background.
     startCrowd: () => {},
+    // Most tests drive rounds with bot counters only; the no-human-vote rule has its own tests below.
+    requireHumanVote: options.requireHumanVote ?? false,
     ...(options.instantSleep
       ? {
           sleep: (ms: number) => {
@@ -189,14 +194,35 @@ describe('runtime', () => {
     expect(incident.finalCall).toBe('noGoal')
   })
 
-  test('under 45% overturns: back to the VAR room', async () => {
+  test('under 45% overturns: the fans\' call is final, the on-field call stands (v4)', async () => {
     const {runtime, instanceId, referendum, stage} = await start()
     const ref = await referendum()
     await setBotVotes(runtime, ref._id, 26, 34) // 26/60 = 43.3%
     const result = await closeWindow(runtime, instanceId, Date.parse(ref.closesAt))
     expect(result.status).toBe('closed')
     expect((await referendum()).result).toBe('overturned')
+    expect(await stage()).toBe('overturned')
+    const incident = await runtime.content.fetch<{finalCall?: string}>('*[_id == "incident-1"][0]{finalCall}')
+    expect(incident.finalCall).toBe('goal')
+  })
+
+  test('no human vote: no decision, back to the VAR room', async () => {
+    const {runtime, instanceId, referendum, stage} = await start(undefined, {requireHumanVote: true})
+    const ref = await referendum()
+    await setBotVotes(runtime, ref._id, 50, 10) // the bots would uphold, but they can't decide alone
+    const result = await closeWindow(runtime, instanceId, Date.parse(ref.closesAt))
+    expect(result).toMatchObject({status: 'noVotes', votes: 60})
+    expect((await referendum()).result).toBe('noVotes')
     expect(await stage()).toBe('varRoom')
+  })
+
+  test('one human vote is enough for the crowd to decide', async () => {
+    const {runtime, instanceId, referendum, stage} = await start(undefined, {requireHumanVote: true})
+    const ref = await referendum()
+    await setBotVotes(runtime, ref._id, 50, 10)
+    await castHumanVote(runtime, ref._id, 'uphold')
+    expect(await closeWindow(runtime, instanceId, Date.parse(ref.closesAt))).toMatchObject({status: 'closed'})
+    expect(await stage()).toBe('upheld')
   })
 
   test('exactly 50% is too close: extra time waits for its press, then opens a second referendum', async () => {
@@ -281,6 +307,33 @@ describe('runtime', () => {
     expect(await stage()).toBe('upheld')
   })
 
+  test('a human vote finishes the round early: the rest of the crowd votes at once, then it closes', async () => {
+    const {runtime, referendum, stage} = await start()
+    const ref = await referendum()
+    await castHumanVote(runtime, ref._id, 'overturn')
+    // Well before closesAt: the bench clock hasn't moved.
+    const result = await finishEarly(runtime, ref._id)
+    expect(result).toMatchObject({status: 'closed'})
+
+    const after = await runtime.content.fetch<{result?: string; bots: number; waves: number}>(
+      '*[_id == $id][0]{result, "bots": botVotes.uphold + botVotes.overturn, "waves": botVotes.waves}',
+      {id: ref._id},
+    )
+    const planned = waves(planCrowd({round: 'regular', loop: 1, windowSeconds: 20, recommendationFavours: 'home', outcryLevel: 3, seed: 1}))
+    expect(after.waves).toBe(planned.length)
+    expect(after.bots).toBe(planned.reduce((n, w) => n + w.votes.length, 0))
+    expect(after.result).toBeDefined()
+    expect(await stage()).not.toBe('referendum')
+  })
+
+  test('finishEarly on a round that already has a result does nothing', async () => {
+    const {runtime, instanceId, referendum} = await start()
+    const ref = await referendum()
+    await setBotVotes(runtime, ref._id, 40, 5)
+    await closeWindow(runtime, instanceId, Date.parse(ref.closesAt))
+    expect(await finishEarly(runtime, ref._id)).toBeUndefined()
+  })
+
   test('startNext while a round is open is busy', async () => {
     const {runtime, instanceId} = await start()
     const result = await startNext(runtime)
@@ -301,10 +354,10 @@ describe('runtime', () => {
     expect(after.status).toBe('started')
   })
 
-  test('startNext after an overturn recommends the same parked instance', async () => {
-    const {runtime, instanceId, referendum, stage} = await start()
+  test('startNext after a round nobody voted in recommends the same parked instance', async () => {
+    const {runtime, instanceId, referendum, stage} = await start(undefined, {requireHumanVote: true})
     const ref = await referendum()
-    await setBotVotes(runtime, ref._id, 10, 50) // overturn
+    await setBotVotes(runtime, ref._id, 10, 50) // no human vote -> parked in the VAR room
     await closeWindow(runtime, instanceId, Date.parse(ref.closesAt))
     expect(await stage()).toBe('varRoom')
 
@@ -313,9 +366,9 @@ describe('runtime', () => {
   })
 
   test('an unknown pick changes nothing (plan 005)', async () => {
-    const {runtime, instanceId, referendum, stage} = await start()
+    const {runtime, instanceId, referendum, stage} = await start(undefined, {requireHumanVote: true})
     const ref = await referendum()
-    await setBotVotes(runtime, ref._id, 10, 50) // overturn -> parked in the VAR room
+    await setBotVotes(runtime, ref._id, 10, 50) // no human vote -> parked in the VAR room
     await closeWindow(runtime, instanceId, Date.parse(ref.closesAt))
     expect(await stage()).toBe('varRoom')
 
@@ -326,12 +379,12 @@ describe('runtime', () => {
   })
 
   test('a pick at the daily cap does not abort the parked run (plan 005)', async () => {
-    const {runtime, instanceId, referendum, stage} = await start([
-      incidentDoc(),
-      incidentDoc({_id: 'incident-2', title: 'Test 2'}),
-    ])
+    const {runtime, instanceId, referendum, stage} = await start(
+      [incidentDoc(), incidentDoc({_id: 'incident-2', title: 'Test 2'})],
+      {requireHumanVote: true},
+    )
     const ref = await referendum()
-    await setBotVotes(runtime, ref._id, 10, 50) // overturn -> parked in the VAR room
+    await setBotVotes(runtime, ref._id, 10, 50) // no human vote -> parked in the VAR room
     await closeWindow(runtime, instanceId, Date.parse(ref.closesAt))
     expect(await stage()).toBe('varRoom')
 

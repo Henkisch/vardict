@@ -1,6 +1,11 @@
+import {after} from 'next/server'
 import {RULES} from 'workflows/rules'
+import {finishEarly} from 'workflows/runtime'
 
 import {clientKey, getRuntime, paused, rateLimited, readJson} from '@/lib/runtime'
+
+// finishEarly runs after the response: the rest of the crowd's waves plus closing, a few seconds.
+export const maxDuration = 60
 
 const SESSION = /^[a-zA-Z0-9-]{16,64}$/
 
@@ -56,5 +61,12 @@ export async function POST(request: Request) {
     castAt,
   })
   if (doc.castAt !== castAt) return Response.json({status: 'alreadyVoted', choice: doc.choice}, {status: 409})
+  // One judge alone shouldn't wait out the clock: a human vote closes the round now (the rest of the seeded
+  // crowd votes at once first). After the response, so the phone gets its confirmation straight away.
+  after(() =>
+    finishEarly(getRuntime(), referendumId)
+      .then(() => undefined)
+      .catch((error: unknown) => console.error('finish early failed', referendumId, error)),
+  )
   return Response.json({status: 'voted', choice})
 }

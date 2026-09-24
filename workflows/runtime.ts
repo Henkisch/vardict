@@ -29,6 +29,9 @@ export type RuntimeConfig = {
   // (e.g. one that instead advances a bench's own clock) so waits aren't pinned to real time, which has
   // nothing to do with a bench's separately-tracked clock.
   sleep?: (ms: number) => Promise<void>
+  // The simulated crowd can't decide alone: a round with no human vote goes back to the VAR room. Default on;
+  // most runtime tests turn it off to drive rounds with bot counters only.
+  requireHumanVote?: boolean
 }
 
 export type Runtime = {
@@ -41,6 +44,7 @@ export type Runtime = {
   background: (task: () => Promise<void>) => void
   now: () => number
   sleep: (ms: number) => Promise<void>
+  requireHumanVote: boolean
 }
 
 // Effect params carry documents as global references: dataset:<project>:<dataset>:<id>.
@@ -128,7 +132,14 @@ function handlers(content: SanityClient, now: () => number, onOpened: (referendu
     await content.patch(id).set({finalCall: varRecommendation}).commit()
   }
 
-  const byKind = {open, extend, finalize}
+  // The fans overturned the VAR's recommendation: the on-field call stands, and becomes the final call.
+  const overrule: EffectHandler = async (params) => {
+    const id = docId(params.incidentId)
+    const {originalCall} = await content.fetch<{originalCall: string}>('*[_id == $id][0]{originalCall}', {id})
+    await content.patch(id).set({finalCall: originalCall}).commit()
+  }
+
+  const byKind = {open, extend, finalize, overrule}
   return Object.fromEntries(
     Object.entries(EFFECTS).flatMap(([kind, names]) =>
       Object.values(names as Record<string, string>).map((name) => [name, byKind[kind as keyof typeof byKind]]),
@@ -147,6 +158,7 @@ export function createRuntime({
   client,
   now = Date.now,
   sleep = (ms) => new Promise<void>((resolve) => setTimeout(resolve, ms)),
+  requireHumanVote = true,
 }: RuntimeConfig): Runtime {
   const base = client ?? createClient({projectId, token, apiVersion: '2025-02-19', useCdn: false})
   const content = base.withConfig({dataset: contentDataset})
@@ -169,7 +181,7 @@ export function createRuntime({
       ),
     },
   })
-  const runtime: Runtime = {engine, content, workflows, projectId, contentDataset, tag, background, now, sleep}
+  const runtime: Runtime = {engine, content, workflows, projectId, contentDataset, tag, background, now, sleep, requireHumanVote}
   return runtime
 }
 
@@ -225,6 +237,8 @@ function currentStageFields(instance: Awaited<ReturnType<Engine['getInstance']>>
 export type CloseResult =
   // waiting: a voting stage whose ballot hasn't been kicked off yet (the run is on the verdict screen).
   | {status: 'notVoting' | 'stillOpen' | 'alreadyClosed' | 'waiting'; stage: string}
+  // noVotes: the window closed without a human vote, so the run went back to the VAR room with no decision.
+  | {status: 'noVotes'; stage: string; votes: number}
   | {status: 'extended' | 'closed'; stage: string; upholdPct: number; votes: number}
 
 // The same thresholds closeActions() in the definition routes on, mirrored here so we can label a referendum
@@ -264,7 +278,7 @@ async function syncResults(content: SanityClient, instance: Awaited<ReturnType<E
 
 // Called by /api/tick when a countdown hits zero. Safe to call twice or too early.
 export async function closeWindow(
-  {engine, content, now: runtimeNow}: Runtime,
+  {engine, content, now: runtimeNow, requireHumanVote}: Runtime,
   instanceId: string,
   now = runtimeNow(),
 ): Promise<CloseResult> {
@@ -301,6 +315,14 @@ export async function closeWindow(
   const tally = await countVotes(content, referendumId, closesAtIso)
   // Quorum counts heads; the split counts humans at their weight.
   const upholdPct = tally.weightedTotal ? Math.round((tally.uphold / tally.weightedTotal) * 1000) / 10 : 50
+
+  // The simulated crowd can't decide alone: no human vote, no decision. Back to the VAR room.
+  if (requireHumanVote && tally.humans === 0) {
+    await engine.fireAction({instanceId, activity: 'count', action: 'noVotes', idempotencyKey: `novotes-${referendumId}`})
+    await content.patch(referendumId).setIfMissing({result: 'noVotes'}).commit()
+    await engine.drainEffects({instanceId})
+    return {status: 'noVotes', stage, votes: tally.bots}
+  }
 
   if (tally.bots + tally.humans < RULES.quorum && !fields.extended) {
     await engine.fireAction({
@@ -669,12 +691,33 @@ export async function closeUntilDone(
       console.warn('crowd close failed', referendumId, attempt, error)
       continue
     }
-    if (result.status === 'closed' || result.status === 'alreadyClosed' || result.status === 'notVoting' || result.status === 'waiting') {
+    if (['closed', 'alreadyClosed', 'notVoting', 'waiting', 'noVotes'].includes(result.status)) {
       return result
     }
     // 'extended' or 'stillOpen': the window moved (or hadn't opened yet when we checked); loop and re-read closesAt.
   }
   return undefined
+}
+
+// A human voted, so there's nothing left to wait for (Experience v3: one judge alone at a desk). The rest of the
+// seeded crowd votes at once, in the same waves it would have cast over the window, then the round closes.
+// The crowd still running in the background finds the round closed and stops.
+export async function finishEarly(runtime: Runtime, referendumId: string) {
+  const {content} = runtime
+  const ref = await content.fetch<CrowdReferendum & {result?: string; waves?: number}>(
+    `*[_id == $id][0]{round, loop, windowOpensAt, closesAt, workflowInstanceId, result, "waves": coalesce(botVotes.waves, 0),
+      "seed": incident->crowdSeed, "recommendationFavours": incident->recommendationFavours,
+      "outcryLevel": incident->outcry.level}`,
+    {id: referendumId},
+  )
+  if (!ref || ref.result) return
+  const windowSeconds = (Date.parse(ref.closesAt) - Date.parse(ref.windowOpensAt)) / 1000
+  const planned = waves(planCrowd({...ref, windowSeconds}))
+  for (let index = ref.waves ?? 0; index < planned.length; index++) {
+    if ((await applyWave(runtime, referendumId, index, planned[index].votes)) === 'closed') return
+  }
+  // Closing "after" the window: the tally still only counts votes cast before closesAt, which this one was.
+  return closeWindow(runtime, ref.workflowInstanceId, Number.POSITIVE_INFINITY)
 }
 
 // Releases about 60 seeded bot votes in waves across the window, then closes the window. The next round doesn't

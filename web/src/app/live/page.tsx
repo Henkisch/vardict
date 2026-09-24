@@ -125,8 +125,9 @@ export default function LivePage() {
   const verdictKey = showVerdict && ref?.result ? `${ref._id}:${ref.result}` : undefined
   useEffect(() => {
     if (!soundOn || !verdictKey || !ref?.result) return
+    // A decision gets a roar either way (the fans won something); nobody voting gets a groan.
     if (ref.result === 'tooClose') cue('gasp')
-    else if (phase === 'decided') cue(ref.result === 'upheld' ? 'roar' : 'groan')
+    else if (ref.result === 'noVotes') cue('groan')
     else cue('roar')
     // One reaction per result: keyed on verdictKey only.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -138,16 +139,12 @@ export default function LivePage() {
     : voting || counting
       ? 'voting'
       : showVerdict && ref?.result
-        ? ref.round.startsWith('shootout') && between
-          ? ref.result === 'upheld'
-            ? 'penaltyScored'
-            : 'penaltySaved'
+        ? ref.result === 'noVotes'
+          ? 'noVotes'
           : ref.result === 'tooClose'
             ? 'tooClose'
-            : phase === 'decided'
-              ? ref.result === 'upheld'
-                ? 'upheld'
-                : 'abandoned'
+            : ref.result === 'upheld'
+              ? 'upheld'
               : 'overturned'
         : 'review'
   const tickerIncident = showVerdict || voting || counting || parked ? ref?.incident._id : state?.next?._id
@@ -265,7 +262,16 @@ export default function LivePage() {
 
             {voting && (
               <div className="flex flex-col gap-2">
-                <VoteButtons key={ref._id} referendumId={ref._id} size="panel" />
+                <VoteButtons
+                  key={ref._id}
+                  referendumId={ref._id}
+                  size="panel"
+                  onVoted={() => {
+                    refresh()
+                    setTimeout(refresh, 2000)
+                    setTimeout(refresh, 4000)
+                  }}
+                />
                 <p className="text-sm text-muted">
                   Your vote counts ×{HUMAN_VOTE_WEIGHT} against {ref.bots} simulated fans.
                 </p>

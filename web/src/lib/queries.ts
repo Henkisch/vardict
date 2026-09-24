@@ -57,7 +57,7 @@ export type LiveReferendum = {
   loop: number
   windowOpensAt: string
   closesAt: string
-  result?: 'upheld' | 'overturned' | 'tooClose'
+  result?: 'upheld' | 'overturned' | 'tooClose' | 'noVotes'
   workflowInstanceId: string
   uphold: number
   overturn: number
@@ -68,7 +68,7 @@ export type LiveReferendum = {
   incident: IncidentCard
 }
 
-export type RunRound = {round: string; loop: number; result?: 'upheld' | 'overturned' | 'tooClose'; seconds: number}
+export type RunRound = {round: string; loop: number; result?: 'upheld' | 'overturned' | 'tooClose' | 'noVotes'; seconds: number}
 
 export type IncidentCard = {
     _id: string
@@ -141,7 +141,7 @@ export type IncidentRound = {
   _id: string
   round: string
   loop: number
-  result?: 'upheld' | 'overturned' | 'tooClose'
+  result?: 'upheld' | 'overturned' | 'tooClose' | 'noVotes'
   windowOpensAt: string
   workflowInstanceId: string
   seconds: number

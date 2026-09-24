@@ -1,8 +1,8 @@
 import {Bars} from '@/components/Bars'
 import {WorkflowPath} from '@/components/WorkflowPath'
-import {formatClock, type LiveReferendum} from '@/lib/queries'
+import {CALL_LABELS, formatClock, type LiveReferendum} from '@/lib/queries'
 import type {Phase} from '@/lib/run-status'
-import {LOOP_CAP, SHOOTOUT_ROUNDS_TO_WIN, WINDOW_SECONDS} from 'workflows/shared'
+import {SHOOTOUT_ROUNDS_TO_WIN, WINDOW_SECONDS} from 'workflows/shared'
 
 type Copy = {headline: string; tone: string; next: string}
 
@@ -21,20 +21,16 @@ function copyFor(ref: LiveReferendum, phase: Phase): Copy {
       ? {headline: 'Too close to call', tone: 'text-var', next: `Between 45% and 55%. ${WINDOW_SECONDS.extraTime} seconds of extra time.`}
       : {headline: 'Still too close', tone: 'text-var', next: 'Extra time settled nothing. Sudden death: one penalty decides it.'}
   }
-  const upheld = ref.result === 'upheld'
-  const how = shootout ? ' on penalties' : ref.round === 'extraTime' ? ' in extra time' : ''
-  if (upheld) return {headline: `Upheld${how}`, tone: 'text-uphold', next: 'The people confirmed it. The call stands.'}
-  if (phase === 'decided' || ref.loop >= LOOP_CAP) {
-    return {headline: 'Match abandoned', tone: 'text-overturn', next: `Overturned for the ${LOOP_CAP}rd time. To be replayed.`}
+  if (ref.result === 'noVotes') {
+    return {headline: 'No fans voted', tone: 'text-var', next: "The crowd can't decide alone. Back to the VAR room."}
   }
-  return {
-    headline: `Overturned${how}`,
-    tone: 'text-overturn',
-    next:
-      ref.loop + 1 >= LOOP_CAP
-        ? 'Back to the VAR room. One more overturn and the match is abandoned.'
-        : 'Back to the VAR room for another look.',
+  const how = shootout ? ' on the penalty' : ref.round === 'extraTime' ? ' in extra time' : ''
+  const onPitch = CALL_LABELS[ref.incident.originalCall] ?? ref.incident.originalCall
+  if (ref.result === 'upheld' || (shootout && won > lost)) {
+    return {headline: `Upheld${how}`, tone: 'text-uphold', next: 'The fans confirmed the VAR. The call stands.'}
   }
+  // The fans' call is final (workflow v4): the on-field call stands.
+  return {headline: `Overturned${how}`, tone: 'text-overturn', next: `The fans overruled the VAR. ${onPitch} stands.`}
 }
 
 export function Verdict({round: ref, phase, action}: {round: LiveReferendum; phase: Phase; action: React.ReactNode}) {

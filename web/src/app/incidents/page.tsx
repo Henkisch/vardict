@@ -36,9 +36,9 @@ function IncidentRow({incident}: {incident: IncidentOverviewRow}) {
   const outcome = incidentOutcome(incident.rounds)
   const {label, tone} = OUTCOME_LABEL[outcome]
   const {homeTeam: home, awayTeam: away} = incident.match
-  // The control case: VAR was simply wrong, so overturning (or abandoning, its extreme form) is "right".
+  // The control case: VAR was simply wrong, so overturning it is "right".
   const controlVerdict =
-    incident.controlCase && (outcome === 'upheld' || outcome === 'abandoned')
+    incident.controlCase && (outcome === 'upheld' || outcome === 'overturned')
       ? outcome === 'upheld'
         ? {text: 'The people got it wrong.', tone: 'text-overturn'}
         : {text: 'The people got it right.', tone: 'text-uphold'}

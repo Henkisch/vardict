@@ -7,7 +7,7 @@ import type {RunRound} from '@/lib/queries'
 // with the real stage names. Derived from the run's referendums, which are public; the engine's own state lives in
 // the private workflows dataset.
 
-type Stage = 'varRoom' | 'referendum' | 'extraTime' | 'shootout' | 'upheld' | 'abandoned'
+type Stage = 'varRoom' | 'referendum' | 'extraTime' | 'shootout' | 'upheld' | 'overturned'
 
 const EXPLAIN: Record<Stage, string> = {
   varRoom: 'The VAR room reviews the footage and recommends a call.',
@@ -15,10 +15,10 @@ const EXPLAIN: Record<Stage, string> = {
   extraTime: `Too close to call: ${WINDOW_SECONDS.extraTime} more seconds, same thresholds.`,
   shootout: `Still too close: sudden death. One ${WINDOW_SECONDS.shootout}-second vote decides it.`,
   upheld: 'The people confirmed the call. It stands.',
-  abandoned: 'Three trips back to the VAR room. Match to be replayed.',
+  overturned: 'The fans overruled the VAR. The on-field call stands.',
 }
 
-const RESULT_TONE = {upheld: 'text-uphold', overturned: 'text-overturn', tooClose: 'text-var'} as const
+const RESULT_TONE = {upheld: 'text-uphold', overturned: 'text-overturn', tooClose: 'text-var', noVotes: 'text-muted'} as const
 
 type Step = {stage: Stage; label: string; result?: RunRound['result']; current?: boolean}
 
@@ -33,7 +33,7 @@ function stepsFor(run: RunRound[], phase: Phase): Step[] {
   let loop = 0
   for (const round of run) {
     if (round.loop !== loop) {
-      steps.push({stage: 'varRoom', label: loop ? `VAR room · loop ${round.loop}` : 'VAR room'})
+      steps.push({stage: 'varRoom', label: loop ? 'VAR room · again' : 'VAR room'})
       loop = round.loop
     }
     const stage = stageOf(round.round)
@@ -43,9 +43,9 @@ function stepsFor(run: RunRound[], phase: Phase): Step[] {
   const last = run.at(-1)
   if (!last?.result) return steps
   // Where the run is now, after its latest result.
-  if (phase === 'parked') steps.push({stage: 'varRoom', label: `VAR room · loop ${last.loop + 1}`, current: true})
+  if (phase === 'parked') steps.push({stage: 'varRoom', label: 'VAR room · again', current: true})
   else if (phase === 'decided') {
-    steps.push(last.result === 'upheld' ? {stage: 'upheld', label: 'Upheld'} : {stage: 'abandoned', label: 'Abandoned'})
+    steps.push(last.result === 'upheld' ? {stage: 'upheld', label: 'Upheld'} : {stage: 'overturned', label: 'Overturned'})
   } else if (phase === 'between') {
     const next = last.round === 'regular' ? 'extraTime' : 'shootout'
     steps.push({stage: next, label: next === 'extraTime' ? 'Extra time' : 'Next penalty', current: true})
@@ -94,6 +94,6 @@ export function WorkflowPath({run, phase}: {run: RunRound[]; phase: Phase}) {
   )
 }
 
-const RESULT_WORD = {upheld: 'upheld', overturned: 'overturned', tooClose: 'too close'} as const
+const RESULT_WORD = {upheld: 'upheld', overturned: 'overturned', tooClose: 'too close', noVotes: 'no votes'} as const
 // A shootout round is a penalty: uphold means the VAR scores.
-const PENALTY_WORD = {upheld: 'scored', overturned: 'saved', tooClose: 'retaken'} as const
+const PENALTY_WORD = {upheld: 'scored', overturned: 'saved', tooClose: 'retaken', noVotes: 'no votes'} as const

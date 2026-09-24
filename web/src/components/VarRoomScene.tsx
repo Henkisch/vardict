@@ -26,6 +26,7 @@ const LAST_COPY = {
   upheld: {label: 'Upheld', tone: 'text-uphold'},
   overturned: {label: 'Overturned', tone: 'text-overturn'},
   tooClose: {label: 'Too close', tone: 'text-var'},
+  noVotes: {label: 'No votes', tone: 'text-muted'},
 } as const
 
 // What the big screen shows between votes: the VAR room at work on the next decision.
@@ -87,7 +88,7 @@ export function VarRoomScene({incident, last, start}: Props) {
           <span>{last.incident.title}</span>
           {last.result && (
             <span className={`font-display text-lg font-extrabold uppercase ${LAST_COPY[last.result].tone}`}>
-              {last.result === 'overturned' && last.loop >= 3 ? 'Abandoned, match to be replayed' : LAST_COPY[last.result].label}
+              {LAST_COPY[last.result].label}
             </span>
           )}
           <Link href={`/incidents/${last.incident.slug}`} className="text-var underline">

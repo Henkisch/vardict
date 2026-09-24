@@ -12,6 +12,7 @@ const RESULT = {
   upheld: {label: 'Upheld', tone: 'text-uphold'},
   overturned: {label: 'Overturned', tone: 'text-overturn'},
   tooClose: {label: 'Too close', tone: 'text-var'},
+  noVotes: {label: 'No fans voted', tone: 'text-muted'},
 } as const
 
 export default function IncidentPage() {
@@ -27,7 +28,7 @@ export default function IncidentPage() {
   const runs = groupRuns(incident.rounds)
   const {homeTeam: home, awayTeam: away} = incident.match
   const outcome = incidentOutcome(incident.rounds)
-  // The control case: VAR was simply wrong. Overturning (or abandoning, its extreme form) is the "right" call.
+  // The control case: VAR was simply wrong. Overturning it is the "right" call.
   const controlVerdict =
     incident.controlCase && outcome !== 'notVoted' && outcome !== 'open'
       ? outcome === 'upheld'
@@ -35,7 +36,6 @@ export default function IncidentPage() {
         : 'The people refused to rubber-stamp a decision the referees admit was wrong.'
       : undefined
   const peopleFallback = {
-    abandoned: 'Abandoned · match to be replayed',
     parked: 'Back in the VAR room',
     open: 'Still being decided',
     notVoted: 'Not voted yet',
@@ -65,8 +65,8 @@ export default function IncidentPage() {
         <Call label="The VAR room" value={incident.varRecommendation} />
         {outcome === 'upheld' ? (
           <Call label="The people" value={incident.varRecommendation} />
-        ) : outcome === 'abandoned' ? (
-          <Call label="The people" value={peopleFallback.abandoned} tone="text-overturn" />
+        ) : outcome === 'overturned' ? (
+          <Call label="The people" value={incident.originalCall} tone="text-overturn" />
         ) : (
           <Call label="The people" fallback={peopleFallback[outcome]} />
         )}

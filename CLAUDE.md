@@ -398,6 +398,15 @@ path strip. It was verified on production with Pickford: regular time too close 
 to the VAR room. Known issue: the first "Send to the people" took ~13 s before the round showed up (start + recommend
 + open on the server, then polling), while later presses took ~3 s.
 
+**Workflow v4 (Henrik, session 4):** the fans' call is final. Over 55% keeps the VAR's call (`upheld`), under 45%
+overturns it (`overturned`, terminal: the on-field call becomes the final call), 45-55% goes to extra time and then
+one sudden-death penalty. A round with no human vote is no decision: back to `varRoom`. Loops and "abandoned" are
+gone. Windows are 20 s / 10 s / 8 s, and a human vote closes the round early (the rest of the seeded crowd votes
+at once). Routes: one `/live` that follows the run (Henrik asked twice; kept, since per-step routes go stale).
+
+**Polish backlog (Henrik: "do that in the end"):** animations between states, and don't swap the content before the
+transition plays (hold the old state until the transition starts). Also more layout polish on /live.
+
 Still open: loose ends in `plans/README.md` (season reset vs results wording, a clean slate before judging).
 
 ## Cost guards (cost review, session 3)

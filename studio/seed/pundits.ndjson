@@ -18,9 +18,9 @@
 {"_id": "pundit-18", "_type": "punditLine", "trigger": "upheld", "pundit": "gaffer", "text": "Upheld. The VAR was right all along. Nobody will ever admit it."}
 {"_id": "pundit-19", "_type": "punditLine", "trigger": "upheld", "pundit": "stats", "text": "Confirmed by the people. Adds roughly four minutes per decision. Worth it."}
 {"_id": "pundit-20", "_type": "punditLine", "trigger": "upheld", "pundit": "oldPro", "text": "The call stands. Took twice as long. Felt twice as fair. Wasn't."}
-{"_id": "pundit-21", "_type": "punditLine", "trigger": "overturned", "pundit": "gaffer", "text": "Overturned! Back to the VAR room. They'll need a bigger kettle."}
+{"_id": "pundit-21", "_type": "punditLine", "trigger": "overturned", "pundit": "gaffer", "text": "Overturned! The fans have overruled the experts. Somewhere a VAR official is updating his CV."}
 {"_id": "pundit-22", "_type": "punditLine", "trigger": "overturned", "pundit": "stats", "text": "The people have overruled the experts. A first for this country, surely."}
-{"_id": "pundit-23", "_type": "punditLine", "trigger": "overturned", "pundit": "oldPro", "text": "Back it goes. That monitor has seen more of this than the referee has."}
-{"_id": "pundit-24", "_type": "punditLine", "trigger": "abandoned", "pundit": "gaffer", "text": "Abandoned. Match to be replayed. Nobody wins. Except the lawyers."}
-{"_id": "pundit-25", "_type": "punditLine", "trigger": "abandoned", "pundit": "oldPro", "text": "Three overturns. That's not a decision any more, that's a lifestyle."}
-{"_id": "pundit-26", "_type": "punditLine", "trigger": "abandoned", "pundit": "stats", "text": "Total time added: yes."}
+{"_id": "pundit-23", "_type": "punditLine", "trigger": "overturned", "pundit": "oldPro", "text": "The on-field call stands. The referee was right all along. Nobody tell him."}
+{"_id": "pundit-24", "_type": "punditLine", "trigger": "noVotes", "pundit": "gaffer", "text": "Nobody voted. Democracy's biggest problem, in one empty stand."}
+{"_id": "pundit-25", "_type": "punditLine", "trigger": "noVotes", "pundit": "oldPro", "text": "Not a single fan voted. Back to the VAR room, and back to the pies."}
+{"_id": "pundit-26", "_type": "punditLine", "trigger": "noVotes", "pundit": "stats", "text": "Turnout: zero. Even the bots look embarrassed."}

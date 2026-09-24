@@ -4,11 +4,11 @@
 // voting:   the window is open, no result yet.
 // counting: the window closed, no result yet (waiting on /api/tick).
 // between:  a round has a result but the run continues — tooClose, or a shootout round that isn't decided yet.
-// parked:   overturned and back in the VAR room for another loop.
-// decided:  upheld, overturned at the loop cap (abandoned), a shootout that's been won or lost outright, or no
+// parked:   nobody voted (the simulated crowd can't decide alone), so it's back in the VAR room.
+// decided:  upheld or overturned (the fans' call is final, workflow v4), a penalty scored or saved, or no
 //           referendum at all.
 
-import {LOOP_CAP, SHOOTOUT_ROUNDS_TO_WIN} from 'workflows/shared'
+import {SHOOTOUT_ROUNDS_TO_WIN} from 'workflows/shared'
 
 export type Phase = 'voting' | 'counting' | 'between' | 'parked' | 'decided'
 
@@ -33,21 +33,19 @@ export type RunRef = {
 //   - result: tooClose                                                   -> between
 //   - shootout round, 2 wins/1 loss so far (nobody at 3 yet)              -> between
 //   - shootout round, 3rd win                                            -> decided
-//   - shootout round, 3rd loss, loop 1                                   -> parked
-//   - result: overturned, loop 3 (loop cap, abandoned)                   -> decided
+//   - result: noVotes                                                  -> parked
+//   - result: overturned                                               -> decided
 //   - result: upheld                                                     -> decided
 export function runPhase(ref: RunRef | null | undefined, now: number): Phase {
   if (!ref) return 'decided'
   if (!ref.result) return now < Date.parse(ref.closesAt) ? 'voting' : 'counting'
+  if (ref.result === 'noVotes') return 'parked'
   if (ref.result === 'tooClose') return 'between'
 
-  let overturned = ref.result === 'overturned'
   if (ref.round.startsWith('shootout')) {
     const wins = ref.shootout.filter((r) => r === 'upheld').length
     const losses = ref.shootout.filter((r) => r === 'overturned').length
     if (wins < SHOOTOUT_ROUNDS_TO_WIN && losses < SHOOTOUT_ROUNDS_TO_WIN) return 'between'
-    overturned = losses >= SHOOTOUT_ROUNDS_TO_WIN
   }
-
-  return overturned && ref.loop < LOOP_CAP ? 'parked' : 'decided'
+  return 'decided'
 }

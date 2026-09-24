@@ -18,7 +18,16 @@ function sessionId() {
 
 // Uphold / Overturn for one referendum. One vote per browser per round (the server enforces it too).
 // `size="huge"` fills a phone screen; `size="panel"` sits in the big screen's side panel.
-export function VoteButtons({referendumId, size}: {referendumId: string; size: 'huge' | 'panel'}) {
+export function VoteButtons({
+  referendumId,
+  size,
+  onVoted,
+}: {
+  referendumId: string
+  size: 'huge' | 'panel'
+  // Called once the vote is stored: the round closes early (see /api/vote), so the screen should refetch.
+  onVoted?: () => void
+}) {
   // Votes by referendum id, so a new round shows fresh buttons.
   const [votes, setVotes] = useState<Record<string, Choice>>({})
   const [error, setError] = useState<string>()
@@ -33,6 +42,7 @@ export function VoteButtons({referendumId, size}: {referendumId: string; size: '
       body: JSON.stringify({referendumId, choice, sessionId: sessionId()}),
     })
     const body = await response.json().catch(() => ({}))
+    if (body.status === 'voted') onVoted?.()
     if (body.status === 'alreadyVoted') setVotes((v) => ({...v, [referendumId]: body.choice}))
     else if (!response.ok) {
       setVotes((v) => {

@@ -55,11 +55,24 @@ describe('peoplesVar', () => {
     expect(await pendingEffects()).toContain('finalize-referendum')
   })
 
-  test('under 45% sends it back to the VAR room', async () => {
-    const {stage, recommend, close} = await start()
+  // v4 (session 4): the fans' call is final. Overturned is terminal and writes the on-field call.
+  test('under 45% overturns: terminal, and the on-field call becomes the final call', async () => {
+    const {stage, recommend, close, pendingEffects} = await start()
     await recommend()
     await close(44)
+    expect(await stage()).toBe('overturned')
+    expect(await pendingEffects()).toContain('overrule-referendum')
+  })
+
+  test('a round nobody voted in goes back to the VAR room with no decision', async () => {
+    const {bench, id, stage, recommend, kickOff, pendingEffects} = await start()
+    await recommend()
+    await kickOff()
+    await bench.fireAction({instanceId: id, activity: 'count', action: 'noVotes'})
     expect(await stage()).toBe('varRoom')
+    expect((await pendingEffects()).filter((n) => n.startsWith('finalize-') || n.startsWith('overrule-'))).toEqual([])
+    await recommend() // Let the fans decide, again
+    expect(await stage()).toBe('referendum')
   })
 
   test('only an upheld result writes the final call, from whichever stage decided it', async () => {
@@ -100,7 +113,7 @@ describe('peoplesVar', () => {
   test('extra time: upheld, overturned, or on to a shootout', async () => {
     for (const [pct, expected] of [
       [60, 'upheld'],
-      [40, 'varRoom'],
+      [40, 'overturned'],
       [50, 'shootout'],
     ] as const) {
       const run = await start()
@@ -142,40 +155,13 @@ describe('peoplesVar', () => {
     expect(rounds).toEqual(['regular', 'extraTime', 'shootout1'])
   })
 
-  test('shootout: a saved penalty goes back to the VAR room', async () => {
+  test('shootout: a saved penalty overturns', async () => {
     const {stage, recommend, close, round} = await start()
     await recommend()
     await close(50)
     await close(50)
     await round(false)
-    expect(await stage()).toBe('varRoom')
-  })
-
-  test('a second shootout starts from 0–0', async () => {
-    const {stage, recommend, close, round} = await start()
-    await recommend()
-    await close(50)
-    await close(50)
-    await round(false)
-    expect(await stage()).toBe('varRoom')
-    await recommend()
-    await close(50)
-    await close(50)
-    expect(await stage()).toBe('shootout') // the earlier miss doesn't count against this shootout
-    await round(true)
-    expect(await stage()).toBe('upheld')
-  })
-
-  test('the third trip back to the VAR room abandons the match', async () => {
-    const {stage, recommend, close} = await start()
-    for (let trip = 1; trip <= 2; trip++) {
-      await recommend()
-      await close(10)
-      expect(await stage()).toBe('varRoom')
-    }
-    await recommend()
-    await close(10)
-    expect(await stage()).toBe('abandoned')
+    expect(await stage()).toBe('overturned')
   })
 
   test('no quorum: one extension, then the window must close', async () => {
