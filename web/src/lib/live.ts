@@ -8,13 +8,14 @@ export const client = createClient({
   projectId: process.env.NEXT_PUBLIC_SANITY_PROJECT_ID!,
   dataset: process.env.NEXT_PUBLIC_SANITY_DATASET!,
   apiVersion: '2026-03-01',
-  useCdn: true,
+  // Vote counts change every second; don't let a CDN hand out a stale "no vote live".
+  useCdn: false,
 })
 
-const POLL_MS = 4_000
+const POLL_MS = 3_000
 
-// Live Content API: fetch with sync tags, refetch when a live event touches them. Falls back to polling if
-// the event stream is refused (goaway) or errors.
+// Live Content API: fetch with sync tags, refetch when a live event touches them. Polls as well, so a failed
+// first fetch or a silent event stream (blockers, proxies) can't leave a screen stuck (session 3).
 export function useLiveQuery<T>(query: string, params: Record<string, unknown> = {}) {
   const [data, setData] = useState<T | undefined>()
   const key = JSON.stringify(params)
@@ -22,29 +23,27 @@ export function useLiveQuery<T>(query: string, params: Record<string, unknown> =
   useEffect(() => {
     let tags: string[] = []
     let cancelled = false
-    let poll: ReturnType<typeof setInterval> | undefined
     const load = async (lastLiveEventId?: string) => {
-      const response = await client.fetch<T>(query, JSON.parse(key), {filterResponse: false, lastLiveEventId})
-      if (cancelled) return
+      const response = await client
+        .fetch<T>(query, JSON.parse(key), {filterResponse: false, lastLiveEventId})
+        .catch(() => undefined)
+      if (cancelled || !response) return
       tags = response.syncTags ?? []
       setData(response.result)
     }
-    const startPolling = () => {
-      poll ??= setInterval(() => void load(), POLL_MS)
-    }
     void load()
+    const poll = setInterval(() => void load(), POLL_MS)
     const subscription = client.live.events().subscribe({
       next: (event) => {
         if (event.type === 'message' && event.tags.some((tag) => tags.includes(tag))) void load(event.id)
-        if (event.type === 'restart' || event.type === 'reconnect') void load()
-        if (event.type === 'goaway') startPolling()
+        if (event.type === 'welcome' || event.type === 'restart' || event.type === 'reconnect') void load()
       },
-      error: startPolling,
+      error: () => {},
     })
     return () => {
       cancelled = true
       subscription.unsubscribe()
-      if (poll) clearInterval(poll)
+      clearInterval(poll)
     }
   }, [query, key])
 
