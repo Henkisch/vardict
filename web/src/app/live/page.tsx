@@ -222,7 +222,7 @@ export default function LivePage() {
         <VarRoomScene incident={ref.incident} loop={ref.loop + 1} start={start} />
       ) : decided ? (
         state?.next ? (
-          <VarRoomScene incident={state.next} last={ref ?? undefined} start={start} />
+          <VarRoomScene incident={state.next} start={start} />
         ) : state ? (
           <section className="flex flex-1 flex-col items-center justify-center gap-4 py-16 text-center">
             <p className="font-display text-4xl font-extrabold uppercase">Every call has been confirmed</p>

@@ -1,14 +1,11 @@
-import Link from 'next/link'
-
 import {FitBox} from '@/components/FitBox'
 import {MonitorWall, WALL_RATIO} from '@/components/MonitorWall'
-import {CALL_LABELS, formatClock, type IncidentCard, type LiveReferendum} from '@/lib/queries'
+import {CALL_LABELS, formatClock, type IncidentCard} from '@/lib/queries'
 
 type Props = {
   incident: IncidentCard
   // Set when the run was overturned and is back here for another look.
   loop?: number
-  last?: LiveReferendum
   start: React.ReactNode
 }
 
@@ -22,15 +19,8 @@ const CHECK: Record<string, string> = {
   goalLine: 'Checking goal-line',
 }
 
-const LAST_COPY = {
-  upheld: {label: 'Upheld', tone: 'text-uphold'},
-  overturned: {label: 'Overturned', tone: 'text-overturn'},
-  tooClose: {label: 'Too close', tone: 'text-var'},
-  noVotes: {label: 'No votes', tone: 'text-muted'},
-} as const
-
 // What the big screen shows between votes: the VAR room at work on the next decision.
-export function VarRoomScene({incident, last, start}: Props) {
+export function VarRoomScene({incident, start}: Props) {
   const {homeTeam: home, awayTeam: away} = incident.match
   const recommendation = CALL_LABELS[incident.varRecommendation] ?? incident.varRecommendation
   return (
@@ -81,21 +71,6 @@ export function VarRoomScene({incident, last, start}: Props) {
           <p className="text-xs text-muted">Over 55% keeps it · under 45% overturns · in between: extra time</p>
         </div>
       </section>
-
-      {last && (
-        <p className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-t border-line pt-4 text-sm">
-          <span className="uppercase tracking-[0.2em] text-muted">Last verdict</span>
-          <span>{last.incident.title}</span>
-          {last.result && (
-            <span className={`font-display text-lg font-extrabold uppercase ${LAST_COPY[last.result].tone}`}>
-              {LAST_COPY[last.result].label}
-            </span>
-          )}
-          <Link href={`/incidents/${last.incident.slug}`} className="text-var underline">
-            Every round
-          </Link>
-        </p>
-      )}
     </div>
   )
 }
