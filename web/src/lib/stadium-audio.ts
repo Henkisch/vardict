@@ -18,8 +18,23 @@ type Engine = {ctx: AudioContext; master: GainNode; bedGain: GainNode; buffers: 
 
 // One engine per page, kept on window: a module reload (Fast Refresh in dev) must reuse it, or the old crowd
 // keeps playing with nothing left that can mute it.
-const holder = globalThis as unknown as {__vardictStadium?: Engine}
+const holder = globalThis as unknown as {__vardictStadium?: Engine; __vardictSound?: Set<() => void>}
 const engine = () => holder.__vardictStadium
+
+// Sound state for every page's toggle (useSyncExternalStore): off until someone starts it, then on or muted.
+// The engine lives on window, so it survives client-side navigation between /live and the results pages.
+export type SoundState = 'off' | 'on' | 'muted'
+const listeners = () => (holder.__vardictSound ??= new Set())
+const notify = () => listeners().forEach((listener) => listener())
+export function subscribeSound(listener: () => void) {
+  listeners().add(listener)
+  return () => listeners().delete(listener)
+}
+export function soundState(): SoundState {
+  const e = engine()
+  if (!e) return 'off'
+  return e.ctx.state === 'running' ? 'on' : 'muted'
+}
 
 async function load(ctx: AudioContext, url: string) {
   const response = await fetch(url)
@@ -59,6 +74,7 @@ export async function startStadium() {
   }
   const {ctx} = holder.__vardictStadium
   if (ctx.state === 'suspended') await ctx.resume()
+  notify()
 }
 
 // Muting suspends the whole context: nothing can leak through, and it costs no CPU while silent.
@@ -67,6 +83,7 @@ export async function setMuted(muted: boolean) {
   if (!e) return
   if (muted) await e.ctx.suspend()
   else await e.ctx.resume()
+  notify()
 }
 
 // 0 = a quiet ground between votes, 1 = a packed stand on its feet. Glides, never jumps.

@@ -4,6 +4,7 @@ import Link from 'next/link'
 
 import {OutcomeBadge} from '@/components/OutcomeBadge'
 import {Scorebug} from '@/components/Scorebug'
+import {SiteHeader} from '@/components/SiteHeader'
 import {incidentOutcome, isDecided, OUTCOME_LABEL} from '@/lib/outcome'
 import {useLiveQuery} from '@/lib/live'
 import {CALL_LABELS, formatClock, type IncidentOverviewRow, type IncidentsOverview} from '@/lib/queries'
@@ -11,26 +12,36 @@ import {CALL_LABELS, formatClock, type IncidentOverviewRow, type IncidentsOvervi
 export default function IncidentsPage() {
   const {data: overview} = useLiveQuery<IncidentsOverview>('/api/live?q=incidents', {intervalMs: 30_000})
 
+  const decided = overview?.incidents.filter((i) => isDecided(incidentOutcome(i.rounds))).length ?? 0
   return (
-    <main className="mx-auto flex w-full max-w-4xl flex-col gap-8 px-4 py-8 sm:px-8">
-      <header className="flex flex-col gap-2 border-b border-line pb-6">
-        <Link href="/live" className="font-display text-xl font-extrabold uppercase">
-          VAR<span className="text-var">dict</span>
-        </Link>
-        <h1 className="font-display text-5xl font-extrabold uppercase text-balance">Results</h1>
-        <p className="text-sm text-muted">Time added by democracy</p>
-        <p className="font-display text-5xl font-extrabold text-var tabular">
-          {overview ? formatClock(overview.democracySeconds) : '--:--'}
-        </p>
-      </header>
+    <div className="stadium flex min-h-dvh flex-col">
+      <main className="mx-auto flex w-full max-w-[1920px] flex-1 flex-col gap-4 px-4 py-3 sm:px-6">
+        <SiteHeader current="results" />
+        <section className="flex flex-col gap-6 rounded-xl bg-pitch p-5 sm:flex-row sm:items-end sm:justify-between lg:p-8">
+          <div className="flex flex-col gap-2">
+            <h1 className="font-display text-5xl font-extrabold uppercase leading-none lg:text-6xl">Results</h1>
+            <p className="text-lg text-muted">
+              {overview ? `${decided} of ${overview.incidents.length} decided by the people` : 'Loading the verdicts…'}
+            </p>
+          </div>
+          <div className="flex items-stretch gap-3 sm:text-right">
+            <span className="w-1.5 shrink-0 bg-var sm:order-last" aria-hidden />
+            <div className="flex flex-col gap-1">
+              <p className="text-sm text-muted">Time added by democracy</p>
+              <p className="font-display text-6xl font-extrabold leading-none text-var tabular lg:text-7xl">
+                {overview ? formatClock(overview.democracySeconds) : '--:--'}
+              </p>
+            </div>
+          </div>
+        </section>
 
-      <section className="flex flex-col gap-3">
-        {overview === undefined && <p className="text-muted">Loading the verdicts…</p>}
-        {overview?.incidents.map((incident) => (
-          <IncidentRow key={incident.slug} incident={incident} />
-        ))}
-      </section>
-    </main>
+        <section className="grid gap-3 pb-6 xl:grid-cols-2">
+          {overview?.incidents.map((incident) => (
+            <IncidentRow key={incident.slug} incident={incident} />
+          ))}
+        </section>
+      </main>
+    </div>
   )
 }
 
@@ -52,9 +63,7 @@ function IncidentRow({incident}: {incident: IncidentOverviewRow}) {
   return (
     <Link
       href={`/incidents/${incident.slug}`}
-      className={`group relative flex overflow-hidden rounded-lg bg-pitch transition-colors hover:bg-raised focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-chalk ${
-        outcome === 'notVoted' ? 'opacity-70 hover:opacity-100' : ''
-      }`}
+      className={`group relative flex overflow-hidden rounded-lg bg-pitch transition-colors hover:bg-raised focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-chalk`}
     >
       <span className={`w-1.5 shrink-0 ${edge}`} aria-hidden />
       <div className="flex min-w-0 flex-1 flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between sm:gap-6">

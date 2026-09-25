@@ -1,6 +1,5 @@
 'use client'
 
-import Link from 'next/link'
 import {useEffect, useState, useSyncExternalStore} from 'react'
 
 import {Bars} from '@/components/Bars'
@@ -9,6 +8,8 @@ import {EnterStadium} from '@/components/EnterStadium'
 import {KickOff} from '@/components/KickOff'
 import {MatchScene} from '@/components/MatchScene'
 import {PunditTicker} from '@/components/PunditTicker'
+import {SiteHeader} from '@/components/SiteHeader'
+import {useSound} from '@/components/SoundToggle'
 import {StepIndicator, type Step} from '@/components/StepIndicator'
 import {VarRoomScene} from '@/components/VarRoomScene'
 import {Verdict} from '@/components/Verdict'
@@ -16,7 +17,7 @@ import {VoteButtons} from '@/components/VoteButtons'
 import {useCloseWhenCounting, useLiveState, useNow} from '@/lib/live'
 import {HUMAN_VOTE_WEIGHT, roundLabel, type LiveState} from '@/lib/queries'
 import {runPhase} from '@/lib/run-status'
-import {cue, setIntensity, setMuted, startStadium} from '@/lib/stadium-audio'
+import {cue, setIntensity, startStadium} from '@/lib/stadium-audio'
 
 export default function LivePage() {
   const now = useNow()
@@ -94,26 +95,16 @@ export default function LivePage() {
   // Enter the stadium: shown once per browser session. The click also starts the sound (autoplay policy).
   const sessionEntered = useSyncExternalStore(noop, readEntered, () => true)
   const [enteredNow, setEnteredNow] = useState(false)
-  const [soundOn, setSoundOn] = useState(false)
-  const [muted, setMutedState] = useState(false)
+  const sound = useSound()
+  const soundOn = sound !== 'off'
   function enter() {
     void startStadium()
-    setSoundOn(true)
     setEnteredNow(true)
     try {
       sessionStorage.setItem(ENTERED_KEY, '1')
     } catch {
       // Private mode or blocked storage: the intro just shows again next visit.
     }
-  }
-  function toggleSound() {
-    if (!soundOn) {
-      void startStadium()
-      setSoundOn(true)
-      return
-    }
-    void setMuted(!muted)
-    setMutedState(!muted)
   }
 
   // The crowd follows the vote: louder the closer it is, loudest while counting, quiet between votes.
@@ -173,25 +164,10 @@ export default function LivePage() {
   return (
     <div className="stadium flex min-h-dvh flex-col lg:h-dvh lg:overflow-hidden">
     <main className="mx-auto flex w-full max-w-[1920px] flex-1 flex-col gap-3 px-4 py-3 sm:px-6 lg:min-h-0 lg:overflow-hidden">
-      <header className="grid shrink-0 grid-cols-[auto_1fr] items-center gap-x-6 gap-y-2 md:grid-cols-[auto_1fr_auto]">
-        <p className="font-display text-2xl font-extrabold uppercase leading-none">
-          VAR<span className="text-var">dict</span>
-          <span className="ml-3 hidden font-sans text-sm font-normal normal-case text-muted lg:inline">
-            VAR, finally in the fans&apos; hands.
-          </span>
-        </p>
-        <div className="col-span-2 row-start-2 mt-3 md:col-span-1 md:row-start-auto md:mt-0 md:justify-self-center">
-          {state && <StepIndicator step={step} detail={step === 'var-room' ? undefined : roundName} />}
-        </div>
-        <div className="col-start-2 row-start-1 flex items-center gap-5 justify-self-end text-sm text-muted md:col-start-3">
-          <button type="button" onClick={toggleSound} className="whitespace-nowrap hover:text-chalk">
-            {!soundOn ? 'Sound on' : muted ? 'Unmute' : 'Mute'}
-          </button>
-          <Link href="/incidents" className="whitespace-nowrap hover:text-chalk">
-            Results
-          </Link>
-        </div>
-      </header>
+      <SiteHeader
+        current="live"
+        center={state && <StepIndicator step={step} detail={step === 'var-room' ? undefined : roundName} />}
+      />
 
       {!sessionEntered && !enteredNow && state && <EnterStadium fixtures={state.fixtures} onEnter={enter} />}
       {countingDown && <KickOff seconds={Math.ceil(kickoffLeft)} />}

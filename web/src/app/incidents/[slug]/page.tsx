@@ -5,6 +5,8 @@ import {useParams} from 'next/navigation'
 
 import {Clip} from '@/components/Clip'
 import {OutcomeBadge} from '@/components/OutcomeBadge'
+import {Scorebug} from '@/components/Scorebug'
+import {SiteHeader} from '@/components/SiteHeader'
 import {useLiveQuery} from '@/lib/live'
 import {groupRuns, runOutcome, incidentOutcome, isDecided, OUTCOME_LABEL} from '@/lib/outcome'
 import {CALL_LABELS, formatClock, roundLabel, type IncidentResult} from '@/lib/queries'
@@ -22,8 +24,8 @@ export default function IncidentPage() {
     intervalMs: 30_000,
   })
 
-  if (incident === undefined) return <main className="p-8 text-muted">Loading the verdict…</main>
-  if (incident === null) return <main className="p-8">No incident called “{slug}”.</main>
+  if (incident === undefined) return <Frame><p className="p-5 text-muted">Loading the verdict…</p></Frame>
+  if (incident === null) return <Frame><p className="p-5">No incident called “{slug}”.</p></Frame>
 
   const votedSeconds = incident.rounds.filter((r) => r.result).reduce((n, r) => n + r.seconds, 0)
   const runs = groupRuns(incident.rounds)
@@ -37,24 +39,24 @@ export default function IncidentPage() {
         : 'The people refused to rubber-stamp a decision the referees admit was wrong.'
       : undefined
   return (
-    <main className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-4 py-8 sm:px-8">
-      <header className="flex flex-col gap-2 border-b border-line pb-6">
-        <div className="flex items-baseline gap-4">
-          <Link href="/live" className="font-display text-xl font-extrabold uppercase">
-            VAR<span className="text-var">dict</span>
+    <Frame>
+      <section className="flex flex-col gap-3 rounded-xl bg-pitch p-5 lg:p-8">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <Link href="/incidents" className="text-sm text-muted hover:text-chalk">
+            ← All results
           </Link>
-          <Link href="/incidents" className="text-sm text-muted underline">
-            ← Back to results
-          </Link>
+          <OutcomeBadge outcome={outcome} />
         </div>
-        <OutcomeBadge outcome={outcome} className="mt-2 self-start" />
-        <p className="text-sm text-muted">
-          {incident.match.competition} · {home.name} {incident.match.score.home}–{incident.match.score.away} {away.name}
-        </p>
-        <h1 className="font-display text-5xl font-extrabold uppercase text-balance">{incident.title}</h1>
-        {incident.situation && <p className="text-xl">{incident.situation}</p>}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+          <Scorebug home={home} away={away} minute={incident.minute} />
+          <span className="text-sm text-muted">
+            {incident.match.competition} · final score {incident.match.score.home}–{incident.match.score.away}
+          </span>
+        </div>
+        <h1 className="font-display text-5xl font-extrabold uppercase leading-[0.95] text-balance lg:text-6xl">{incident.title}</h1>
+        {incident.situation && <p className="max-w-3xl text-xl text-muted">{incident.situation}</p>}
         {controlVerdict && <p className="text-lg text-var">Control case. {controlVerdict}</p>}
-      </header>
+      </section>
 
       <section className="grid gap-3 sm:grid-cols-3">
         {/* Who won the argument is marked: the VAR's call if the fans kept it, the referee's if they overturned it. */}
@@ -63,7 +65,7 @@ export default function IncidentPage() {
         <People outcome={outcome} />
       </section>
 
-      <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
+      <section className="grid gap-4 lg:grid-cols-[minmax(0,56rem)_minmax(0,1fr)]">
         <Clip clip={incident.clip} fallbackText={incident.fallbackText} />
         <div className="flex flex-col gap-2 rounded-lg bg-pitch p-5">
           <p className="text-sm text-muted">Time added by democracy</p>
@@ -126,14 +128,14 @@ export default function IncidentPage() {
         </ul>
       </section>
 
-      <nav className="flex flex-wrap gap-x-4 gap-y-2 border-t border-line pt-6 text-sm">
+      <nav aria-label="Other incidents" className="flex flex-wrap gap-x-4 gap-y-2 pb-6 text-sm">
         {incident.others.map((other) => (
           <Link key={other.slug} href={`/incidents/${other.slug}`} className="text-muted underline">
             {other.title}
           </Link>
         ))}
       </nav>
-    </main>
+    </Frame>
   )
 }
 
@@ -162,6 +164,18 @@ function People({outcome}: {outcome: ReturnType<typeof incidentOutcome>}) {
       <p className={`font-display text-3xl font-extrabold uppercase leading-none ${tone}`}>
         {outcome === 'upheld' ? 'Kept it' : outcome === 'overturned' ? 'Overturned it' : waiting ? 'Not voted yet' : label}
       </p>
+    </div>
+  )
+}
+
+// The same frame as /live and /incidents: floodlit backdrop, the shared header, full width.
+function Frame({children}: {children: React.ReactNode}) {
+  return (
+    <div className="stadium flex min-h-dvh flex-col">
+      <main className="mx-auto flex w-full max-w-[1920px] flex-1 flex-col gap-4 px-4 py-3 sm:px-6">
+        <SiteHeader current="results" />
+        {children}
+      </main>
     </div>
   )
 }

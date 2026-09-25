@@ -551,3 +551,11 @@ cached (`x-vercel-cache: HIT`) after the next deploy.
 - **Step row on phones:** Henrik asked whether it needed a plate or centring. My call: no plate. Below md it becomes
   a full-width three-part progress bar (amber line up to the current step, grey after, labels centred), with more
   room above it. From md up it stays quiet inline text in the header.
+- **Results pages on brand (Henrik: "feels a bit off brand"):** they now share `/live`'s frame: the floodlit
+  backdrop, full width, and one `SiteHeader` (wordmark left; Sound, Stadium, Results right, with the current page
+  marked). Results opens with a score plate (title, "n of 5 decided", the democracy clock as a scoreboard number),
+  and the cards sit in two columns on wide screens. Unplayed cards aren't dimmed any more: after a wipe that made
+  the whole page look faded. The incident page gets the same plate, and its clip is capped at 56rem.
+- **Mute everywhere (Henrik):** the crowd kept playing after a link to Results, with no switch there. The sound
+  state now lives with the audio engine (`soundState`/`subscribeSound`), and every header has the same
+  `SoundToggle`. Checked: Enter the stadium → "Mute" → Results still shows "Mute".
