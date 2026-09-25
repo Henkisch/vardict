@@ -12,7 +12,7 @@ const STEPS: {id: Step; label: string}[] = [
 
 // Where the run is, as three steps, with the workflow stage it maps to. Also mirrored into the address bar
 // (/live?step=...) without navigating: /live stays one route that follows the run.
-export function StepIndicator({step, detail, stage}: {step: Step; detail?: string; stage?: string}) {
+export function StepIndicator({step, detail}: {step: Step; detail?: string}) {
   // Next's router integrates native replaceState when the state argument is null (see the Next docs on
   // "Using the native History API"). Re-checked on every render, since a router update can reset the URL.
   useEffect(() => {
@@ -26,31 +26,25 @@ export function StepIndicator({step, detail, stage}: {step: Step; detail?: strin
     }
   })
 
+  // L5 chrome (design.md): quiet text, the current step in chalk with a small amber mark.
   const current = STEPS.findIndex((s) => s.id === step)
   return (
-    <nav aria-label="Where the match is" className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1">
-      <ol className="flex items-center gap-2">
+    <nav aria-label="Where the match is">
+      <ol className="flex items-center gap-3 text-sm">
         {STEPS.map((s, i) => (
-          <li key={s.id} className="flex items-center gap-2">
-            {i > 0 && <span className={`h-px w-6 ${i <= current ? 'bg-var' : 'bg-line'}`} aria-hidden />}
+          <li key={s.id} className="flex items-center gap-3">
+            {i > 0 && <span className="h-px w-5 bg-line" aria-hidden />}
             <span
               aria-current={i === current ? 'step' : undefined}
-              className={`flex items-center gap-2 rounded-full px-3 py-1 font-display text-sm font-bold uppercase tracking-[0.15em] ${
-                i === current ? 'bg-var text-ink' : i < current ? 'text-chalk' : 'text-muted'
-              }`}
+              className={`flex items-center gap-2 whitespace-nowrap ${i === current ? 'font-semibold text-chalk' : 'text-muted'}`}
             >
-              <span className="tabular">{i + 1}</span>
+              {i === current && <span className="h-2 w-2 rounded-full bg-var" aria-hidden />}
               {s.label}
-              {i === current && detail && <span className="font-medium normal-case tracking-normal">· {detail}</span>}
+              {i === current && detail && <span className="font-normal text-muted">· {detail}</span>}
             </span>
           </li>
         ))}
       </ol>
-      {stage && (
-        <span className="text-xs text-muted">
-          workflow stage <span className="font-mono text-chalk">{stage}</span>
-        </span>
-      )}
     </nav>
   )
 }

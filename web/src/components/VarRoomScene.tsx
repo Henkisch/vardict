@@ -11,12 +11,12 @@ type Props = {
 
 // What the VAR is checking, shown small in the monitor bar. Keyed by incident.incidentType.
 const CHECK: Record<string, string> = {
-  offside: 'Checking goal · possible offside',
-  handball: 'Checking penalty · possible handball',
-  penalty: 'Checking penalty',
-  redCard: 'Checking possible red card',
-  mistakenIdentity: 'Checking player identity',
-  goalLine: 'Checking goal-line',
+  offside: 'possible offside',
+  handball: 'possible handball',
+  penalty: 'possible penalty',
+  redCard: 'possible red card',
+  mistakenIdentity: 'player identity',
+  goalLine: 'goal-line',
 }
 
 // What the big screen shows between votes: the VAR room at work on the next decision.
@@ -24,16 +24,16 @@ export function VarRoomScene({incident, start}: Props) {
   return (
     <MatchScene
       incident={incident}
-      barLeft={<>VAR · {CHECK[incident.incidentType ?? ''] ?? 'Review'}</>}
+      barLeft={<>VAR check · {CHECK[incident.incidentType ?? ''] ?? 'review'}</>}
       barRight={
-        <>
-          <span className="hidden sm:inline">Real VAR check took </span>
+        <span className="flex flex-col items-end">
+          <span className="font-sans text-xs font-normal normal-case">the real check took</span>
           {formatClock(incident.realDelaySeconds)}
-        </>
+        </span>
       }
       media={<MonitorWall incident={incident} />}
       mediaRatio={WALL_RATIO}
-      actionLabel="Your call · keep it or overturn it?"
+      actionLabel="Does the VAR get it right? Let the stadium decide."
       action={start}
     />
   )

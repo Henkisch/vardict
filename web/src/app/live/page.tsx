@@ -151,23 +151,9 @@ export default function LivePage() {
               ? 'upheld'
               : 'overturned'
         : 'review'
-  // Which of the three steps the screen is on, and the workflow stage it corresponds to.
+  // Which of the three steps the screen is on.
   const step: Step = voting || counting ? 'vote' : showVerdict ? 'verdict' : 'var-room'
   const roundName = ref?.round === 'regular' ? 'Regular time' : ref?.round === 'extraTime' ? 'Extra time' : ref ? 'Penalty' : undefined
-  const workflowStage =
-    step === 'var-room'
-      ? 'varRoom'
-      : step === 'vote' || (showVerdict && between)
-        ? ref?.round === 'regular'
-          ? 'referendum'
-          : ref?.round === 'extraTime'
-            ? 'extraTime'
-            : 'shootout'
-        : ref?.result === 'upheld'
-          ? 'upheld'
-          : ref?.result === 'noVotes'
-            ? 'varRoom'
-            : 'overturned'
   const tickerIncident = showVerdict || voting || counting || parked ? ref?.incident._id : state?.next?._id
   const start = <StartButton onClick={press} busy={Boolean(starting)} message={startMessage} />
   const nextLabel =
@@ -187,30 +173,25 @@ export default function LivePage() {
   return (
     <div className="stadium flex min-h-dvh flex-col">
     <main className="mx-auto flex w-full max-w-[1920px] flex-1 flex-col gap-3 px-4 py-3 sm:px-6 lg:h-dvh lg:overflow-hidden">
-      <header className="flex shrink-0 flex-wrap items-baseline justify-between gap-x-6 gap-y-1 pb-1">
-        <div className="flex flex-wrap items-baseline gap-x-4">
-          <h1 className="font-display text-3xl font-extrabold uppercase tracking-wide">
-            VAR<span className="text-var">dict</span>
-          </h1>
-          <p className="text-lg text-muted">VAR, finally in the fans&apos; hands.</p>
+      <header className="grid shrink-0 grid-cols-[auto_1fr] items-center gap-x-6 gap-y-2 md:grid-cols-[auto_1fr_auto]">
+        <p className="font-display text-2xl font-extrabold uppercase leading-none">
+          VAR<span className="text-var">dict</span>
+          <span className="ml-3 hidden font-sans text-sm font-normal normal-case text-muted lg:inline">
+            VAR, finally in the fans&apos; hands.
+          </span>
+        </p>
+        <div className="col-span-2 row-start-2 md:col-span-1 md:row-start-auto md:justify-self-center">
+          {state && <StepIndicator step={step} detail={step === 'var-room' ? undefined : roundName} />}
         </div>
-        <div className="flex items-baseline gap-5">
-          <button
-            type="button"
-            onClick={toggleSound}
-            className="font-display text-lg font-bold uppercase tracking-[0.15em] text-muted hover:text-chalk"
-          >
-            {!soundOn ? '🔈 Sound on' : muted ? '🔇 Unmute' : '🔊 Mute'}
+        <div className="col-start-2 row-start-1 flex items-center gap-5 justify-self-end text-sm text-muted md:col-start-3">
+          <button type="button" onClick={toggleSound} className="whitespace-nowrap hover:text-chalk">
+            {!soundOn ? 'Sound on' : muted ? 'Unmute' : 'Mute'}
           </button>
-          <Link href="/incidents" className="font-display text-lg font-bold uppercase tracking-[0.15em] text-muted hover:text-chalk">
-            Results →
+          <Link href="/incidents" className="whitespace-nowrap hover:text-chalk">
+            Results
           </Link>
         </div>
       </header>
-
-      {state && (
-        <StepIndicator step={step} detail={step === 'var-room' ? undefined : roundName} stage={workflowStage} />
-      )}
 
       {!sessionEntered && !enteredNow && state && <EnterStadium fixtures={state.fixtures} onEnter={enter} />}
       {countingDown && <KickOff seconds={Math.ceil(kickoffLeft)} />}
@@ -235,14 +216,15 @@ export default function LivePage() {
         <MatchScene
           incident={incident}
           barLeft={<>Fans vote · {roundLabel(ref.round)}</>}
+          live={voting}
           barRight={
             voting || counting ? (
-              <span className="font-display text-2xl font-extrabold text-chalk">{Math.ceil(secondsLeft)}s</span>
+              <span className="text-5xl font-extrabold leading-none text-chalk">{Math.ceil(secondsLeft)}</span>
             ) : undefined
           }
           media={<Clip clip={incident.clip} fallbackText={incident.fallbackText} />}
           mediaRatio={16 / 9}
-          actionLabel={voting ? 'Your vote · keep the VAR\'s call or overturn it?' : 'The fans have voted'}
+          actionLabel={voting ? 'Keep the VAR\'s call, or overturn it?' : 'The fans have voted'}
           action={
             <div className="flex flex-col gap-2">
               <div className="jumbotron rounded-lg p-2">

@@ -503,3 +503,13 @@ cached (`x-vercel-cache: HIT`) after the next deploy.
 - `/api/reset` is operator-only and needs `{"confirm": "WIPE"}` in the body. The booth asks you to type WIPE (the
   Dashboard iframe may block `confirm()`).
 - Checked in the Dashboard through Chrome (read-only, nothing pressed): both datasets load live.
+- **Redesign (Hallmark):** Henrik on the first booth: "really good start but there's so much going on, and there's
+  really no hierarchy or structure, same for /live", and then "really important to get a clear view of what
+  incident currently is being reviewed". Three questions settled the brief: judges watching a video, footage then
+  button, Sky Sports at night. The result is `design.md`, a shared system with a five-level hierarchy. The incident
+  under review is L1 on both screens (a TV scorebug with team colour chips, then the title), then one lower-third,
+  then the one amber button. Everything else got quieter: no tracked uppercase labels, no borders around every
+  box, the workflow shown as a thin rail of stage names, the pundit ticker as a plain line. Tokens moved to OKLCH
+  with the same colours. The verdict screen now carries the scorebug too, and its path explanations sit in one
+  column (a backlog item).
+- **Not verified:** phone widths. Chrome ignored the window resize, so check `/live` on a phone after the deploy.

@@ -1,4 +1,5 @@
 import {Bars} from '@/components/Bars'
+import {Scorebug} from '@/components/Scorebug'
 import {WorkflowPath} from '@/components/WorkflowPath'
 import {CALL_LABELS, formatClock, type LiveReferendum} from '@/lib/queries'
 import type {Phase} from '@/lib/run-status'
@@ -39,19 +40,25 @@ export function Verdict({round: ref, phase, action}: {round: LiveReferendum; pha
   return (
     <section className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto">
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_24rem]">
-        <div className="flex flex-col justify-center gap-4 rounded-xl border border-line bg-pitch p-6">
-          <p className="text-xs uppercase tracking-[0.2em] text-muted">
-            {ref.incident.title} · {shootout ? 'Sudden-death penalty' : ref.round === 'extraTime' ? 'Extra time' : 'Regular time'}
-          </p>
-          <p className={`font-display text-7xl font-extrabold uppercase leading-none ${copy.tone}`}>{copy.headline}</p>
-          <p className="text-xl">{copy.next}</p>
+        <div className="flex flex-col justify-center gap-5 rounded-xl bg-pitch p-6 lg:p-8">
+          <div className="flex flex-col gap-2">
+            <Scorebug home={ref.incident.match.homeTeam} away={ref.incident.match.awayTeam} minute={ref.incident.minute} />
+            <p className="font-display text-3xl font-extrabold uppercase leading-none text-balance">{ref.incident.title}</p>
+          </div>
+          <div className="flex flex-col gap-2">
+            <p className="text-sm text-muted">
+              {shootout ? 'Sudden-death penalty' : ref.round === 'extraTime' ? 'Extra time' : 'Regular time'}
+            </p>
+            <p className={`font-display text-7xl font-extrabold uppercase leading-none xl:text-8xl ${copy.tone}`}>{copy.headline}</p>
+            <p className="text-xl">{copy.next}</p>
+          </div>
           <Bars uphold={ref.uphold} overturn={ref.overturn} size="small" />
           <p className="text-sm text-muted">
             {ref.humans} human and {ref.bots} simulated votes. Each human vote counts ×20.
           </p>
           <SlowerClock realSeconds={ref.incident.realDelaySeconds} votedSeconds={votedSeconds(ref)} />
         </div>
-        <aside className="flex flex-col justify-center gap-4 rounded-xl border border-line bg-pitch p-6">{action}</aside>
+        <aside className="flex flex-col justify-center gap-4 rounded-xl bg-pitch p-6">{action}</aside>
       </div>
       <WorkflowPath run={ref.run} phase={phase} />
     </section>

@@ -58,38 +58,32 @@ export function WorkflowPath({run, phase}: {run: RunRound[]; phase: Phase}) {
   if (steps.length === 0) return null
   const explained = [...new Set(steps.map((s) => s.stage))]
   return (
-    <section className="flex flex-col gap-3 rounded-xl border border-line bg-pitch/60 p-4">
-      <p className="text-xs uppercase tracking-[0.2em] text-muted">
-        The path through the workflow · <span className="font-mono normal-case tracking-normal">peoples-var</span>
+    <section className="flex flex-col gap-3 px-1">
+      <p className="text-sm text-muted">
+        The path through the workflow <span className="font-mono text-chalk">peoples-var</span>
       </p>
       <ol className="flex flex-wrap items-center gap-x-2 gap-y-2">
         {steps.map((step, i) => (
           <li key={i} className="flex items-center gap-2">
-            {i > 0 && <span className="text-muted" aria-hidden>→</span>}
-            <span
-              className={`flex flex-col rounded-md border px-2.5 py-1 ${step.current ? 'border-var' : 'border-line'}`}
-            >
-              <span className="font-display text-sm font-bold uppercase">
-                {step.label}
-                {step.result && (
-                  <span className={`ml-1.5 ${RESULT_TONE[step.result]}`}>
-                    · {step.stage === 'shootout' ? PENALTY_WORD[step.result] : RESULT_WORD[step.result]}
-                  </span>
-                )}
-              </span>
-              <span className="font-mono text-[11px] text-muted">{step.stage}</span>
+            {i > 0 && <span className="text-line" aria-hidden>→</span>}
+            <span className={`rounded-full border px-3 py-1 font-mono text-sm ${step.current ? 'border-var text-var' : 'border-line'}`}>
+              {step.stage}
+              {step.result && (
+                <span className={`ml-1.5 font-sans ${RESULT_TONE[step.result]}`}>
+                  {step.stage === 'shootout' ? PENALTY_WORD[step.result] : RESULT_WORD[step.result]}
+                </span>
+              )}
             </span>
           </li>
         ))}
       </ol>
-      <dl className="grid gap-1 text-sm sm:grid-cols-2">
+      <ul className="flex flex-col gap-1 text-sm text-muted">
         {explained.map((stage) => (
-          <div key={stage} className="flex gap-2">
-            <dt className="font-mono text-muted">{stage}</dt>
-            <dd>{EXPLAIN[stage]}</dd>
-          </div>
+          <li key={stage}>
+            <span className="font-mono text-chalk">{stage}</span> {EXPLAIN[stage]}
+          </li>
         ))}
-      </dl>
+      </ul>
     </section>
   )
 }

@@ -1,21 +1,25 @@
+/* Hallmark · genre: atmospheric · macrostructure: Photographic (stadium) · design-system: design.md · designed-as-app */
 @import "tailwindcss";
 
-/* One deliberate look: a stadium screen at night. */
+/* One deliberate look: a stadium screen at night. Tokens: design.md (names kept for the Tailwind utilities:
+   ink = paper, pitch = paper-2, line = rule, chalk = ink, muted = ink-2, var = accent). */
 :root {
-  --ink: #0b0f0c;
-  --pitch: #11281c;
-  --line: #24473a;
-  --chalk: #eef3ec;
-  --muted: #9db3a6;
-  --var: #f5b400;
-  --uphold: #2fbf71;
-  --overturn: #e5484d;
+  --ink: oklch(15% 0.012 155);
+  --pitch: oklch(20% 0.03 158);
+  --raised: oklch(25% 0.032 158);
+  --line: oklch(33% 0.035 160);
+  --chalk: oklch(95% 0.01 140);
+  --muted: oklch(76% 0.03 155);
+  --var: oklch(81% 0.165 80);
+  --uphold: oklch(71% 0.16 152);
+  --overturn: oklch(63% 0.195 24);
   color-scheme: dark;
 }
 
 @theme inline {
   --color-ink: var(--ink);
   --color-pitch: var(--pitch);
+  --color-raised: var(--raised);
   --color-line: var(--line);
   --color-chalk: var(--chalk);
   --color-muted: var(--muted);
@@ -26,8 +30,14 @@
   --font-display: var(--font-condensed), "Arial Narrow", system-ui, sans-serif;
 }
 
+html,
+body {
+  overflow-x: clip;
+}
+
 body {
   background: var(--ink);
+  font-variant-numeric: tabular-nums;
   color: var(--chalk);
   font-family: var(--font-sans);
 }

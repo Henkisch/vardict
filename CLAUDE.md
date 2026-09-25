@@ -413,8 +413,11 @@ the Dashboard; not yet deployed there (plan 013 step 4, needs Henrik's OK). Full
 
 **Polish backlog (Henrik: "do that in the end"):** animations between states, and don't swap the content before the
 transition plays (hold the old state until the transition starts). Also more layout polish on /live.
-The workflow path's stage explanations sit in a two-column grid that scatters on wide screens (WorkflowPath
-`dl`): make them sit naturally, e.g. one line per stage under its step, or a single column.
+~~Workflow path explanations scatter in two columns~~: one column since the session-5 redesign.
+
+**Design system (session 5):** `design.md` at the root is the locked system for both screens (Hallmark redesign).
+Its core rule is a five-level hierarchy: L1 the incident under review (scorebug + title, on screen in every step),
+L2 one lower-third, L3 the one accent-filled press, L4 evidence, L5 quiet chrome. Read it before touching either UI.
 
 Still open: loose ends in `plans/README.md` (season reset vs results wording, a clean slate before judging).
 

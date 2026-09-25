@@ -28,13 +28,11 @@ export function PunditTicker({lines, trigger, incidentId}: {lines: PunditLine[];
   if (!line) return null
 
   return (
-    <div className="flex shrink-0 items-center gap-3 overflow-hidden rounded-lg border border-line bg-pitch px-4 py-2" aria-live="polite">
-      <span className="shrink-0 rounded bg-overturn px-2 py-0.5 font-display text-sm font-extrabold uppercase tracking-[0.15em]">
-        Studio
-      </span>
-      <p key={line._id} className="ticker-in min-w-0 truncate text-lg">
-        <span className="font-display font-bold uppercase tracking-wide text-var">{PUNDIT_NAME[line.pundit] ?? line.pundit}:</span>{' '}
-        {line.text}
+    <div className="flex shrink-0 items-baseline gap-3 overflow-hidden px-1 text-base" aria-live="polite">
+      <span className="shrink-0 text-sm text-muted">In the studio</span>
+      <p key={line._id} className="ticker-in min-w-0 truncate">
+        <span className="font-semibold">{PUNDIT_NAME[line.pundit] ?? line.pundit}:</span>{' '}
+        <span className="text-muted">{line.text}</span>
       </p>
     </div>
   )

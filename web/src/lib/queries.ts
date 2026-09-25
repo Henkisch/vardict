@@ -106,7 +106,7 @@ export type LiveState = {
 export function roundLabel(round: string) {
   if (round === 'regular') return 'Regular time'
   if (round === 'extraTime') return 'Extra time'
-  return `Shootout · round ${round.replace('shootout', '')}`
+  return 'Sudden-death penalty'
 }
 
 export function formatClock(totalSeconds: number) {
