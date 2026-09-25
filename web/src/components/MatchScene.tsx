@@ -65,7 +65,7 @@ export function MatchScene({incident, barLeft, barRight, live = false, media, me
       </section>
       </div>
 
-      <section className="flex shrink-0 flex-col gap-4 px-1 sm:flex-row sm:items-end sm:justify-between sm:gap-8">
+      <section className="flex shrink-0 flex-col gap-4 rounded-xl bg-pitch p-5 sm:flex-row sm:items-center sm:justify-between sm:gap-8">
         <div className="flex items-end gap-5">
           <Call label="Referee" value={CALL_LABELS[incident.originalCall] ?? incident.originalCall} />
           <span className="pb-1 font-display text-3xl leading-none text-muted" aria-hidden>
