@@ -576,3 +576,14 @@ cached (`x-vercel-cache: HIT`) after the next deploy.
     from its Results card into the incident page. Browser back and polling refreshes don't animate.
   - A first CSS-only attempt tripped the React linter's "no refs during render" rule; it was replaced by Motion
     before it shipped.
+- **A waiting screen, and a real VAR room step (Henrik: "when nothing is ongoing... shouldn't we have something
+  like waiting... a mechanism to trigger it from the live page since an admin might not actually be there"):**
+  `/live` used to claim "Under review" and play the monitor wall with no run started, and one press skipped
+  straight to the vote. Now there are two presses, both open to anyone on `/live` and mirrored in the VAR Room:
+  **Start the VAR check** (`/api/start {step: "check"}` → `startNext(..., {checkOnly: true})`: the run starts and
+  waits in the VAR room; pressing again changes nothing, tested) and **Let the fans decide** (the existing
+  recommend + kick-off). `/api/live` now says whether a run is live (`run: {stage, incidentId}`, read server-side
+  from the private workflows dataset), so a waiting screen switches by itself when someone else starts a check,
+  and it never drops to the 60 s sleepy poll.
+- Also caught from Henrik's two screenshots: the booth said Brighton was next while `/live` said Pickford.
+  `/live`'s own next-in-line query had no match-date tie-break either.

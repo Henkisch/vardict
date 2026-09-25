@@ -14,6 +14,7 @@ import {SiteHeader} from '@/components/SiteHeader'
 import {useSound} from '@/components/SoundToggle'
 import {StepIndicator, type Step} from '@/components/StepIndicator'
 import {VarRoomScene} from '@/components/VarRoomScene'
+import {WaitingScene} from '@/components/WaitingScene'
 import {Verdict} from '@/components/Verdict'
 import {VoteButtons} from '@/components/VoteButtons'
 import {useCloseWhenCounting, useLiveState, useNow} from '@/lib/live'
@@ -23,7 +24,13 @@ import {cue, setIntensity, startStadium} from '@/lib/stadium-audio'
 
 export default function LivePage() {
   const now = useNow()
-  const {state, refresh, boost} = useLiveState<LiveState>('/api/live?q=live', (s) => runPhase(s?.referendum, now))
+  // Nothing running (no workflow run live) is the waiting screen, which must never sleep: someone else may start
+  // the VAR check at any moment.
+  const {state, refresh, boost} = useLiveState<LiveState>(
+    '/api/live?q=live',
+    (s) => runPhase(s?.referendum, now),
+    (s) => !s?.run,
+  )
   const ref = state?.referendum
   const closesAt = ref ? Date.parse(ref.closesAt) : 0
   // A new round opens KICKOFF_SECONDS after it's created: every screen counts down to windowOpensAt.
@@ -43,16 +50,26 @@ export default function LivePage() {
   const [startMessage, setStartMessage] = useState<string>()
   // The press only asks the server; the button says so. The screen changes once, when the new round exists, and
   // the 3-2-1 then plays over the vote screen (timed by the round's windowOpensAt).
-  const [starting, setStarting] = useState<{from?: string} | null>(null)
+  const [starting, setStarting] = useState<{from?: string; check?: boolean} | null>(null)
   function press() {
     if (starting) return
     setStartMessage(undefined)
     setStarting({from: ref?._id})
     void startNextRound()
   }
-  async function startNextRound() {
+  // The waiting screen's press: start the VAR check only (the run waits in the VAR room for the next press).
+  function pressCheck() {
+    if (starting) return
+    setStartMessage(undefined)
+    setStarting({from: ref?._id, check: true})
+    void startNextRound(true)
+  }
+  async function startNextRound(check = false) {
     boost()
-    const response = await fetch('/api/start', {method: 'POST'}).catch(() => undefined)
+    const response = await fetch(
+      '/api/start',
+      check ? {method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify({step: 'check'})} : {method: 'POST'},
+    ).catch(() => undefined)
     const body = response ? await response.json().catch(() => ({})) : {}
     // Fetch the new round straight away (and once more, in case the effect was still being drained).
     refresh()
@@ -76,8 +93,10 @@ export default function LivePage() {
       setStartMessage(message)
     }
   }
-  // Done starting once the new round is on screen (or after 15 s, if it never shows).
+  // Done starting once the new round is on screen, or for a VAR check once the run shows up (or after 15 s).
+  const run = state?.run
   if (starting && ref && ref._id !== starting.from) setStarting(null)
+  if (starting?.check && run) setStarting(null)
   useEffect(() => {
     if (!starting) return
     const id = setTimeout(() => setStarting(null), 15_000)
@@ -162,15 +181,27 @@ export default function LivePage() {
   )
 
   const incident = ref?.incident
+  // A run waiting in the VAR room (a fresh VAR check, or back after a round nobody voted in): the VAR room at
+  // work on its incident. Its incident is the latest round's when that's this run's, else the next in line.
+  const checking = run?.stage === 'varRoom'
+  const checkIncident = checking
+    ? ref?.incident._id === run.incidentId && parked
+      ? ref.incident
+      : state?.next?._id === run.incidentId
+        ? state.next
+        : ref?.incident._id === run.incidentId
+          ? ref.incident
+          : state?.next
+    : undefined
   // Which scene is on screen: a change of key plays the transition (SceneTransition), the same key updates in place.
   const sceneKey =
     showVerdict && ref
       ? `verdict:${ref._id}`
-      : parked && ref
-        ? `parked:${ref._id}`
-        : decided
+      : checking && checkIncident
+        ? `var-room:${checkIncident._id}:${ref?._id ?? ''}`
+        : decided || parked
           ? state?.next
-            ? `var-room:${state.next._id}`
+            ? `waiting:${state.next._id}`
             : state
               ? 'season'
               : 'connecting'
@@ -194,16 +225,20 @@ export default function LivePage() {
       <SceneTransition sceneKey={sceneKey} className="flex flex-col lg:min-h-0 lg:flex-1">
         {showVerdict && ref ? (
           <Verdict round={ref} phase={phase} action={verdictAction} />
-        ) : parked && ref ? (
-          <VarRoomScene incident={ref.incident} loop={ref.loop + 1} start={start} />
-        ) : decided ? (
+        ) : checking && checkIncident ? (
+          <VarRoomScene incident={checkIncident} loop={ref ? ref.loop + 1 : undefined} start={start} />
+        ) : decided || parked ? (
           state?.next ? (
-            <VarRoomScene incident={state.next} start={start} />
+            <WaitingScene
+              incident={state.next}
+              fixtures={state.fixtures}
+              start={<StartButton onClick={pressCheck} busy={Boolean(starting)} message={startMessage} label="Start the VAR check" />}
+            />
           ) : state ? (
             <section className="flex flex-1 flex-col items-center justify-center gap-4 py-16 text-center">
               <p className="font-display text-4xl font-extrabold uppercase">Every call has been confirmed</p>
               <p className="max-w-xl text-muted">The people have upheld all five. Democracy is complete, and slower.</p>
-              <StartButton onClick={press} busy={Boolean(starting)} message={startMessage} label="Start a new season" />
+              <StartButton onClick={pressCheck} busy={Boolean(starting)} message={startMessage} label="Start a new season" />
             </section>
           ) : (
             <p className="py-16 text-center text-muted">Connecting to the VAR room…</p>

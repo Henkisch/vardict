@@ -19,7 +19,7 @@ export async function POST(request: Request) {
   if (rateLimited(`start:${clientKey(request)}`, 3, 60_000)) {
     return Response.json({status: 'rateLimited'}, {status: 429, headers: CORS})
   }
-  const parsed = await readJson<{incidentId?: unknown}>(request, {headers: CORS, allowEmpty: true})
+  const parsed = await readJson<{incidentId?: unknown; step?: unknown}>(request, {headers: CORS, allowEmpty: true})
   if ('error' in parsed) return parsed.error
   const requested = isOperator(request) && typeof parsed.body.incidentId === 'string' ? parsed.body.incidentId : undefined
   if (requested !== undefined && !INCIDENT_ID_PATTERN.test(requested)) {
@@ -27,7 +27,8 @@ export async function POST(request: Request) {
   }
 
   try {
-    const result = await startNext(getRuntime(), requested)
+    // {step: 'check'}: /live's waiting screen starts the VAR check only (anyone may; it never skips a step).
+    const result = await startNext(getRuntime(), requested, {checkOnly: parsed.body.step === 'check'})
     const status =
       result.status === 'busy'
         ? 409

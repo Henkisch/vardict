@@ -86,7 +86,9 @@ const SLEEP_AFTER_MS = 5 * 60_000
 // (a round has a result but the run continues, e.g. mid-shootout) — plus for 20 s after the phase last
 // changed, to bridge the gap before the next round's referendum exists in the query result, and for 30 s
 // after pressing Send to the people.
-export function useLiveState<T>(url: string, phaseOf: (state: T | undefined) => Phase) {
+// `awake`: a state the screen must never sleep through (the /live waiting screen, which has to notice a VAR check
+// someone else starts), so it keeps the idle poll instead of dropping to the sleepy one.
+export function useLiveState<T>(url: string, phaseOf: (state: T | undefined) => Phase, awake?: (state: T | undefined) => boolean) {
   const [fast, setFast] = useState(false)
   // A screen that just pressed Send to the people polls fast for 30 s, until its round shows up.
   const [boosted, setBoosted] = useState(false)
@@ -97,7 +99,7 @@ export function useLiveState<T>(url: string, phaseOf: (state: T | undefined) => 
   const phase = phaseOf(state)
   const active = phase === 'voting' || phase === 'counting' || phase === 'between'
   // Only a run with nothing left to show is a candidate for sleep - an active run already polls fast.
-  const canSleep = phase === 'decided' || phase === 'parked'
+  const canSleep = (phase === 'decided' || phase === 'parked') && !awake?.(state)
 
   // Adjusting state during render in response to a change — React's documented pattern for this, not an
   // effect: boost for a beat whenever the phase itself changes, to bridge the gap before the next round's

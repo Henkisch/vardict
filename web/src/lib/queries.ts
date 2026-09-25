@@ -32,9 +32,10 @@ export const LIVE_QUERY = `{
     incident->${INCIDENT_CARD}
   },
   // Who the VAR room is looking at while nothing is live: next in line, same order as /api/start picks.
-  "next": *[_type == "incident" && !defined(finalCall)]{
-    ..., "last": *[_type == "referendum" && references(^._id)] | order(windowOpensAt desc)[0].windowOpensAt
-  } | order(coalesce(last, "0") asc)[0]${INCIDENT_CARD},
+  "next": *[_type == "incident" && !defined(finalCall) && !(_id in path("drafts.**"))]{
+    ..., "last": *[_type == "referendum" && references(^._id)] | order(windowOpensAt desc)[0].windowOpensAt,
+    "date": match->date
+  } | order(coalesce(last, "0") asc, date asc)[0]${INCIDENT_CARD},
   "democracySeconds": math::sum(*[_type == "incident"].realDelaySeconds)
     + coalesce(math::sum(*[_type == "referendum" && defined(result)]{
         "s": dateTime(closesAt) - dateTime(windowOpensAt)
@@ -95,7 +96,11 @@ export type IncidentCard = {
     match: {competition: string; homeTeam: Team; awayTeam: Team}
 }
 
+// The live workflow run, if any: added by /api/live from the private workflows dataset (stage + incident only).
+export type LiveRun = {stage: string; incidentId: string} | null
+
 export type LiveState = {
+  run?: LiveRun
   referendum: LiveReferendum | null
   next: IncidentCard | null
   democracySeconds: number

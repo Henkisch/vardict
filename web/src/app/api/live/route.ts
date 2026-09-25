@@ -8,7 +8,10 @@ import {
   type IncidentsOverview,
   type LiveState,
 } from '@/lib/queries'
+import {liveInstances} from 'workflows/runtime'
+
 import {runPhase} from '@/lib/run-status'
+import {getRuntime} from '@/lib/runtime'
 
 // One token-free client per server instance, reused across requests (the dataset is public, so no write
 // token belongs here). useCdn: false because the CDN itself lags 5-20 s (measured session 3) - freshness
@@ -31,7 +34,11 @@ export async function GET(request: Request) {
   if (q === 'live') {
     let result: LiveState
     try {
-      result = await client.fetch<LiveState>(LIVE_QUERY)
+      // The run lives in the private workflows dataset: only its stage and incident go out, so /live can tell
+      // "waiting for a VAR check" from "the VAR room is reviewing".
+      const [state, instances] = await Promise.all([client.fetch<LiveState>(LIVE_QUERY), liveInstances(getRuntime())])
+      const run = instances[0]
+      result = {...state, run: run ? {stage: run.currentStage, incidentId: String(run.subjectId).split(':').at(-1)!} : null}
     } catch (error) {
       console.error('live fetch failed', error)
       return Response.json(null, {status: 502, headers: {'Cache-Control': 'no-store'}})

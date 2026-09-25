@@ -738,4 +738,21 @@ describe('runtime', () => {
     const instance = await runtime.engine.getInstance({instanceId})
     expect(instance.completedAt).toBeDefined()
   })
+
+  test('checkOnly starts the VAR check without a vote; the next press sends it to the people', async () => {
+    const {runtime} = await setup()
+    const check = await startNext(runtime, undefined, {checkOnly: true})
+    expect(check.status).toBe('checking')
+    if (check.status !== 'checking') throw new Error('unreachable')
+    expect(await stageOf(runtime, check.instanceId)).toBe('varRoom')
+    expect(await runtime.content.fetch<number>('count(*[_type == "referendum"])')).toBe(0)
+
+    // A second "Start the VAR check" (someone else pressing too) changes nothing.
+    const again = await startNext(runtime, undefined, {checkOnly: true})
+    expect(again).toMatchObject({status: 'checking', instanceId: check.instanceId})
+
+    const sent = await startNext(runtime)
+    expect(sent).toMatchObject({status: 'recommended', instanceId: check.instanceId})
+    expect(await runtime.content.fetch<number>('count(*[_type == "referendum"])')).toBe(1)
+  })
 })

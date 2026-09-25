@@ -21,7 +21,19 @@ type Board = {ref: Ref | null; next: Incident | null}
 
 // L1-L3 of the booth (design.md): the incident under review, what's happening to it now, and the one press. The
 // press posts to the same /api/start as /live's button, so it follows the run step by step.
+type Run = {currentStage: string} | null
+
+// The live run from the private workflows dataset: whether a VAR check is running decides the first press.
 export function UnderReview() {
+  const {data: run} = useQuery<Run>({
+    projectId: 't2sbu6uu',
+    dataset: 'workflows',
+    query: `*[_type == "sanity.workflow.instance" && tag == "dev" && !defined(completedAt)] | order(startedAt desc)[0]{currentStage}`,
+  })
+  return <Review run={run} />
+}
+
+function Review({run}: {run: Run}) {
   const {data} = useQuery<Board>({
     query: `{
       "ref": *[_type == "referendum"] | order(windowOpensAt desc)[0]{
@@ -66,6 +78,8 @@ export function UnderReview() {
     return () => clearTimeout(id)
   }, [phase, ref])
 
+  // No run: the next incident waits for its VAR check. A run in the VAR room: its check is under way.
+  const checking = run?.currentStage === 'varRoom'
   const incident = phase === 'next' ? data?.next : ref?.incident
   const check = `VAR check · ${CHECK[incident?.incidentType ?? ''] ?? 'review'}`
   const now_ =
@@ -81,16 +95,25 @@ export function UnderReview() {
               ? {label: check, detail: 'back from the fans: nobody voted'}
               : {label: check}
   const button =
-    phase === 'between' ? (ref?.round === 'regular' ? 'Go to extra time' : 'Penalties!') : incident ? 'Send to the people' : 'Start a new season'
+    phase === 'between'
+      ? ref?.round === 'regular'
+        ? 'Go to extra time'
+        : 'Penalties!'
+      : !incident
+        ? 'Start a new season'
+        : checking || phase === 'parked'
+          ? 'Send to the people'
+          : 'Start the VAR check'
   const locked = busy || phase === 'kickoff' || phase === 'voting' || phase === 'counting'
 
   async function press() {
     setBusy(true)
     setMessage(undefined)
-    const result = await sendToThePeople().catch(() => ({status: 'unreachable'}) as const)
+    const startCheck = phase === 'next' && !checking
+    const result = await sendToThePeople(undefined, {check: startCheck}).catch(() => ({status: 'unreachable'}) as const)
     setBusy(false)
     setMessage(
-      result.status === 'started' || result.status === 'recommended' || result.status === 'kickedOff'
+      result.status === 'started' || result.status === 'recommended' || result.status === 'kickedOff' || result.status === 'checking'
         ? undefined
         : result.status === 'busy'
           ? 'Busy. Press again in a moment.'
@@ -117,7 +140,7 @@ export function UnderReview() {
     <section className="review" aria-label={phase === 'next' ? 'Next up' : 'Under review'}>
       <div className="review-subject">
         <p className="review-kicker">
-          {phase === 'next' ? 'Next up' : 'Under review'}
+          {phase === 'next' && !checking ? 'Next up · waiting for the VAR check' : 'Under review'}
           {incident.controlCase && ' · control case'}
         </p>
         <Scorebug home={incident.home} away={incident.away} minute={incident.minute} />

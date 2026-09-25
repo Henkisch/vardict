@@ -187,7 +187,8 @@ export function createRuntime({
 }
 
 // Start a run for an incident, record the VAR's call and open the first vote: one press of Send to the people.
-export async function sendToThePeople(runtime: Runtime, incidentId: string) {
+// The VAR check starts: a run for the incident, waiting in the VAR room for its recommend (the next press).
+export async function startVarCheck(runtime: Runtime, incidentId: string) {
   const {engine, projectId, contentDataset} = runtime
   const {instance} = await engine.startInstance({
     definition: DEFINITION,
@@ -195,6 +196,12 @@ export async function sendToThePeople(runtime: Runtime, incidentId: string) {
       {type: 'subject', name: 'subject', value: {id: `dataset:${projectId}:${contentDataset}:${incidentId}`, type: 'incident'}},
     ],
   })
+  return instance
+}
+
+export async function sendToThePeople(runtime: Runtime, incidentId: string) {
+  const {engine} = runtime
+  const instance = await startVarCheck(runtime, incidentId)
   // Keyed by this visit to the VAR room, so a retry after a dropped response (or the recovery path in
   // startNext) replays instead of double-firing the human action.
   const visits = instance.stages.filter((s) => s.name === 'varRoom').length
@@ -420,6 +427,8 @@ export const START_COOLDOWN_SECONDS = 10
 export type StartResult =
   // newSeason: true only when every incident had a final call and this press reset them all to start again.
   | {status: 'started'; instanceId: string; incidentId: string; newSeason?: true}
+  // checkOnly: the VAR check started (a run waiting in the VAR room); the next press sends it to the people.
+  | {status: 'checking'; instanceId: string; incidentId: string; newSeason?: true}
   | {status: 'recommended'; instanceId: string; incidentId: string}
   // A voting stage was waiting for its press (Go to extra time, Take the next penalty): its ballot is now open.
   | {status: 'kickedOff'; instanceId: string; incidentId: string; stage: string}
@@ -469,16 +478,19 @@ async function releaseStartLock(runtime: Runtime): Promise<void> {
 // The "Send to the people" button: one live vote at a time. A run parked in the VAR room (after an overturn)
 // is sent back to the people; otherwise the next incident in line starts a fresh run. Only an operator-picked
 // `pick` (validated by the caller/route) reaches here as anything other than undefined.
-export async function startNext(runtime: Runtime, pick?: string): Promise<StartResult> {
+// `checkOnly` (the /live waiting screen's "Start the VAR check"): with nothing running, start the run but leave
+// it in the VAR room instead of opening the vote. With a run already live it changes nothing, so two people
+// pressing at once can't skip the VAR room.
+export async function startNext(runtime: Runtime, pick?: string, {checkOnly = false}: {checkOnly?: boolean} = {}): Promise<StartResult> {
   if (!(await acquireStartLock(runtime))) return {status: 'busy', stage: 'starting'}
   try {
-    return await startNextLocked(runtime, pick)
+    return await startNextLocked(runtime, pick, checkOnly)
   } finally {
     await releaseStartLock(runtime)
   }
 }
 
-async function startNextLocked(runtime: Runtime, pick?: string): Promise<StartResult> {
+async function startNextLocked(runtime: Runtime, pick: string | undefined, checkOnly: boolean): Promise<StartResult> {
   const {engine, content, workflows, tag} = runtime
 
   // Validate the pick before anything else can act on it - in particular, before any abort below.
@@ -491,6 +503,11 @@ async function startNextLocked(runtime: Runtime, pick?: string): Promise<StartRe
   }
 
   const [live] = await liveInstances(runtime)
+  if (checkOnly && live) {
+    return live.currentStage === 'varRoom'
+      ? {status: 'checking', instanceId: live._id, incidentId: docId(live.subjectId)}
+      : {status: 'busy', instanceId: live._id, stage: live.currentStage}
+  }
   // A voting stage whose ballot isn't open yet is waiting for a press, not busy: the run sits on the verdict
   // screen until someone presses Go to extra time / Take the next penalty.
   let waiting = false
@@ -589,6 +606,10 @@ async function startNextLocked(runtime: Runtime, pick?: string): Promise<StartRe
   }
 
   try {
+    if (checkOnly) {
+      const {_id: instanceId} = await startVarCheck(runtime, incidentId)
+      return newSeason ? {status: 'checking', instanceId, incidentId, newSeason: true} : {status: 'checking', instanceId, incidentId}
+    }
     const instanceId = await sendToThePeople(runtime, incidentId)
     return newSeason
       ? {status: 'started', instanceId, incidentId, newSeason: true}
