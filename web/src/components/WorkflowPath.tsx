@@ -1,5 +1,7 @@
 import {WINDOW_SECONDS} from 'workflows/shared'
 
+import {Chevron} from '@/components/PathChips'
+
 import type {Phase} from '@/lib/run-status'
 import type {RunRound} from '@/lib/queries'
 
@@ -75,7 +77,7 @@ export function WorkflowPath({run, phase}: {run: RunRound[]; phase: Phase}) {
       <ol className="flex flex-wrap items-center gap-x-2 gap-y-2">
         {steps.map((step, i) => (
           <li key={i} className="flex items-center gap-2">
-            {i > 0 && <span className="text-line" aria-hidden>→</span>}
+            {i > 0 && <Chevron className="h-4 w-4" />}
             <span className={`rounded-full border px-3 py-1 text-sm font-semibold ${step.current ? 'border-var text-var' : 'border-line'}`}>
               {step.label}
               {step.result && (

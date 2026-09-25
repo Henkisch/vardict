@@ -671,3 +671,7 @@ cached (`x-vercel-cache: HIT`) after the next deploy.
   in, rounds voted, workflow stages walked, the control-case verdict) sits on Results and on `/live`'s full-time
   screen. Both come from one helper (`lib/path.ts`), so they can't disagree; checked against the real test run
   (16 stages: 3+4+3+3+3). Henrik after the test run: "overall, it seems to be working very good!"
+- **Two small ones from Henrik's screenshots:** the URL and step bar said `step=var-room` at full time (and on the
+  waiting screen), because the page only knew three steps. Now there's `waiting` (nothing lit) and `full-time` (all
+  three done). The path chips' "›" was barely visible, so it's a drawn chevron in the muted grey, on Results and on
+  the verdict's path strip too.

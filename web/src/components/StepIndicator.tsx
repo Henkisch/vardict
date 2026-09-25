@@ -2,7 +2,8 @@
 
 import {useEffect} from 'react'
 
-export type Step = 'var-room' | 'vote' | 'verdict'
+// 'waiting': nothing has started yet (no step lit). 'full-time': every decision is in (all three done).
+export type Step = 'waiting' | 'var-room' | 'vote' | 'verdict' | 'full-time'
 
 const STEPS: {id: Step; label: string}[] = [
   {id: 'var-room', label: 'VAR room'},
@@ -29,7 +30,7 @@ export function StepIndicator({step, detail}: {step: Step; detail?: string}) {
   // L5 chrome (design.md). From md up: quiet inline text in the header, the current step in chalk with an amber dot.
   // Below md it has its own row, so it becomes a full-width three-part progress bar (Henrik: the left-floating
   // row looked unfinished): an amber line up to the current step, grey after, labels centred.
-  const current = STEPS.findIndex((s) => s.id === step)
+  const current = step === 'waiting' ? -1 : step === 'full-time' ? STEPS.length : STEPS.findIndex((s) => s.id === step)
   return (
     <nav aria-label="Where the match is" className="w-full md:w-auto">
       <ol className="grid w-full grid-cols-3 gap-1 text-sm md:flex md:items-center md:gap-3">
@@ -39,7 +40,7 @@ export function StepIndicator({step, detail}: {step: Step; detail?: string}) {
             <span className={`h-0.5 w-full rounded-full md:hidden ${i <= current ? 'bg-var' : 'bg-line'}`} aria-hidden />
             <span
               aria-current={i === current ? 'step' : undefined}
-              className={`flex items-center gap-2 whitespace-nowrap ${i === current ? 'font-semibold text-chalk' : 'text-muted'}`}
+              className={`flex items-center gap-2 whitespace-nowrap ${i === current ? 'font-semibold text-chalk' : i < current ? 'text-chalk' : 'text-muted'}`}
             >
               {i === current && <span className="hidden h-2 w-2 rounded-full bg-var md:block" aria-hidden />}
               {s.label}

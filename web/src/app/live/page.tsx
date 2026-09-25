@@ -197,7 +197,16 @@ export default function LivePage() {
                 : 'overturned'
         : 'review'
   // Which of the three steps the screen is on.
-  const step: Step = voting || counting ? 'vote' : showVerdict ? 'verdict' : 'var-room'
+  const step: Step =
+    voting || counting
+      ? 'vote'
+      : showVerdict
+        ? 'verdict'
+        : run
+          ? 'var-room'
+          : state && !state.next && (decided || parked)
+            ? 'full-time'
+            : 'waiting'
   const roundName = ref?.round === 'regular' ? 'Regular time' : ref?.round === 'extraTime' ? 'Extra time' : ref ? 'Penalty' : undefined
   const tickerIncident = showVerdict || voting || counting || parked ? ref?.incident._id : state?.next?._id
   const start = <StartButton onClick={press} busy={Boolean(starting)} message={startMessage} />

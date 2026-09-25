@@ -11,11 +11,7 @@ export function PathChips({steps}: {steps: PathStep[]}) {
         const end = step.stage === 'upheld' || step.stage === 'overturned'
         return (
           <li key={i} className="flex items-center gap-1.5">
-            {i > 0 && (
-              <span className="text-line" aria-hidden>
-                ›
-              </span>
-            )}
+            {i > 0 && <Chevron />}
             <span
               className={`rounded-full border px-2 py-0.5 font-semibold ${
                 end ? (step.stage === 'upheld' ? 'border-uphold text-uphold' : 'border-overturn text-overturn') : 'border-line text-chalk'
@@ -28,5 +24,14 @@ export function PathChips({steps}: {steps: PathStep[]}) {
         )
       })}
     </ol>
+  )
+}
+
+// Drawn, not a glyph: a small "›" in the rule colour all but disappears on the pitch surface (Henrik).
+export function Chevron({className = ''}: {className?: string}) {
+  return (
+    <svg className={`shrink-0 text-muted ${className}`} width="12" height="12" viewBox="0 0 16 16" aria-hidden>
+      <path d="M6 3.5 10.5 8 6 12.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
   )
 }
