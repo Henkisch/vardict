@@ -675,3 +675,22 @@ cached (`x-vercel-cache: HIT`) after the next deploy.
   waiting screen), because the page only knew three steps. Now there's `waiting` (nothing lit) and `full-time` (all
   three done). The path chips' "›" was barely visible, so it's a drawn chevron in the muted grey, on Results and on
   the verdict's path strip too.
+
+## Session 6 (Sep 25): the submission, first real draft
+
+- **Henrik: "is it time for a first iteration of the write up, im not sure when to post it?! is it possible on
+  dev.to to edit it as we go?"** Checked the challenge page, its contest rules and DEV's official hackathon rules:
+  none of them say anything about editing. The only hard rule is a published post by Oct 4 23:59 PDT. DEV posts can
+  be edited any time, and unpublished drafts have a private preview link. Plan: `SUBMISSION.md` stays the source,
+  paste into an unpublished DEV draft around Sep 28 to check rendering, publish Oct 3 evening, freeze before the
+  deadline. Reactions only matter as a tie-breaker, so posting early buys little.
+- **Rewrote `SUBMISSION.md` (v2).** The session-3 draft still described six stages, "abandoned", loops, 10-30 s
+  windows and a five-round shootout. Now: the v4+ rules (55/45, extra time, one penalty, no human vote = back to the
+  VAR room), 60/30/15 s windows, ×8, the step-by-step presses as they read on `/live`, a "How it uses Sanity"
+  section for the schema criterion (three call fields incl. `overturnedCall`, counters vs vote docs, `punditLine`,
+  derived clock), and a build process arc from this log: day-one platform findings, the clip hunt, the first deploy,
+  the cost review, "automagically" → step by step, checking with numbers, audit + executor agents.
+- A pre-publish checklist sits at the top of the file as an HTML comment (tokens, repo public, wipe, keySeconds,
+  video, screenshots, cover, tags, agent session).
+- Checked: the public dataset URL returns 5 incidents; `/incidents` and the Díaz page answer 200; 62 tests
+  (8 crowd, 13 definition, 41 runtime).
