@@ -1,45 +1,64 @@
 import {type SanityConfig} from '@sanity/sdk'
 import {SanityApp} from '@sanity/sdk-react'
-import {Suspense} from 'react'
+import {Suspense, type ReactNode} from 'react'
 
-import {IncidentList} from './components/IncidentList'
-import {LiveRound} from './components/LiveRound'
-import {WorkflowStage} from './components/WorkflowStage'
+import {FullWipe} from './components/FullWipe'
+import {IncidentBoard} from './components/IncidentBoard'
+import {TheCall} from './components/TheCall'
+import {VoteFeed} from './components/VoteFeed'
+import {WorkflowGraph} from './components/WorkflowGraph'
+import {useNow} from './useNow'
 import './App.css'
 
-// The VAR Room: Henrik's private operator console. Content from `production`, workflow state from the private
-// `workflows` dataset (readable because the Dashboard hands the app a logged-in user's token).
+// Stockley Park: the officials' booth. PGMOL's real VAR hub sits there, miles from any ground; /live is the
+// stadium. Content from `production`, workflow state from the private `workflows` dataset (readable because
+// the Dashboard hands the app a logged-in user's token).
 const config: SanityConfig[] = [
   {projectId: 't2sbu6uu', dataset: 'production'},
   {projectId: 't2sbu6uu', dataset: 'workflows'},
 ]
 
+const Loading = ({children}: {children: ReactNode}) => (
+  <Suspense fallback={<section className="panel muted">Patching in…</section>}>{children}</Suspense>
+)
+
+function WallClock() {
+  const now = useNow(1000)
+  return <span className="mono">{new Date(now).toLocaleTimeString('en-GB')}</span>
+}
+
 export default function App() {
   return (
-    <SanityApp config={config} fallback={<p className="muted pad">Opening the VAR room…</p>}>
-      <main className="room">
-        <header className="room-header">
-          <h1>
-            VAR <span className="accent">Room</span>
-          </h1>
-          <Suspense fallback={<p className="muted">Checking the workflow…</p>}>
-            <WorkflowStage />
-          </Suspense>
+    <SanityApp config={config} fallback={<p className="muted pad">Opening Stockley Park…</p>}>
+      <main className="booth">
+        <header className="booth-head">
+          <div>
+            <h1>
+              Stockley <span className="accent">Park</span>
+            </h1>
+            <p className="small muted">VAR hub · officials only · the stadium is on /live</p>
+          </div>
+          <p className="booth-status small">
+            <span className="rec">● REC</span> <WallClock />
+          </p>
         </header>
-        <div className="room-grid">
-          <section>
-            <h2>Incidents</h2>
-            <Suspense fallback={<p className="muted">Loading incidents…</p>}>
-              <IncidentList />
-            </Suspense>
-          </section>
-          <section>
-            <h2>Live round</h2>
-            <Suspense fallback={<p className="muted">Loading the round…</p>}>
-              <LiveRound />
-            </Suspense>
-          </section>
+        <Loading>
+          <WorkflowGraph />
+        </Loading>
+        <div className="booth-grid">
+          <div className="booth-col">
+            <Loading>
+              <TheCall />
+            </Loading>
+            <Loading>
+              <IncidentBoard />
+            </Loading>
+          </div>
+          <Loading>
+            <VoteFeed />
+          </Loading>
         </div>
+        <FullWipe />
       </main>
     </SanityApp>
   )

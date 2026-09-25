@@ -600,6 +600,41 @@ async function startNextLocked(runtime: Runtime, pick?: string): Promise<StartRe
   }
 }
 
+// Only run data - what rounds create on the fly - is ever deleted. Content (incidents, matches, teams, laws,
+// pundit lines) is never deleted; incidents only lose their finalCall.
+export const RUN_DATA_TYPES = ['vote', 'referendum'] as const
+
+export type WipeResult = {status: 'wiped'; aborted: number; deleted: number; cleared: number} | {status: 'busy'; stage: string}
+
+// The booth's "Full wipe": a clean slate before recording or judging. Aborts live runs, deletes every vote and
+// referendum, and clears every finalCall, so the democracy clock falls back to the real VAR delays. Finished
+// workflow instances stay in the private dataset (engine-owned). Takes the start lock so no press can start a
+// run halfway through.
+export async function wipeRunData(runtime: Runtime): Promise<WipeResult> {
+  if (!(await acquireStartLock(runtime))) return {status: 'busy', stage: 'starting'}
+  try {
+    const {engine, content} = runtime
+    const live = await liveInstances(runtime)
+    for (const instance of live) await engine.abortInstance({instanceId: instance._id})
+    const ids = await content.fetch<string[]>('*[_type in $types]._id', {types: [...RUN_DATA_TYPES]})
+    const incidents = await content.fetch<string[]>('*[_type == "incident" && defined(finalCall)]._id')
+    // Chunked: one transaction per 200 mutations keeps each request small.
+    for (let i = 0; i < ids.length; i += 200) {
+      const tx = content.transaction()
+      ids.slice(i, i + 200).forEach((id) => tx.delete(id))
+      await tx.commit()
+    }
+    if (incidents.length) {
+      const tx = content.transaction()
+      incidents.forEach((id) => tx.patch(content.patch(id).unset(['finalCall'])))
+      await tx.commit()
+    }
+    return {status: 'wiped', aborted: live.length, deleted: ids.length, cleared: incidents.length}
+  } finally {
+    await releaseStartLock(runtime)
+  }
+}
+
 // `at` is in the runtime's own clock domain (production: real wall-clock ms, same as `now`'s default of
 // `Date.now`; tests: a bench's controllable clock). Delegates the actual wait to `runtime.sleep` so tests can
 // swap in a fast/no-op wait instead of pinning this to real time.

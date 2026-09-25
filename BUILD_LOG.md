@@ -484,3 +484,22 @@ cached (`x-vercel-cache: HIT`) after the next deploy.
 - Deployed: code pushed by Henrik, workflow v4, Studio schema (Pundit lines, Key moment).
 - **Next session:** Henrik plays a full round and reports. Then animations between states (hold the old state until
   the transition plays), the workflow-path layout, Stockley Park (the App SDK console), and polish.
+
+## Session 5 (Sep 25): Stockley Park, the officials' booth
+
+- **Starting point:** the VAR Room was still the v2 console (loops, "visit 1 of 3", a five-round shootout). It no
+  longer matched workflow v4, so I rebuilt it instead of patching it.
+- **Vibe questions first**, as in session 4. Henrik picked a broadcast-gallery look, two panels (a live workflow graph
+  and a live vote feed), and two controls (the one step-by-step button, plus a reset). He asked whether "new season"
+  would also erase the votes. It didn't: it only cleared `finalCall`. So we settled on a **Full wipe** instead, and
+  then came the important follow-up: "but dont wipe any imortant data ey?!". The wipe works from an allowlist
+  (`RUN_DATA_TYPES = ['vote', 'referendum']`) plus clearing `finalCall`. A test seeds a match, team, law and pundit
+  line and checks they all survive. The reset script now calls the same function.
+- **The booth:** a graph of `peoples-var` read in real time from the private `workflows` dataset (current stage lit,
+  visit counts, the path with timestamps, the subject resolved from `production` with `useDocumentProjection`). "The
+  call" puts the on-pitch call next to the VAR's recommendation, with the same button `/live` has. The live feed turns
+  each real-time update of `botVotes` into a "bot wave" line with its persona split, and lists every fan vote
+  (×20) as it lands. That's the App SDK real-time story for the video.
+- `/api/reset` is operator-only and needs `{"confirm": "WIPE"}` in the body. The booth asks you to type WIPE (the
+  Dashboard iframe may block `confirm()`).
+- Checked in the Dashboard through Chrome (read-only, nothing pressed): both datasets load live.

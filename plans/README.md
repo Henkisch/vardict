@@ -24,7 +24,7 @@ real Sanity project and the public site — don't run them without the operator'
 | 010 | `/incidents` results overview + "Abandoned" | P2 | S | 007 | DONE (branch `advisor/010-results-index` @ ec68e73; reviewed; not merged) |
 | 011 | Brief matches code; shared rules in one place | P2 | S | 001–010 | DONE (branch `advisor/011-docs-and-constants` @ 9f62a11; reviewed after 1 revision; var-room keeps copies (lockfile); operator: redeploy Studio schema; not merged) |
 | 012 | Spike: "Watch a shootout" replay | P3 | M | 006, 010 | TODO |
-| 013 | VAR Room in the Dashboard + operator controls | P2 | S–M | 005, 009 | TODO |
+| 013 | VAR Room in the Dashboard + operator controls | P2 | S–M | 005, 009 | IN PROGRESS (session 5: rebuilt as Stockley Park; Full wipe instead of new season; Dashboard deploy awaits operator) |
 | 014 | Link previews show the democracy clock (OG) | P3 | S–M | 010 | TODO |
 | 015 | Spike: declare the `finalCall` guard | P3 | S | 002 | TODO |
 

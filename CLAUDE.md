@@ -91,13 +91,14 @@ organization dashboard, not on a public URL. So:
 
 | Part | Built with | Audience | Job |
 | --- | --- | --- | --- |
-| VAR Room | App SDK | Henrik only (org member) | Pick an incident, start a referendum, perform the human `recommend` transition, watch votes and bot waves live, restart a referendum |
+| VAR Room ("Stockley Park") | App SDK | Henrik only (org member) | The officials' booth (session 5): live `peoples-var` graph from the private `workflows` dataset, the same one step-by-step button as /live, a live feed of bot waves and fans' votes as they land, the match-day list, and a Full wipe |
 | /vote | Next.js | Public, phones | Redirects to `/live` - voting happens there (Henrik, session 3: one page is both the big screen and where you vote) |
 | /live | Next.js | Public, big screen | "Send to the people" button (starts a referendum, see Judge testing), clip with the situation line under it, VAR recommendation, live bars, countdown, round, democracy clock, QR code to /vote |
 | /incidents | Next.js | Public | Results overview: every incident's fixture, VAR call and outcome, plus the shared democracy clock (plan 010) |
 | /incidents/[slug] | Next.js | Public | Final call, every round's split, total delay added, control-case headline |
 | /api/vote | Next.js server route | Called by /vote | Validates and writes votes with a server-only token |
 | /api/start | Next.js server route | Called by /live's "Send to the people" button and the VAR Room | Starts the next incident's referendum (engine API + `recommend`), one at a time, with a cooldown; only an operator (shared secret) may pick a specific incident |
+| /api/reset | Next.js server route | Called by Stockley Park's Full wipe (operator key + `{confirm: "WIPE"}`) | `wipeRunData`: aborts live runs, deletes every `vote` and `referendum`, clears `finalCall`. Content is never deleted (`RUN_DATA_TYPES`). Finished workflow instances stay |
 | /api/tick | Next.js server route | Called by /live, the VAR Room and the bot crowd | Calls `closeWindow` (wraps `engine.fireAction` + `drainEffects`) so vote windows close on time; idempotent |
 | /api/crowd | Next.js server route | Called by the server itself when a round opens (`workflows/runtime.ts`'s `open` effect) | Runs one referendum's bot crowd (`runCrowd`) in the background, guarded by an HMAC key derived from the write token |
 | /api/live | Next.js server route | Polled by /live, /incidents and /incidents/[slug] | The one GROQ read every public screen shares, cached at Vercel's CDN (`?q=live\|incident\|incidents`) |
@@ -403,6 +404,12 @@ overturns it (`overturned`, terminal: the on-field call becomes the final call),
 one sudden-death penalty. A round with no human vote is no decision: back to `varRoom`. Loops and "abandoned" are
 gone. Windows are 20 s / 10 s / 8 s, and a human vote closes the round early (the rest of the seeded crowd votes
 at once). Routes: one `/live` that follows the run (Henrik asked twice; kept, since per-step routes go stale).
+
+**Stockley Park (session 5):** built in `var-room/` as a broadcast gallery: workflow graph (current stage lit, visit
+counts, path with times), The call (on-pitch call vs VAR recommendation, one button posting to `/api/start`), a live
+feed that diffs `botVotes` counters into bot waves and lists each fan vote, the match-day list, and Full wipe
+(type WIPE; only run data). Henrik chose: no pick-any-incident, no persona table, no /live mirror. Runs locally in
+the Dashboard; not yet deployed there (plan 013 step 4, needs Henrik's OK). Full wipe needs `/api/reset` pushed.
 
 **Polish backlog (Henrik: "do that in the end"):** animations between states, and don't swap the content before the
 transition plays (hold the old state until the transition starts). Also more layout polish on /live.

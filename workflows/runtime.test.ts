@@ -15,6 +15,7 @@ import {
   START_COOLDOWN_SECONDS,
   startNext,
   type Runtime,
+  wipeRunData,
 } from './runtime'
 
 // A bench's own client physically stores the "home" workflow resource (definitions, instances) wherever the
@@ -702,5 +703,39 @@ describe('runtime', () => {
     // Not `referendum()`: a tooClose result opens extra time's own referendum, which is now the latest one.
     const closed = await runtime.content.fetch<{result?: string}>('*[_id == $id][0]{result}', {id: ref._id})
     expect(closed.result).toBe('tooClose')
+  })
+
+  test('full wipe deletes only run data: content survives, finalCalls clear, the next press starts fresh', async () => {
+    const content: Doc[] = [
+      incidentDoc(),
+      {_id: 'match-1', _type: 'match', competition: 'Premier League'},
+      {_id: 'team-1', _type: 'team', name: 'Everton'},
+      {_id: 'law-12', _type: 'law', number: 12},
+      {_id: 'pundit-1', _type: 'punditLine', text: 'Clear and obvious.'},
+    ]
+    const {bench, runtime, instanceId, referendum} = await start(content)
+    const ref = await referendum()
+    await castHumanVote(runtime, ref._id, 'uphold')
+    await setBotVotes(runtime, ref._id, 40, 5)
+    await closeWindow(runtime, instanceId, Date.parse(ref.closesAt)) // upheld -> writes finalCall
+
+    const result = await wipeRunData(runtime)
+    expect(result).toMatchObject({status: 'wiped', deleted: 2, cleared: 1})
+
+    expect(await runtime.content.fetch<number>('count(*[_type in ["vote", "referendum"]])')).toBe(0)
+    expect(await runtime.content.fetch<number>('count(*[defined(finalCall)])')).toBe(0)
+    const kept = await runtime.content.fetch<string[]>('*[_id in $ids]._id', {ids: content.map((d) => d._id)})
+    expect(kept.sort()).toEqual(content.map((d) => d._id).sort())
+
+    bench.advance((START_COOLDOWN_SECONDS + 1) * 1000)
+    expect((await startNext(runtime)).status).toBe('started')
+  })
+
+  test('full wipe aborts a live run', async () => {
+    const {runtime, instanceId} = await start()
+    const result = await wipeRunData(runtime)
+    expect(result).toMatchObject({status: 'wiped', aborted: 1, deleted: 1})
+    const instance = await runtime.engine.getInstance({instanceId})
+    expect(instance.completedAt).toBeDefined()
   })
 })
