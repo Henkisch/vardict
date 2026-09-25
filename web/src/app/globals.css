@@ -126,3 +126,88 @@ body {
     transform: none;
   }
 }
+
+/* The verdict headline lands (rare, so it can have a little weight). Scene changes themselves are Motion
+   (SceneTransition). */
+:root {
+  --ease-out-expo: cubic-bezier(0.19, 1, 0.22, 1);
+  --ease-out-quad: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  --ease-in-out-cubic: cubic-bezier(0.645, 0.045, 0.355, 1);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .verdict-land {
+    animation: verdict-land 520ms var(--ease-out-expo) 120ms both;
+  }
+}
+@keyframes verdict-land {
+  from {
+    opacity: 0;
+    transform: scale(1.06);
+  }
+}
+
+/* Page transitions (PageTransition, React <ViewTransition>). Forward = deeper: the old page leaves left, the new
+   one arrives from the right; back is the mirror. The old page leaves fast, the new one waits for it and arrives
+   gently. The header stays put, and the incident title morphs between its Results card and its own page. */
+::view-transition-old(.nav-forward),
+::view-transition-old(.nav-back) {
+  animation:
+    150ms var(--ease-out-quad) both vt-fade reverse,
+    400ms var(--ease-in-out-cubic) both vt-slide reverse;
+}
+::view-transition-new(.nav-forward),
+::view-transition-new(.nav-back) {
+  animation:
+    210ms var(--ease-out-quad) 150ms both vt-fade,
+    400ms var(--ease-in-out-cubic) both vt-slide;
+}
+::view-transition-old(.nav-forward) {
+  --vt-offset: -60px;
+}
+::view-transition-new(.nav-forward) {
+  --vt-offset: 60px;
+}
+::view-transition-old(.nav-back) {
+  --vt-offset: 60px;
+}
+::view-transition-new(.nav-back) {
+  --vt-offset: -60px;
+}
+::view-transition-group(site-header) {
+  animation: none;
+  z-index: 100;
+}
+::view-transition-old(site-header) {
+  display: none;
+}
+::view-transition-group(.morph) {
+  animation-duration: 400ms;
+  animation-timing-function: var(--ease-in-out-cubic);
+}
+::view-transition-image-pair(.morph) {
+  animation-name: vt-via-blur;
+}
+@keyframes vt-fade {
+  from {
+    filter: blur(3px);
+    opacity: 0;
+  }
+}
+@keyframes vt-slide {
+  from {
+    translate: var(--vt-offset);
+  }
+}
+@keyframes vt-via-blur {
+  30% {
+    filter: blur(3px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation-duration: 150ms !important;
+    translate: none !important;
+  }
+}

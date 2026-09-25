@@ -564,3 +564,15 @@ cached (`x-vercel-cache: HIT`) after the next deploy.
   row, the democracy clock) and the clip filling the rest, capped to the screen height. "Every round" and "The
   outcry" sit side by side under it.
 - **Verdict path strip in plain words:** "VAR room → Fans vote → Extra time → Penalty → Upheld / Overturned" under "The path through the Sanity workflow", like the booth. The stage names stay in code only.
+- **Animations between states (Henrik: "focus on page/state transitions, using motion.dev preferably"):**
+  - *State changes on `/live`* use Motion (`motion` added to web; the lockfile only gained lines this time).
+    `SceneTransition` is `AnimatePresence mode="wait"` keyed by the scene (VAR room / vote / verdict / next
+    incident): the old scene stays, frozen, and exits (180 ms, fade + 6 px up), then the new one rises in (420 ms,
+    strong ease-out, a 2 px blur clearing). That's the backlog item "hold the old state until the transition
+    plays". The verdict headline lands with a small scale-in. Reduced motion: opacity only.
+  - *Page changes* use React's `<ViewTransition>`, not Motion: Motion can't play an exit when the App Router swaps
+    a page, and Next 16 supports view transitions natively. Links carry `transitionTypes`: deeper (Stadium →
+    Results → incident) slides left, back slides right, the header stays anchored, and the incident title morphs
+    from its Results card into the incident page. Browser back and polling refreshes don't animate.
+  - A first CSS-only attempt tripped the React linter's "no refs during render" rule; it was replaced by Motion
+    before it shipped.

@@ -8,6 +8,8 @@ import {EnterStadium} from '@/components/EnterStadium'
 import {KickOff} from '@/components/KickOff'
 import {MatchScene} from '@/components/MatchScene'
 import {PunditTicker} from '@/components/PunditTicker'
+import {PageTransition} from '@/components/PageTransition'
+import {SceneTransition} from '@/components/SceneTransition'
 import {SiteHeader} from '@/components/SiteHeader'
 import {useSound} from '@/components/SoundToggle'
 import {StepIndicator, type Step} from '@/components/StepIndicator'
@@ -160,6 +162,21 @@ export default function LivePage() {
   )
 
   const incident = ref?.incident
+  // Which scene is on screen: a change of key plays the transition (SceneTransition), the same key updates in place.
+  const sceneKey =
+    showVerdict && ref
+      ? `verdict:${ref._id}`
+      : parked && ref
+        ? `parked:${ref._id}`
+        : decided
+          ? state?.next
+            ? `var-room:${state.next._id}`
+            : state
+              ? 'season'
+              : 'connecting'
+          : ref
+            ? `vote:${ref._id}`
+            : 'empty'
 
   return (
     <div className="stadium flex min-h-dvh flex-col lg:h-dvh lg:overflow-hidden">
@@ -172,62 +189,68 @@ export default function LivePage() {
       {!sessionEntered && !enteredNow && state && <EnterStadium fixtures={state.fixtures} onEnter={enter} />}
       {countingDown && <KickOff seconds={Math.ceil(kickoffLeft)} />}
 
-      {showVerdict && ref ? (
-        <Verdict round={ref} phase={phase} action={verdictAction} />
-      ) : parked && ref ? (
-        <VarRoomScene incident={ref.incident} loop={ref.loop + 1} start={start} />
-      ) : decided ? (
-        state?.next ? (
-          <VarRoomScene incident={state.next} start={start} />
-        ) : state ? (
-          <section className="flex flex-1 flex-col items-center justify-center gap-4 py-16 text-center">
-            <p className="font-display text-4xl font-extrabold uppercase">Every call has been confirmed</p>
-            <p className="max-w-xl text-muted">The people have upheld all five. Democracy is complete, and slower.</p>
-            <StartButton onClick={press} busy={Boolean(starting)} message={startMessage} label="Start a new season" />
-          </section>
-        ) : (
-          <p className="py-16 text-center text-muted">Connecting to the VAR room…</p>
-        )
-      ) : incident && ref ? (
-        <MatchScene
-          incident={incident}
-          barLeft={<>Fans vote · {roundLabel(ref.round)}</>}
-          live={voting}
-          barRight={
-            voting || counting ? (
-              <span className="font-display text-5xl font-extrabold leading-none text-chalk tabular">{Math.ceil(secondsLeft)}</span>
-            ) : undefined
-          }
-          media={<Clip clip={incident.clip} fallbackText={incident.fallbackText} />}
-          mediaRatio={16 / 9}
-          actionLabel={voting ? 'Keep the VAR\'s call, or overturn it?' : 'The fans have voted'}
-          action={
-            <div className="flex w-full flex-col gap-2 sm:w-[40rem]">
-              <div className="jumbotron rounded-lg p-2">
-                <Bars uphold={ref.uphold} overturn={ref.overturn} size="small" />
+      <PageTransition>
+      <div className="flex flex-col lg:min-h-0 lg:flex-1">
+      <SceneTransition sceneKey={sceneKey} className="flex flex-col lg:min-h-0 lg:flex-1">
+        {showVerdict && ref ? (
+          <Verdict round={ref} phase={phase} action={verdictAction} />
+        ) : parked && ref ? (
+          <VarRoomScene incident={ref.incident} loop={ref.loop + 1} start={start} />
+        ) : decided ? (
+          state?.next ? (
+            <VarRoomScene incident={state.next} start={start} />
+          ) : state ? (
+            <section className="flex flex-1 flex-col items-center justify-center gap-4 py-16 text-center">
+              <p className="font-display text-4xl font-extrabold uppercase">Every call has been confirmed</p>
+              <p className="max-w-xl text-muted">The people have upheld all five. Democracy is complete, and slower.</p>
+              <StartButton onClick={press} busy={Boolean(starting)} message={startMessage} label="Start a new season" />
+            </section>
+          ) : (
+            <p className="py-16 text-center text-muted">Connecting to the VAR room…</p>
+          )
+        ) : incident && ref ? (
+          <MatchScene
+            incident={incident}
+            barLeft={<>Fans vote · {roundLabel(ref.round)}</>}
+            live={voting}
+            barRight={
+              voting || counting ? (
+                <span className="font-display text-5xl font-extrabold leading-none text-chalk tabular">{Math.ceil(secondsLeft)}</span>
+              ) : undefined
+            }
+            media={<Clip clip={incident.clip} fallbackText={incident.fallbackText} />}
+            mediaRatio={16 / 9}
+            actionLabel={voting ? 'Keep the VAR\'s call, or overturn it?' : 'The fans have voted'}
+            action={
+              <div className="flex w-full flex-col gap-2 sm:w-[40rem]">
+                <div className="jumbotron rounded-lg p-2">
+                  <Bars uphold={ref.uphold} overturn={ref.overturn} size="small" />
+                </div>
+                {voting ? (
+                  <VoteButtons
+                    key={ref._id}
+                    referendumId={ref._id}
+                    size="panel"
+                    onVoted={() => {
+                      refresh()
+                      setTimeout(refresh, 2000)
+                      setTimeout(refresh, 4000)
+                    }}
+                  />
+                ) : (
+                  <p className="font-display text-3xl font-bold uppercase text-var">Counting…</p>
+                )}
+                <p className="text-xs text-muted">
+                  Over 55% keeps it · under 45% overturns · in between: {ref.round === 'regular' ? 'extra time' : 'a sudden-death penalty'}.
+                  Your vote counts ×{HUMAN_VOTE_WEIGHT} against {ref.bots} simulated fans.
+                </p>
               </div>
-              {voting ? (
-                <VoteButtons
-                  key={ref._id}
-                  referendumId={ref._id}
-                  size="panel"
-                  onVoted={() => {
-                    refresh()
-                    setTimeout(refresh, 2000)
-                    setTimeout(refresh, 4000)
-                  }}
-                />
-              ) : (
-                <p className="font-display text-3xl font-bold uppercase text-var">Counting…</p>
-              )}
-              <p className="text-xs text-muted">
-                Over 55% keeps it · under 45% overturns · in between: {ref.round === 'regular' ? 'extra time' : 'a sudden-death penalty'}.
-                Your vote counts ×{HUMAN_VOTE_WEIGHT} against {ref.bots} simulated fans.
-              </p>
-            </div>
-          }
-        />
-      ) : null}
+            }
+          />
+        ) : null}
+      </SceneTransition>
+      </div>
+      </PageTransition>
     </main>
     {state && <PunditTicker lines={state.pundits} trigger={trigger} incidentId={tickerIncident} />}
     </div>

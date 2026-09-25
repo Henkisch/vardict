@@ -4,7 +4,10 @@ import Link from 'next/link'
 import {useParams} from 'next/navigation'
 
 import {Clip} from '@/components/Clip'
+import {ViewTransition} from 'react'
+
 import {OutcomeBadge} from '@/components/OutcomeBadge'
+import {PageTransition} from '@/components/PageTransition'
 import {Scorebug} from '@/components/Scorebug'
 import {SiteHeader} from '@/components/SiteHeader'
 import {useLiveQuery} from '@/lib/live'
@@ -44,14 +47,16 @@ export default function IncidentPage() {
       <section className="flex flex-col overflow-hidden rounded-xl bg-pitch lg:flex-row">
         <div className="flex shrink-0 flex-col gap-5 p-5 lg:w-[30rem] lg:p-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <Link href="/incidents" className="text-sm text-muted hover:text-chalk">
+            <Link href="/incidents" transitionTypes={['nav-back']} className="text-sm text-muted hover:text-chalk">
               ← All results
             </Link>
             <OutcomeBadge outcome={outcome} />
           </div>
           <div className="flex flex-col gap-3">
             <Scorebug home={home} away={away} minute={incident.minute} />
-            <h1 className="font-display text-4xl font-extrabold uppercase leading-[0.95] text-balance xl:text-5xl">{incident.title}</h1>
+            <ViewTransition name={`title-${slug}`} share="morph" default="none">
+              <h1 className="w-fit font-display text-4xl font-extrabold uppercase leading-[0.95] text-balance xl:text-5xl">{incident.title}</h1>
+            </ViewTransition>
             {incident.situation && <p className="text-lg leading-snug text-muted">{incident.situation}</p>}
             <p className="text-sm text-muted">
               {incident.match.competition} · final score {incident.match.score.home}–{incident.match.score.away}
@@ -137,7 +142,7 @@ export default function IncidentPage() {
       <nav aria-label="Other incidents" className="flex flex-wrap items-baseline gap-x-4 gap-y-2 px-1 pb-6 text-sm">
         <span className="text-muted">More incidents</span>
         {incident.others.map((other) => (
-          <Link key={other.slug} href={`/incidents/${other.slug}`} className="underline hover:text-var">
+          <Link key={other.slug} href={`/incidents/${other.slug}`} transitionTypes={['nav-forward']} className="underline hover:text-var">
             {other.title}
           </Link>
         ))}
@@ -181,7 +186,9 @@ function Frame({children}: {children: React.ReactNode}) {
     <div className="stadium flex min-h-dvh flex-col">
       <main className="mx-auto flex w-full max-w-[1920px] flex-1 flex-col gap-4 px-4 py-3 sm:px-6">
         <SiteHeader current="results" />
-        {children}
+        <PageTransition>
+          <div className="flex flex-col gap-4">{children}</div>
+        </PageTransition>
       </main>
     </div>
   )

@@ -2,7 +2,10 @@
 
 import Link from 'next/link'
 
+import {ViewTransition} from 'react'
+
 import {OutcomeBadge} from '@/components/OutcomeBadge'
+import {PageTransition} from '@/components/PageTransition'
 import {Scorebug} from '@/components/Scorebug'
 import {SiteHeader} from '@/components/SiteHeader'
 import {incidentOutcome, isDecided, OUTCOME_LABEL} from '@/lib/outcome'
@@ -17,6 +20,8 @@ export default function IncidentsPage() {
     <div className="stadium flex min-h-dvh flex-col">
       <main className="mx-auto flex w-full max-w-[1920px] flex-1 flex-col gap-4 px-4 py-3 sm:px-6">
         <SiteHeader current="results" />
+        <PageTransition>
+        <div className="flex flex-col gap-4">
         <section className="flex flex-col gap-6 rounded-xl bg-pitch p-5 sm:flex-row sm:items-end sm:justify-between lg:p-8">
           <div className="flex flex-col gap-2">
             <h1 className="font-display text-5xl font-extrabold uppercase leading-none lg:text-6xl">Results</h1>
@@ -40,6 +45,8 @@ export default function IncidentsPage() {
             <IncidentRow key={incident.slug} incident={incident} />
           ))}
         </section>
+        </div>
+        </PageTransition>
       </main>
     </div>
   )
@@ -63,6 +70,7 @@ function IncidentRow({incident}: {incident: IncidentOverviewRow}) {
   return (
     <Link
       href={`/incidents/${incident.slug}`}
+      transitionTypes={['nav-forward']}
       className={`group relative flex overflow-hidden rounded-lg bg-pitch transition-colors hover:bg-raised focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-chalk`}
     >
       <span className={`w-1.5 shrink-0 ${edge}`} aria-hidden />
@@ -72,7 +80,9 @@ function IncidentRow({incident}: {incident: IncidentOverviewRow}) {
             <Scorebug home={home} away={away} minute={incident.minute} />
             <span className="text-sm text-muted">{new Date(incident.match.date).toLocaleDateString('en-GB')}</span>
           </div>
-          <h2 className="font-display text-2xl font-extrabold uppercase leading-tight text-balance sm:text-3xl">{incident.title}</h2>
+          <ViewTransition name={`title-${incident.slug}`} share="morph" default="none">
+            <h2 className="w-fit font-display text-2xl font-extrabold uppercase leading-tight text-balance sm:text-3xl">{incident.title}</h2>
+          </ViewTransition>
           <p className="text-sm text-muted">
             VAR said {CALL_LABELS[incident.varRecommendation] ?? incident.varRecommendation}
             {incident.rounds.length > 0 && ` · ${incident.rounds.length} ${incident.rounds.length === 1 ? 'round' : 'rounds'}`}

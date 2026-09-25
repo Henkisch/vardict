@@ -49,7 +49,7 @@ export function Verdict({round: ref, phase, action}: {round: LiveReferendum; pha
             <p className="text-sm text-muted">
               {shootout ? 'Sudden-death penalty' : ref.round === 'extraTime' ? 'Extra time' : 'Regular time'}
             </p>
-            <p className={`font-display text-7xl font-extrabold uppercase leading-none xl:text-8xl ${copy.tone}`}>{copy.headline}</p>
+            <p className={`verdict-land origin-left font-display text-7xl font-extrabold uppercase leading-none xl:text-8xl ${copy.tone}`}>{copy.headline}</p>
             <p className="text-xl">{copy.next}</p>
           </div>
           <Bars uphold={ref.uphold} overturn={ref.overturn} size="small" />

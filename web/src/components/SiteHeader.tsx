@@ -14,9 +14,11 @@ export function SiteHeader({
   // Page-specific controls before the links (the sound toggle on /live).
   extra?: React.ReactNode
 }) {
-  const link = (href: string, label: string, active: boolean) => (
+  // Stadium is the top of the hierarchy, Results one level down: links say which way they go (PageTransition).
+  const link = (href: string, label: string, active: boolean, direction: 'nav-forward' | 'nav-back') => (
     <Link
       href={href}
+      transitionTypes={[direction]}
       aria-current={active ? 'page' : undefined}
       className={`whitespace-nowrap hover:text-chalk ${active ? 'font-semibold text-chalk' : ''}`}
     >
@@ -24,8 +26,8 @@ export function SiteHeader({
     </Link>
   )
   return (
-    <header className="grid shrink-0 grid-cols-[auto_1fr] items-center gap-x-6 gap-y-2 md:grid-cols-[auto_1fr_auto]">
-      <Link href="/live" className="font-display text-2xl font-extrabold uppercase leading-none">
+    <header style={{viewTransitionName: 'site-header'}} className="grid shrink-0 grid-cols-[auto_1fr] items-center gap-x-6 gap-y-2 md:grid-cols-[auto_1fr_auto]">
+      <Link href="/live" transitionTypes={['nav-back']} className="font-display text-2xl font-extrabold uppercase leading-none">
         VAR<span className="text-var">dict</span>
         <span className="ml-3 hidden font-sans text-sm font-normal normal-case text-muted lg:inline">
           VAR, finally in the fans&apos; hands.
@@ -35,8 +37,8 @@ export function SiteHeader({
       <nav aria-label="Pages" className="col-start-2 row-start-1 flex items-center gap-5 justify-self-end text-sm text-muted md:col-start-3">
         {extra}
         <SoundToggle />
-        {link('/live', 'Stadium', current === 'live')}
-        {link('/incidents', 'Results', current === 'results')}
+        {link('/live', 'Stadium', current === 'live', 'nav-back')}
+        {link('/incidents', 'Results', current === 'results', current === 'live' ? 'nav-forward' : 'nav-back')}
       </nav>
     </header>
   )
