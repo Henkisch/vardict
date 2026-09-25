@@ -74,7 +74,7 @@ export function MatchScene({incident, barLeft, barRight, live = false, pulse = f
 
       <section className="flex shrink-0 flex-col justify-center rounded-xl bg-pitch p-5 lg:flex-1">
         <div ref={stripContent} className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-8">
-          <div className="flex items-end gap-5">
+          <div className="flex flex-wrap items-end gap-x-5 gap-y-2">
             <Call label="Referee" value={CALL_LABELS[incident.originalCall] ?? incident.originalCall} />
             <span className="pb-1 font-display text-3xl leading-none text-muted" aria-hidden>
               →
@@ -100,7 +100,7 @@ function Call({label, value, highlight = false}: {label: string; value: string; 
   return (
     <p className="flex flex-col gap-1 whitespace-nowrap">
       <span className="text-sm text-muted">{label}</span>
-      <span className={`font-display text-4xl font-extrabold uppercase leading-none ${highlight ? 'text-var' : ''}`}>{value}</span>
+      <span className={`font-display text-3xl font-extrabold uppercase leading-none sm:text-4xl ${highlight ? 'text-var' : ''}`}>{value}</span>
     </p>
   )
 }

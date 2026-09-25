@@ -219,7 +219,7 @@ export const peoplesVar = defineWorkflow({
   name: 'peoples-var',
   title: "People's VAR",
   description:
-    'The VAR room recommends, the fans decide. Too close to call goes to extra time, then a sudden-death penalty. Overturned means the on-field call stands. A round nobody votes in goes back to the VAR room.',
+    'The VAR room recommends, the fans decide. Too close to call goes to extra time, then a sudden-death penalty. Overturned means the call the fans chose stands (overturnedCall on the incident). A round nobody votes in goes back to the VAR room.',
   initialStage: 'varRoom',
   start: {
     kind: 'interactive',
@@ -257,6 +257,6 @@ export const peoplesVar = defineWorkflow({
     voteStage('extraTime', 'Extra time', 'shootout'),
     voteStage('shootout', 'Shootout', 'shootout'),
     defineStage({name: 'upheld', title: 'Upheld', description: 'The people have spoken. The call stands.'}),
-    defineStage({name: 'overturned', title: 'Overturned', description: 'The fans overruled the VAR. The on-field call stands.'}),
+    defineStage({name: 'overturned', title: 'Overturned', description: "The fans overruled the VAR. Their call is final: the incident's overturnedCall."}),
   ],
 })

@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import {useEffect, useState, useSyncExternalStore} from 'react'
+import {useEffect, useRef, useState, useSyncExternalStore} from 'react'
 
 import {Bars} from '@/components/Bars'
 import {Clip} from '@/components/Clip'
@@ -130,8 +130,12 @@ export default function LivePage() {
   const [enteredNow, setEnteredNow] = useState(false)
   const sound = useSound()
   const soundOn = sound !== 'off'
+  // Sound cues already played (or skipped): one reaction per result, and none for a verdict that was already on
+  // screen when the visitor walked in (plan 016).
+  const heard = useRef(new Set<string>())
   function enter() {
     void startStadium()
+    if (verdictKey) heard.current.add(verdictKey)
     setEnteredNow(true)
     try {
       sessionStorage.setItem(ENTERED_KEY, '1')
@@ -151,15 +155,27 @@ export default function LivePage() {
 
   // And reacts once to each result: an "ooh" at too close, a roar at a decision.
   const verdictKey = showVerdict && ref?.result ? `${ref._id}:${ref.result}` : undefined
+  const lastDecision = decided && !state?.next
   useEffect(() => {
-    if (!soundOn || !verdictKey || !ref?.result) return
+    if (!soundOn || !verdictKey || !ref?.result || heard.current.has(verdictKey)) return
+    heard.current.add(verdictKey)
     // A decision gets a roar either way (the fans won something); nobody voting gets a groan.
     if (ref.result === 'tooClose') cue('gasp')
     else if (ref.result === 'noVotes') cue('groan')
     else cue('roar')
+    // The night's last decision: the full-time whistle over the roar.
+    if (lastDecision && (ref.result === 'upheld' || ref.result === 'overturned')) setTimeout(() => cue('fullTime'), 1200)
     // One reaction per result: keyed on verdictKey only.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [verdictKey, soundOn])
+
+  // The referee's whistle as a round opens (the kick-off countdown ends), once per round.
+  const whistled = useRef<string | undefined>(undefined)
+  useEffect(() => {
+    if (!soundOn || !ref || ref.result || countingDown || !voting || whistled.current === ref._id) return
+    whistled.current = ref._id
+    cue('whistle')
+  }, [soundOn, ref, countingDown, voting])
 
   // What the pundits talk about right now.
   const trigger = countingDown
@@ -171,9 +187,13 @@ export default function LivePage() {
           ? 'noVotes'
           : ref.result === 'tooClose'
             ? 'tooClose'
-            : ref.result === 'upheld'
-              ? 'upheld'
-              : 'overturned'
+            : ref.round.startsWith('shootout')
+              ? ref.result === 'upheld'
+                ? 'penaltyScored'
+                : 'penaltySaved'
+              : ref.result === 'upheld'
+                ? 'upheld'
+                : 'overturned'
         : 'review'
   // Which of the three steps the screen is on.
   const step: Step = voting || counting ? 'vote' : showVerdict ? 'verdict' : 'var-room'
@@ -235,6 +255,18 @@ export default function LivePage() {
         center={state && <StepIndicator step={step} detail={step === 'var-room' ? undefined : roundName} />}
       />
 
+      {/* One polite announcement per scene for screen readers: the scenes themselves are visual. */}
+      <p className="sr-only" role="status">
+        {showVerdict && ref?.result
+          ? `VARdict for ${ref.incident.title}: ${ref.result === 'tooClose' ? 'too close to call' : ref.result === 'noVotes' ? 'no humans voted' : ref.result}.`
+          : voting && ref
+            ? `The fans are voting on ${ref.incident.title}.`
+            : checking && checkIncident
+              ? `VAR check under way: ${checkIncident.title}.`
+              : state?.next
+                ? `Next up: ${state.next.title}. Waiting for the VAR check.`
+                : ''}
+      </p>
       {!sessionEntered && !enteredNow && state && <EnterStadium fixtures={state.fixtures} onEnter={enter} />}
       {countingDown && <KickOff seconds={Math.ceil(kickoffLeft)} />}
 
@@ -339,7 +371,7 @@ function FullTimeLink() {
     <Link
       href="/incidents"
       transitionTypes={['nav-forward']}
-      className="inline-flex w-full items-center justify-center whitespace-nowrap rounded-lg bg-var px-10 py-3 font-display text-2xl font-extrabold uppercase text-ink transition-transform duration-150 hover:brightness-110 focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-chalk active:scale-[0.97] sm:w-auto sm:min-w-80"
+      className="inline-flex w-full items-center justify-center rounded-lg bg-var px-6 py-3 sm:whitespace-nowrap sm:px-10 font-display text-2xl font-extrabold uppercase text-ink transition-transform duration-150 hover:brightness-110 focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-chalk active:scale-[0.97] sm:w-auto sm:min-w-80"
     >
       Full time: see the results
     </Link>
@@ -381,7 +413,7 @@ function StartButton({
         onClick={onClick}
         disabled={busy}
         aria-busy={busy || undefined}
-        className={`relative w-full overflow-hidden whitespace-nowrap rounded-lg bg-var px-10 py-3 font-display text-2xl font-extrabold uppercase text-ink transition-transform duration-150 hover:brightness-110 focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-chalk active:scale-[0.97] disabled:cursor-progress sm:w-auto sm:min-w-80 ${busy ? 'btn-busy' : ''}`}
+        className={`relative w-full overflow-hidden rounded-lg bg-var px-6 py-3 sm:whitespace-nowrap sm:px-10 font-display text-2xl font-extrabold uppercase text-ink transition-transform duration-150 hover:brightness-110 focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-chalk active:scale-[0.97] disabled:cursor-progress sm:w-auto sm:min-w-80 ${busy ? 'btn-busy' : ''}`}
       >
         <span className="relative flex items-center justify-center gap-3">
           {busy && <span className="btn-spinner h-5 w-5 rounded-full border-[3px] border-ink/25 border-t-ink" aria-hidden />}

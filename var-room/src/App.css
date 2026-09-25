@@ -752,3 +752,8 @@ input {
   color: var(--color-ink-2);
   opacity: 0.55;
 }
+
+/* Team chips stay visible on the dark booth whatever the club colour (Newcastle is near-black). */
+.team-chip {
+  box-shadow: 0 0 0 1px oklch(95% 0.01 140 / 0.35);
+}

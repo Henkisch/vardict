@@ -2,7 +2,7 @@ import {closeWindow, liveInstances} from 'workflows/runtime'
 
 import {clientKey, CORS, getRuntime, preflight, rateLimited} from '@/lib/runtime'
 
-// The bot crowd keeps running after the response: a full run (regular, extra time, 5 shootout rounds) is ~2 min.
+// The bot crowd keeps running after the response: one round is at most ~75 s (60 s window, plus closing).
 export const maxDuration = 300
 
 // Closes the live vote window once its time is up. Called by /live when the countdown hits zero, by the VAR

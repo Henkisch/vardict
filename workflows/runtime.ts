@@ -484,7 +484,7 @@ async function releaseStartLock(runtime: Runtime, lease: string): Promise<void> 
   }
 }
 
-// The "Send to the people" button: one live vote at a time. A run parked in the VAR room (after an overturn)
+// The "Send to the people" button: one live vote at a time. A run parked in the VAR room (after a no-vote round)
 // is sent back to the people; otherwise the next incident in line starts a fresh run. Only an operator-picked
 // `pick` (validated by the caller/route) reaches here as anything other than undefined.
 // `checkOnly` (the /live waiting screen's "Start the VAR check"): with nothing running, start the run but leave
@@ -601,7 +601,8 @@ async function startNextLocked(runtime: Runtime, pick: string | undefined, check
     for (const id of open) await content.patch(id).set({result: 'aborted'}).commit()
   }
 
-  // Next in line: the incident whose last referendum is oldest (never-voted first). Upheld incidents are done.
+  // Next in line: the incident whose last referendum is oldest (never-voted first), ties by match date. Incidents
+  // with a final call are done.
   const nextInLine = () =>
     content.fetch<string | null>(
       `*[_type == "incident" && !defined(finalCall) && !(_id in path("drafts.**"))]{

@@ -654,3 +654,13 @@ cached (`x-vercel-cache: HIT`) after the next deploy.
   own joke; the pitch line is on the intro; tab titles per page; the booth's refusals are in plain words; "1 fan",
   "Attempt 1", "Total delay". SUBMISSION.md, design.md and CLAUDE.md now describe the current rules (no QR code,
   no shootout of five, no abandoned, no Stockley Park).
+- **Plan 016, P4 (polish):** the referee's whistle as a round opens and the full-time whistle on the night's last
+  decision (both existed, never called); no verdict "ooh" for a visitor who walks in mid-verdict; the penalty's own
+  pundit lines fire (`penaltyScored`/`penaltySaved`); screen readers get one announcement per scene, the intro is a
+  real dialog with focus on its button, and the scrolling ticker is no longer a live region; the calls, the verdict
+  headline and the buttons step down and wrap on phones; team chips have a faint outline, so Newcastle's near-black
+  shows on the dark background; the orphan `smoke-1` test document is deleted; stale comments fixed. The workflow
+  definition's stage descriptions said "the on-field call stands", so that text change is `peoples-var` v6.
+- **Not done from P4:** `clip.keySeconds` per incident (the replay and zoom monitors aim at the clip's midpoint).
+  Setting them needs someone to watch each clip; it's a Studio field for Henrik. Focus isn't moved to the new
+  scene's heading after a press (the announcement covers screen readers).

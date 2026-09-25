@@ -9,7 +9,7 @@
 export const HUMAN_VOTE_WEIGHT = 8
 
 // Sudden death (Henrik, session 4: five penalties was too long): one penalty decides it. Scored = upheld,
-// saved = back to the VAR room. The workflow still counts wins/losses, so this could go back up.
+// saved = overturned. The workflow still counts wins/losses, so this could go back up.
 export const SHOOTOUT_ROUNDS_TO_WIN = 1
 
 // How long each vote is open, in seconds. Short on purpose: a judge plays a whole run alone (session 4).

@@ -3,7 +3,8 @@
 Four read-only audits on 2026-09-25 (workflow + runtime, /live + booth state machine, Sanity content, copy), merged
 and spot-checked against the code. P1 = a judge or the recording can hit it.
 
-**Status (Sep 25):** P1 #1-10 done and deployed (commits a8638b0, b626477). #11 (full wipe) waits for the rehearsal. P2-P4 open.
+**Status (Sep 25):** P1-P4 done and deployed, except #11 (full wipe: right before the rehearsal), `clip.keySeconds`
+(needs someone to watch each clip in the Studio) and moving focus to the new scene's heading.
 
 ## P1: things a judge or the recording will hit
 

@@ -27,7 +27,7 @@ export function PunditTicker({lines, trigger, incidentId}: {lines: PunditLine[];
   ))
 
   return (
-    <div className="flex h-11 shrink-0 items-stretch overflow-hidden border-t border-line bg-pitch" aria-live="polite">
+    <div className="flex h-11 shrink-0 items-stretch overflow-hidden border-t border-line bg-pitch" aria-hidden="true">
       <span className="z-10 flex shrink-0 items-center bg-chalk px-4 font-display text-lg font-extrabold uppercase text-ink">
         Studio
       </span>

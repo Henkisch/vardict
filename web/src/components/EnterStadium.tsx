@@ -7,11 +7,16 @@ import {HUMAN_VOTE_WEIGHT} from 'workflows/shared'
 // since browsers only play audio after a click).
 export function EnterStadium({fixtures, onEnter}: {fixtures: Fixture[]; onEnter: () => void}) {
   return (
-    <div className="stadium fixed inset-0 z-40 flex items-center justify-center overflow-y-auto p-6">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="enter-title"
+      className="stadium fixed inset-0 z-40 flex items-center justify-center overflow-y-auto p-6"
+    >
       <div className="flex w-full max-w-3xl flex-col items-center gap-8 text-center">
         <div>
           <p className="text-base text-muted">Tonight, under the floodlights</p>
-          <h1 className="font-display text-7xl font-extrabold uppercase tracking-wide sm:text-8xl">
+          <h1 id="enter-title" className="font-display text-7xl font-extrabold uppercase tracking-wide sm:text-8xl">
             VAR<span className="text-var">dict</span>
           </h1>
           <p className="mt-2 text-2xl">Football fixed VAR. We fixed it with democracy.</p>
@@ -35,6 +40,7 @@ export function EnterStadium({fixtures, onEnter}: {fixtures: Fixture[]; onEnter:
         </ol>
         <button
           type="button"
+          autoFocus
           onClick={onEnter}
           className="rounded-lg bg-var px-10 py-5 font-display text-4xl font-extrabold uppercase text-ink hover:brightness-110 focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-chalk"
         >

@@ -2,15 +2,15 @@ import {startNext} from 'workflows/runtime'
 
 import {clientKey, CORS, getRuntime, isOperator, paused, preflight, rateLimited, readJson} from '@/lib/runtime'
 
-// The bot crowd keeps running after the response: a full run (regular, extra time, 5 shootout rounds) is ~2 min.
+// The bot crowd keeps running after the response: one round is at most ~75 s (60 s window, plus closing).
 export const maxDuration = 300
 
 // Loose enough for a Sanity document id, tight enough to keep this out of a GROQ query as anything but a
 // literal string match (startNext parameterizes the query anyway, but this is cheap and catches typos fast).
 const INCIDENT_ID_PATTERN = /^[a-zA-Z0-9._-]{1,64}$/
 
-// "Send to the people": starts the next incident's referendum, or sends a run that was overturned back to the
-// people. One live vote at a time. Public on purpose, so judges can test without a Sanity login - but only an
+// "Start the VAR check" / "Send to the people": starts the next incident's VAR check, or moves a live run on
+// (sends it to the people, or kicks off extra time / the penalty). One live vote at a time. Public on purpose, so judges can test without a Sanity login - but only an
 // operator (the VAR Room, carrying the shared secret) may pick which incident. A public caller always gets
 // "next in line", so it can't abort a run in progress by naming a different incident.
 export async function POST(request: Request) {

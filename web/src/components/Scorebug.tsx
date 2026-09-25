@@ -16,7 +16,7 @@ export function Scorebug({home, away, minute, size = 'md'}: {home: Team; away: T
 function TeamChip({team}: {team: Team}) {
   return (
     <span className="inline-flex items-center gap-2">
-      <span className="h-[1.1em] w-1.5 rounded-[1px] bg-muted" style={team.primaryColor ? {background: team.primaryColor} : undefined} aria-hidden />
+      <span className="h-[1.1em] w-1.5 rounded-[1px] bg-muted ring-1 ring-chalk/35" style={team.primaryColor ? {background: team.primaryColor} : undefined} aria-hidden />
       {team.shortName}
     </span>
   )
