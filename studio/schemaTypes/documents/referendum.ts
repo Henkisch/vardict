@@ -28,8 +28,8 @@ export const referendum = defineType({
       name: 'loop',
       title: 'VAR room trip',
       type: 'number',
-      description: 'Which trip back to the VAR room this referendum belongs to (1–3).',
-      validation: (rule) => rule.required().min(1).max(3).integer(),
+      description: 'Which visit to the VAR room this referendum belongs to (a round nobody voted in sends the run back).',
+      validation: (rule) => rule.required().min(1).integer(),
     }),
     defineField({
       name: 'threshold',

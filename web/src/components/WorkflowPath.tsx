@@ -28,7 +28,7 @@ const PLAIN: Record<Stage, string> = {
   overturned: 'Overturned',
 }
 
-const RESULT_TONE = {upheld: 'text-uphold', overturned: 'text-overturn', tooClose: 'text-var', noVotes: 'text-muted'} as const
+const RESULT_TONE = {upheld: 'text-uphold', overturned: 'text-overturn', tooClose: 'text-var', noVotes: 'text-muted', aborted: 'text-muted'} as const
 
 type Step = {stage: Stage; label: string; result?: RunRound['result']; current?: boolean}
 
@@ -98,6 +98,6 @@ export function WorkflowPath({run, phase}: {run: RunRound[]; phase: Phase}) {
   )
 }
 
-const RESULT_WORD = {upheld: 'upheld', overturned: 'overturned', tooClose: 'too close', noVotes: 'no votes'} as const
+const RESULT_WORD = {upheld: 'upheld', overturned: 'overturned', tooClose: 'too close', noVotes: 'no humans voted', aborted: 'stopped'} as const
 // A shootout round is a penalty: uphold means the VAR scores.
-const PENALTY_WORD = {upheld: 'scored', overturned: 'saved', tooClose: 'retaken', noVotes: 'no votes'} as const
+const PENALTY_WORD = {upheld: 'upheld', overturned: 'overturned', tooClose: 'too close', noVotes: 'no humans voted', aborted: 'stopped'} as const

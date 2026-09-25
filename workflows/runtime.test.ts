@@ -779,4 +779,12 @@ describe('runtime', () => {
     expect(check.status).toBe('checking')
     expect((await startNext(runtime, undefined, {sendOnly: true})).status).toBe('recommended')
   })
+
+  test('the start lock is only released by its own holder (plan 016 #15)', async () => {
+    const {runtime, bench} = await setup()
+    // Two presses in a row both get through: the first releases its own lease.
+    expect((await startNext(runtime, undefined, {checkOnly: true})).status).toBe('checking')
+    bench.advance(1000)
+    expect((await startNext(runtime, undefined, {checkOnly: true})).status).toBe('checking')
+  })
 })

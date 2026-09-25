@@ -108,7 +108,8 @@ export default function LivePage() {
   if (starting?.check && run) setStarting(null)
   useEffect(() => {
     if (!starting) return
-    const id = setTimeout(() => setStarting(null), 15_000)
+    // Longer than the slowest first press (~13 s) plus a poll, so the button doesn't unlock mid-start.
+    const id = setTimeout(() => setStarting(null), 30_000)
     return () => clearTimeout(id)
   }, [starting])
 
@@ -202,15 +203,7 @@ export default function LivePage() {
   // Also while a run has left the VAR room but its vote round doesn't exist yet (the moment after "Send to the
   // people"): with a run live and no vote or verdict to show, the VAR room holds the screen, never the waiting one.
   const checking = Boolean(run) && !voting && !counting && !showVerdict
-  const checkIncident = checking && run
-    ? ref?.incident._id === run.incidentId && parked
-      ? ref.incident
-      : state?.next?._id === run.incidentId
-        ? state.next
-        : ref?.incident._id === run.incidentId
-          ? ref.incident
-          : state?.next
-    : undefined
+  const checkIncident = checking && run ? (run.incident ?? (ref?.incident._id === run.incidentId ? ref.incident : undefined)) : undefined
   // Which scene is on screen: a change of key plays the transition (SceneTransition), the same key updates in place.
   const sceneKey =
     showVerdict && ref
@@ -226,6 +219,12 @@ export default function LivePage() {
           : ref
             ? `vote:${ref._id}`
             : 'empty'
+  // A message belongs to the scene it was written for: a new scene clears it (plan 016 #18).
+  const [messageScene, setMessageScene] = useState(sceneKey)
+  if (messageScene !== sceneKey) {
+    setMessageScene(sceneKey)
+    if (startMessage) setStartMessage(undefined)
+  }
 
   return (
     <div className="stadium flex min-h-dvh flex-col lg:h-dvh lg:overflow-hidden">

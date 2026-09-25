@@ -9,7 +9,7 @@ export {CALL_LABELS, HUMAN_VOTE_WEIGHT}
 
 const team = '{name, shortName, primaryColor}'
 
-const INCIDENT_CARD = `{
+export const INCIDENT_CARD = `{
   _id, title, "slug": slug.current, situation, minute, varRecommendation, originalCall, "overturnedCall": coalesce(overturnedCall, originalCall), controlCase, fallbackText,
   realDelaySeconds, finalCall, incidentType,
   clip{youtubeId, startSeconds, endSeconds, keySeconds, channel, embedAllowed},
@@ -74,7 +74,7 @@ export type LiveReferendum = {
   loop: number
   windowOpensAt: string
   closesAt: string
-  result?: 'upheld' | 'overturned' | 'tooClose' | 'noVotes'
+  result?: 'upheld' | 'overturned' | 'tooClose' | 'noVotes' | 'aborted'
   workflowInstanceId: string
   uphold: number
   overturn: number
@@ -85,7 +85,7 @@ export type LiveReferendum = {
   incident: IncidentCard
 }
 
-export type RunRound = {round: string; loop: number; result?: 'upheld' | 'overturned' | 'tooClose' | 'noVotes'; seconds: number}
+export type RunRound = {round: string; loop: number; result?: 'upheld' | 'overturned' | 'tooClose' | 'noVotes' | 'aborted'; seconds: number}
 
 export type IncidentCard = {
     _id: string
@@ -115,7 +115,7 @@ export type IncidentCard = {
 }
 
 // The live workflow run, if any: added by /api/live from the private workflows dataset (stage + incident only).
-export type LiveRun = {stage: string; incidentId: string} | null
+export type LiveRun = {stage: string; incidentId: string; incident: IncidentCard | null} | null
 
 export type LiveState = {
   run?: LiveRun
@@ -164,7 +164,7 @@ export type IncidentRound = {
   _id: string
   round: string
   loop: number
-  result?: 'upheld' | 'overturned' | 'tooClose' | 'noVotes'
+  result?: 'upheld' | 'overturned' | 'tooClose' | 'noVotes' | 'aborted'
   windowOpensAt: string
   workflowInstanceId: string
   seconds: number

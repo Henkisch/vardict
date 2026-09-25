@@ -26,7 +26,8 @@ const RESULTS: Record<string, string> = {
   upheld: "Upheld. The VAR's call stands",
   overturned: 'Overturned. The on-field call stands',
   tooClose: 'Too close. Waiting for the next press',
-  noVotes: 'No fans voted. Back to the VAR room',
+  noVotes: 'No humans voted. Back to the VAR room',
+  aborted: 'Stopped. The run was aborted',
 }
 
 const clock = (at: number) => new Date(at).toLocaleTimeString('en-GB')

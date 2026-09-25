@@ -12,7 +12,8 @@ export type Outcome = 'upheld' | 'overturned' | 'parked' | 'live' | 'open' | 'no
 // time (singleSubject: one live run per incident), so this also leaves them in chronological order.
 export function groupRuns(rounds: IncidentRound[]) {
   const runs = new Map<string, IncidentRound[]>()
-  for (const round of rounds) runs.set(round.workflowInstanceId, [...(runs.get(round.workflowInstanceId) ?? []), round])
+  // A stopped round (its run was aborted) decided nothing: leave it out of the outcome and the history.
+  for (const round of rounds.filter((r) => r.result !== 'aborted')) runs.set(round.workflowInstanceId, [...(runs.get(round.workflowInstanceId) ?? []), round])
   return [...runs.values()]
 }
 
@@ -63,8 +64,8 @@ export function runOutcome(run: IncidentRound[]): Outcome {
 
 // The incident's current outcome: whatever its latest run says.
 export function incidentOutcome(rounds: IncidentRound[]): Outcome {
-  if (rounds.length === 0) return 'notVoted'
   const runs = groupRuns(rounds)
+  if (runs.length === 0) return 'notVoted'
   return runOutcome(runs[runs.length - 1])
 }
 

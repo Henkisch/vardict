@@ -64,7 +64,7 @@ function Review({run}: {run: Run}) {
           : 'counting'
       : ref.result === 'tooClose'
         ? 'between'
-        : ref.result === 'noVotes'
+        : ref.result === 'noVotes' && run
           ? 'parked'
           : 'next'
 

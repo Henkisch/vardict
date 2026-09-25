@@ -639,3 +639,11 @@ cached (`x-vercel-cache: HIT`) after the next deploy.
   its step, so a "send" with nothing live answers `nothingToSend` instead of starting a run straight into a vote
   (tested).
 - **Plan 016, P1 content (9-10):** Pickford's situation now reads 0–1 (Mané scored on 3'), and three pundit lines no longer state old rules (×8, not twenty bots; about a minute per decision; overturned isn't always the on-field call). Published data patched with `scripts/fix-content-016.ts`, seed files updated to match.
+- **Plan 016, P2 (robustness):** aborted rounds are now `aborted` (not `noVotes`) and drop out of outcomes and
+  history; the wipe deletes votes before rounds (strong references); a daily round cap (150) stops a script
+  re-sending a parked run forever; the start lock lasts 30 s and is only released by its own holder (the wipe's
+  own test caught a release without the lease); aborted runs no longer trigger the 10 s cooldown; the crowd stops
+  quietly when its round was wiped; `/live`'s busy state waits 30 s; the VAR room shows the run's own incident
+  (from `/api/live`); old start messages clear on a scene change; the booth's match day marks a running check or a
+  parked run as Live. Quorum extension is documented as test-only. Schema: results include noVotes/aborted,
+  rounds list one sudden-death penalty, no loop cap, and finalCall/team descriptions match the rules.

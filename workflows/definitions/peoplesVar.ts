@@ -21,9 +21,14 @@ export const RULES = {
   humanVoteWeight: HUMAN_VOTE_WEIGHT,
   // Cost guards (Free plan quotas): runs started per rolling 24 h, human votes per referendum.
   maxRunsPerDay: 40,
+  // Rounds opened per rolling 24 h. A run parked after a no-vote round can be sent again forever, and each round
+  // costs ~30 API requests (plan 016 #14), so this caps a script pressing on a parked run.
+  maxRoundsPerDay: 150,
   maxHumanVotesPerRound: 300,
   // Free plan's 10k document cap, kept far away: a ceiling on human vote documents per rolling 24 h.
   maxHumanVotesPerDay: 3000,
+  // Quorum + extension only ever fire in tests now: with requireHumanVote, no human = noVotes first, and one human
+  // vote finishes the round early with the whole crowd, which always meets quorum (plan 016 #21).
   quorumExtensionSeconds: 15,
 } as const
 

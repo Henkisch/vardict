@@ -20,17 +20,16 @@ export const CALLS = [
 export const ROUNDS = [
   {title: 'Regular time', value: 'regular'},
   {title: 'Extra time', value: 'extraTime'},
-  {title: 'Shootout 1', value: 'shootout1'},
-  {title: 'Shootout 2', value: 'shootout2'},
-  {title: 'Shootout 3', value: 'shootout3'},
-  {title: 'Shootout 4', value: 'shootout4'},
-  {title: 'Shootout 5', value: 'shootout5'},
+  // One sudden-death penalty since workflow v4 (the value keeps its old name).
+  {title: 'Sudden-death penalty', value: 'shootout1'},
 ]
 
 export const REFERENDUM_RESULTS = [
   {title: 'Upheld', value: 'upheld'},
   {title: 'Overturned', value: 'overturned'},
   {title: 'Too close to call', value: 'tooClose'},
+  {title: 'No humans voted (back to the VAR room)', value: 'noVotes'},
+  {title: 'Stopped (the run was aborted)', value: 'aborted'},
 ]
 
 export const CHOICES = [

@@ -40,6 +40,8 @@ export function runPhase(ref: RunRef | null | undefined, now: number): Phase {
   if (!ref) return 'decided'
   if (!ref.result) return now < Date.parse(ref.closesAt) ? 'voting' : 'counting'
   if (ref.result === 'noVotes') return 'parked'
+  // Its run was stopped (a wipe or an operator pick): nothing is running, so it's over for the screens.
+  if (ref.result === 'aborted') return 'decided'
   if (ref.result === 'tooClose') return 'between'
 
   if (ref.round.startsWith('shootout')) {

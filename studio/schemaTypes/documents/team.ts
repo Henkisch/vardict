@@ -19,7 +19,7 @@ export const team = defineType({
       name: 'primaryColor',
       title: 'Primary colour',
       type: 'string',
-      description: 'Club colour as a hex value, used for this side of the voting bars.',
+      description: 'Club colour as a hex value, for the team chip in the scorebug. Keep it readable on a dark background.',
       validation: (rule) =>
         rule.required().regex(/^#[0-9a-fA-F]{6}$/, {name: 'hex colour'}).error('Use a hex colour like #EF0107'),
     }),

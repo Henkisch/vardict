@@ -140,7 +140,8 @@ export const incident = defineType({
       title: 'Final call',
       type: 'string',
       group: 'calls',
-      description: 'Set by the peoplesVar workflow when the public upholds the call. Not editable by hand.',
+      description:
+        "Set by the peoplesVar workflow when the fans decide: the VAR's call if upheld, 'If the fans overturn it' if overturned. Not editable by hand.",
       options: {list: CALLS},
       readOnly: true,
     }),

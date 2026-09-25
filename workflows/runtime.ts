@@ -444,39 +444,44 @@ export type StartResult =
   | {status: 'unknownIncident'}
 
 const START_LOCK_ID = 'vardict-start-lock'
-const START_LOCK_TTL_MS = 15_000
+// Longer than the slowest measured first press (~13 s: start + recommend + open, plan 016 #15).
+const START_LOCK_TTL_MS = 30_000
 
 // Serializes "Send to the people" presses. Without this, two presses landing at once (or a slow request
 // overlapping a retry) could both read the same parked/empty state and both act on it - aborting the same
 // run twice, or starting two runs. `lockedUntil` is a plain lease on a single tiny document; a caller that
 // can't acquire it gets 'busy' back and should just try again, the same as any other busy state.
-async function acquireStartLock(runtime: Runtime): Promise<boolean> {
+async function acquireStartLock(runtime: Runtime): Promise<string | undefined> {
   const {content} = runtime
   await content.createIfNotExists({_id: START_LOCK_ID, _type: 'startLock', lockedUntil: new Date(0).toISOString()})
   const {_rev, lockedUntil} = await content.fetch<{_rev: string; lockedUntil: string}>(
     '*[_id == $id][0]{_rev, lockedUntil}',
     {id: START_LOCK_ID},
   )
-  if (Date.parse(lockedUntil) > runtime.now()) return false
+  if (Date.parse(lockedUntil) > runtime.now()) return undefined
+  // Our lease, so release can tell it from someone else's (after ours expired and they took it).
+  const lease = new Date(runtime.now() + START_LOCK_TTL_MS).toISOString()
   try {
-    await content
-      .patch(START_LOCK_ID)
-      .set({lockedUntil: new Date(runtime.now() + START_LOCK_TTL_MS).toISOString()})
-      .ifRevisionId(_rev)
-      .commit()
-    return true
+    await content.patch(START_LOCK_ID).set({lockedUntil: lease}).ifRevisionId(_rev).commit()
+    return lease
   } catch {
     // Lost the race to acquire: someone else's commit landed between our read and our write.
-    return false
+    return undefined
   }
 }
 
-async function releaseStartLock(runtime: Runtime): Promise<void> {
-  await runtime.content
-    .patch(START_LOCK_ID)
-    .set({lockedUntil: new Date(runtime.now()).toISOString()})
-    .commit()
-    .catch((error) => console.warn('start lock release failed', error))
+// Frees only our own lease: a slow holder whose lease expired must not free the lock someone else now holds.
+async function releaseStartLock(runtime: Runtime, lease: string): Promise<void> {
+  const {content} = runtime
+  try {
+    const {_rev, lockedUntil} = await content.fetch<{_rev: string; lockedUntil: string}>('*[_id == $id][0]{_rev, lockedUntil}', {
+      id: START_LOCK_ID,
+    })
+    if (lockedUntil !== lease) return
+    await content.patch(START_LOCK_ID).set({lockedUntil: new Date(runtime.now()).toISOString()}).ifRevisionId(_rev).commit()
+  } catch (error) {
+    console.warn('start lock release failed', error)
+  }
 }
 
 // The "Send to the people" button: one live vote at a time. A run parked in the VAR room (after an overturn)
@@ -492,11 +497,12 @@ export async function startNext(
   pick?: string,
   {checkOnly = false, sendOnly = false}: {checkOnly?: boolean; sendOnly?: boolean} = {},
 ): Promise<StartResult> {
-  if (!(await acquireStartLock(runtime))) return {status: 'busy', stage: 'starting'}
+  const lease = await acquireStartLock(runtime)
+  if (!lease) return {status: 'busy', stage: 'starting'}
   try {
     return await startNextLocked(runtime, pick, checkOnly, sendOnly)
   } finally {
-    await releaseStartLock(runtime)
+    await releaseStartLock(runtime, lease)
   }
 }
 
@@ -514,6 +520,11 @@ async function startNextLocked(runtime: Runtime, pick: string | undefined, check
 
   const [live] = await liveInstances(runtime)
   if (sendOnly && !live) return {status: 'nothingToSend'}
+  // Counted from stored rounds, so it holds across serverless instances.
+  const roundsToday = await content.fetch<number>(
+    'count(*[_type == "referendum" && dateTime(windowOpensAt) > dateTime(now()) - 60*60*24])',
+  )
+  if (roundsToday >= RULES.maxRoundsPerDay) return {status: 'dailyLimit', limit: RULES.maxRoundsPerDay}
   if (checkOnly && live) {
     return live.currentStage === 'varRoom'
       ? {status: 'checking', instanceId: live._id, incidentId: docId(live.subjectId)}
@@ -565,7 +576,8 @@ async function startNextLocked(runtime: Runtime, pick: string | undefined, check
   // Checks before any side effect - including the abort below - so a rejected pick or a blocked start
   // never costs the parked run its place.
   const last = await workflows.fetch<{completedAt: string} | null>(
-    `*[_type == "sanity.workflow.instance" && tag == $wfTag && defined(completedAt)] | order(completedAt desc)[0]{completedAt}`,
+    // Aborted runs (a wipe, an operator pick) don't need a breather: only finished matches cool down.
+    `*[_type == "sanity.workflow.instance" && tag == $wfTag && defined(completedAt) && !defined(abortedAt)] | order(completedAt desc)[0]{completedAt}`,
     {wfTag: tag},
   )
   const since = last ? (runtime.now() - Date.parse(last.completedAt)) / 1000 : Infinity
@@ -585,7 +597,8 @@ async function startNextLocked(runtime: Runtime, pick: string | undefined, check
       '*[_type == "referendum" && workflowInstanceId == $id && !defined(result)]._id',
       {id: live!._id},
     )
-    for (const id of open) await content.patch(id).set({result: 'noVotes'}).commit()
+    // 'aborted', not 'noVotes': the run is gone, so screens mustn't show it as back in the VAR room (plan 016 #12).
+    for (const id of open) await content.patch(id).set({result: 'aborted'}).commit()
   }
 
   // Next in line: the incident whose last referendum is oldest (never-voted first). Upheld incidents are done.
@@ -644,12 +657,17 @@ export type WipeResult = {status: 'wiped'; aborted: number; deleted: number; cle
 // workflow instances stay in the private dataset (engine-owned). Takes the start lock so no press can start a
 // run halfway through.
 export async function wipeRunData(runtime: Runtime): Promise<WipeResult> {
-  if (!(await acquireStartLock(runtime))) return {status: 'busy', stage: 'starting'}
+  const lease = await acquireStartLock(runtime)
+  if (!lease) return {status: 'busy', stage: 'starting'}
   try {
     const {engine, content} = runtime
     const live = await liveInstances(runtime)
     for (const instance of live) await engine.abortInstance({instanceId: instance._id})
-    const ids = await content.fetch<string[]>('*[_type in $types]._id', {types: [...RUN_DATA_TYPES]})
+    // Votes before rounds: a vote holds a strong reference to its referendum, so deleting a round first would fail
+    // (plan 016 #13). Chunks keep each transaction small.
+    const ids = await content.fetch<string[]>(
+      '[...*[_type == "vote"]._id, ...*[_type == "referendum"]._id]',
+    )
     const incidents = await content.fetch<string[]>('*[_type == "incident" && defined(finalCall)]._id')
     // Chunked: one transaction per 200 mutations keeps each request small.
     for (let i = 0; i < ids.length; i += 200) {
@@ -664,7 +682,7 @@ export async function wipeRunData(runtime: Runtime): Promise<WipeResult> {
     }
     return {status: 'wiped', aborted: live.length, deleted: ids.length, cleared: incidents.length}
   } finally {
-    await releaseStartLock(runtime)
+    await releaseStartLock(runtime, lease)
   }
 }
 
@@ -696,7 +714,7 @@ type WaveApplyResult = 'closed' | 'applied' | 'gaveUp'
 async function applyWave(runtime: Runtime, referendumId: string, index: number, votes: PlannedVote[]): Promise<WaveApplyResult> {
   const {content} = runtime
   for (let attempt = 1; attempt <= 3; attempt++) {
-    let now: {_rev: string; result?: string; botVotes?: BotVotes; humansUp: number; humansDown: number}
+    let now: {_rev: string; result?: string; botVotes?: BotVotes; humansUp: number; humansDown: number} | null
     try {
       now = await content.fetch(
         `*[_id == $id][0]{_rev, result, botVotes,
@@ -712,7 +730,7 @@ async function applyWave(runtime: Runtime, referendumId: string, index: number, 
       await backoff()
       continue
     }
-    if (now.result) return 'closed' // the round closed while we were retrying
+    if (!now || now.result) return 'closed' // the round closed while we were retrying (or was wiped)
     if ((now.botVotes?.waves ?? 0) > index) return 'applied' // someone else already applied this exact wave
     const upSoFar = (now.botVotes?.uphold ?? 0) + RULES.humanVoteWeight * now.humansUp
     const downSoFar = (now.botVotes?.overturn ?? 0) + RULES.humanVoteWeight * now.humansDown
@@ -757,7 +775,9 @@ export async function closeUntilDone(
 ): Promise<CloseResult | undefined> {
   const {content} = runtime
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    const {closesAt} = await content.fetch<{closesAt: string}>('*[_id == $id][0]{closesAt}', {id: referendumId})
+    const round = await content.fetch<{closesAt: string} | null>('*[_id == $id][0]{closesAt}', {id: referendumId})
+    if (!round) return undefined // wiped while the crowd was waiting
+    const {closesAt} = round
     await sleepUntil(runtime, Date.parse(closesAt) + 500)
     let result: CloseResult
     try {
@@ -799,12 +819,13 @@ export async function finishEarly(runtime: Runtime, referendumId: string) {
 // open by itself: it waits for a press, and its own crowd starts from its open effect.
 export async function runCrowd(runtime: Runtime, referendumId: string) {
   const {content} = runtime
-  const ref = await content.fetch<CrowdReferendum>(
+  const ref = await content.fetch<CrowdReferendum | null>(
     `*[_id == $id][0]{round, loop, windowOpensAt, closesAt, workflowInstanceId,
       "seed": incident->crowdSeed, "recommendationFavours": incident->recommendationFavours,
       "outcryLevel": incident->outcry.level}`,
     {id: referendumId},
   )
+  if (!ref) return // wiped before the crowd started
   const opensAt = Date.parse(ref.windowOpensAt)
   const windowSeconds = (Date.parse(ref.closesAt) - opensAt) / 1000
   const plan = planCrowd({...ref, windowSeconds})

@@ -18,7 +18,8 @@ const RESULT = {
   upheld: {label: 'Upheld', tone: 'text-uphold'},
   overturned: {label: 'Overturned', tone: 'text-overturn'},
   tooClose: {label: 'Too close', tone: 'text-var'},
-  noVotes: {label: 'No fans voted', tone: 'text-muted'},
+  noVotes: {label: 'No humans voted', tone: 'text-muted'},
+  aborted: {label: 'Stopped', tone: 'text-muted'},
 } as const
 
 export default function IncidentPage() {

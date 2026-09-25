@@ -1,6 +1,7 @@
 import {createClient} from '@sanity/client'
 
 import {
+  INCIDENT_CARD,
   INCIDENT_QUERY,
   INCIDENTS_QUERY,
   LIVE_QUERY,
@@ -38,7 +39,12 @@ export async function GET(request: Request) {
       // "waiting for a VAR check" from "the VAR room is reviewing".
       const [state, instances] = await Promise.all([client.fetch<LiveState>(LIVE_QUERY), liveInstances(getRuntime())])
       const run = instances[0]
-      result = {...state, run: run ? {stage: run.currentStage, incidentId: String(run.subjectId).split(':').at(-1)!} : null}
+      const incidentId = run ? String(run.subjectId).split(':').at(-1)! : undefined
+      // The run's own incident, so the VAR room never shows "next in line" when that isn't the run's (plan 016 #17).
+      const incident = incidentId
+        ? await client.fetch<LiveState['next']>(`*[_type == "incident" && _id == $id][0]${INCIDENT_CARD}`, {id: incidentId})
+        : null
+      result = {...state, run: run && incidentId ? {stage: run.currentStage, incidentId, incident} : null}
     } catch (error) {
       console.error('live fetch failed', error)
       return Response.json(null, {status: 502, headers: {'Cache-Control': 'no-store'}})
