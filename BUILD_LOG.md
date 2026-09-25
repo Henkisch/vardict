@@ -613,3 +613,4 @@ cached (`x-vercel-cache: HIT`) after the next deploy.
 - **The booth outran `/live`:** Henrik pressed Start the VAR check and Send to the people within seconds, and
   `/live`, polling every 8 s behind a 5 s cache, was still on the waiting screen when the vote opened. Now any live
   run (the VAR room included) polls every 3 s with a 1 s cache, and the kick-off head start is 5 s instead of 3.
+- **Waiting screen flashed between the VAR room and the vote:** on Send to the people the run leaves the VAR room a moment before its round exists, and `/live` fell back to "waiting". Now any live run with no vote or verdict on screen keeps the VAR room up.

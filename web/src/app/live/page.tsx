@@ -182,10 +182,12 @@ export default function LivePage() {
   )
 
   const incident = ref?.incident
-  // A run waiting in the VAR room (a fresh VAR check, or back after a round nobody voted in): the VAR room at
-  // work on its incident. Its incident is the latest round's when that's this run's, else the next in line.
-  const checking = run?.stage === 'varRoom'
-  const checkIncident = checking
+  // A run in the VAR room (a fresh VAR check, or back after a round nobody voted in): the VAR room at work on its
+  // incident. Its incident is the latest round's when that's this run's, else the next in line.
+  // Also while a run has left the VAR room but its vote round doesn't exist yet (the moment after "Send to the
+  // people"): with a run live and no vote or verdict to show, the VAR room holds the screen, never the waiting one.
+  const checking = Boolean(run) && !voting && !counting && !showVerdict
+  const checkIncident = checking && run
     ? ref?.incident._id === run.incidentId && parked
       ? ref.incident
       : state?.next?._id === run.incidentId
