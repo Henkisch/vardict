@@ -27,20 +27,24 @@ type Props = {
 // decision left to right: what the referee said, what the VAR says, and the fans' part (L3).
 export function MatchScene({incident, barLeft, barRight, live = false, media, mediaRatio, actionLabel, action}: Props) {
   const {homeTeam: home, awayTeam: away} = incident.match
-  // The panel has auto height (Henrik): it wraps the incident and the footage. The free space it sits in is
-  // measured here and handed to the footage as its height limit, so it still never outgrows the screen.
-  const region = useRef<HTMLDivElement>(null)
+  // The panel has auto height and the strip under it takes the rest of the screen (Henrik). The footage's height
+  // limit is the whole frame minus the strip's own content, measured here, so it never outgrows the screen.
+  const frame = useRef<HTMLDivElement>(null)
+  const stripContent = useRef<HTMLDivElement>(null)
   const [room, setRoom] = useState<number>()
   useLayoutEffect(() => {
-    const element = region.current
-    if (!element) return
-    const observer = new ResizeObserver(([entry]) => setRoom(Math.max(0, entry.contentRect.height - MEDIA_PAD_Y)))
-    observer.observe(element)
+    const outer = frame.current
+    const inner = stripContent.current
+    if (!outer || !inner) return
+    const measure = () =>
+      setRoom(Math.max(0, outer.clientHeight - GAP - (inner.offsetHeight + STRIP_PAD_Y) - MEDIA_PAD_Y))
+    const observer = new ResizeObserver(measure)
+    observer.observe(outer)
+    observer.observe(inner)
     return () => observer.disconnect()
   }, [])
   return (
-    <div className="flex flex-col gap-4 lg:min-h-0 lg:flex-1">
-      <div ref={region} className="flex min-w-0 flex-col lg:min-h-0 lg:flex-1">
+    <div ref={frame} className="flex flex-col gap-4 lg:min-h-0 lg:flex-1">
       <section className="flex min-w-0 flex-col overflow-hidden rounded-xl bg-pitch lg:flex-row">
         <div className="flex shrink-0 flex-col gap-6 p-5 lg:w-96 xl:w-[26rem]">
           <div className="flex flex-col gap-3">
@@ -63,27 +67,30 @@ export function MatchScene({incident, barLeft, barRight, live = false, media, me
           {media}
         </FitBox>
       </section>
-      </div>
 
-      <section className="flex shrink-0 flex-col gap-4 rounded-xl bg-pitch p-5 sm:flex-row sm:items-center sm:justify-between sm:gap-8">
-        <div className="flex items-end gap-5">
-          <Call label="Referee" value={CALL_LABELS[incident.originalCall] ?? incident.originalCall} />
-          <span className="pb-1 font-display text-3xl leading-none text-muted" aria-hidden>
-            →
-          </span>
-          <Call label="VAR" value={CALL_LABELS[incident.varRecommendation] ?? incident.varRecommendation} highlight />
-        </div>
-        <div className="flex min-w-0 flex-col gap-2 sm:items-end">
-          {actionLabel && <p className="text-sm text-muted">{actionLabel}</p>}
-          {action}
+      <section className="flex shrink-0 flex-col justify-center rounded-xl bg-pitch p-5 lg:flex-1">
+        <div ref={stripContent} className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-8">
+          <div className="flex items-end gap-5">
+            <Call label="Referee" value={CALL_LABELS[incident.originalCall] ?? incident.originalCall} />
+            <span className="pb-1 font-display text-3xl leading-none text-muted" aria-hidden>
+              →
+            </span>
+            <Call label="VAR" value={CALL_LABELS[incident.varRecommendation] ?? incident.varRecommendation} highlight />
+          </div>
+          <div className="flex min-w-0 flex-col gap-2 sm:items-end">
+            {actionLabel && <p className="text-sm text-muted">{actionLabel}</p>}
+            {action}
+          </div>
         </div>
       </section>
     </div>
   )
 }
 
-// The footage's vertical padding (lg:py-5), taken off the measured room.
+// Taken off the measured frame: the footage's vertical padding (lg:py-5), the strip's (p-5) and the gap (gap-4).
 const MEDIA_PAD_Y = 40
+const STRIP_PAD_Y = 40
+const GAP = 16
 
 function Call({label, value, highlight = false}: {label: string; value: string; highlight?: boolean}) {
   return (
