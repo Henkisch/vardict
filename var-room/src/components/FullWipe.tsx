@@ -1,3 +1,4 @@
+import {useQuery} from '@sanity/sdk-react'
 import {useState} from 'react'
 
 import {HAS_OPERATOR_KEY, wipeRunData} from '../api'
@@ -6,7 +7,33 @@ import {HAS_OPERATOR_KEY, wipeRunData} from '../api'
 // incidents and every other piece of content stay. Inline confirm: the Dashboard iframe may block confirm().
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`
 
+// What a wipe would clear, read live: run data in production, a running match in the private workflows dataset.
+// Nothing there: the button is off (Henrik: "full wipe shouldn't be possible if there's nothing to wipe").
 export function FullWipe() {
+  const {data: running} = useQuery<number>({
+    projectId: 't2sbu6uu',
+    dataset: 'workflows',
+    query: 'count(*[_type == "sanity.workflow.instance" && tag == "dev" && !defined(completedAt)])',
+  })
+  return <Wipe running={running ?? 0} />
+}
+
+type Counts = {runData: number; finalCalls: number}
+
+function Wipe({running}: {running: number}) {
+  const {data: counts} = useQuery<Counts>({
+    query: '{"runData": count(*[_type in ["vote", "referendum"]]), "finalCalls": count(*[_type == "incident" && defined(finalCall)])}',
+  })
+  const nothing = !counts || (counts.runData === 0 && counts.finalCalls === 0 && running === 0)
+  const summary = counts
+    ? [
+        counts.runData && plural(counts.runData, 'vote or round', 'votes and rounds'),
+        counts.finalCalls && plural(counts.finalCalls, 'final call', 'final calls'),
+        running && plural(running, 'running match', 'running matches'),
+      ]
+        .filter(Boolean)
+        .join(', ')
+    : ''
   const [open, setOpen] = useState(false)
   const [typed, setTyped] = useState('')
   const [busy, setBusy] = useState(false)
@@ -30,9 +57,14 @@ export function FullWipe() {
       {!open ? (
         <div className="wipe-row">
           <p className="small muted" aria-live="polite">
-            {message ?? (HAS_OPERATOR_KEY ? 'Clean slate before a recording or judging.' : 'Needs SANITY_APP_OPERATOR_KEY.')}
+            {message ??
+              (!HAS_OPERATOR_KEY
+                ? 'Needs SANITY_APP_OPERATOR_KEY.'
+                : nothing
+                  ? 'Nothing to wipe: a clean slate.'
+                  : `A wipe would clear ${summary}.`)}
           </p>
-          <button type="button" className="danger-outline" onClick={() => setOpen(true)} disabled={!HAS_OPERATOR_KEY}>
+          <button type="button" className="danger-outline" onClick={() => setOpen(true)} disabled={!HAS_OPERATOR_KEY || nothing}>
             Full wipe
           </button>
         </div>

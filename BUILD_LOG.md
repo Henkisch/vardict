@@ -598,3 +598,4 @@ cached (`x-vercel-cache: HIT`) after the next deploy.
 - **The waiting screen's match list shows results** ("Upheld · Penalty" / "Overturned · …" / Next up / To play),
   from each incident's `finalCall`.
 - **"I started the VAR check, yet the button remains LET THE FANS DECIDE":** working as intended (that press is step two), but the VAR room step looked too much like the screen before it. It now says "The VAR check is under way. Seen enough?" over the button, and the lower-third tab pulses while the check runs.
+- **Full wipe only when there is something to wipe (Henrik):** the booth counts votes/rounds, final calls and running matches live and says what a wipe would clear; with nothing there it reads "Nothing to wipe: a clean slate" and the button is off. Also: Upheld / Overturned sit together as one pair on the rail.
