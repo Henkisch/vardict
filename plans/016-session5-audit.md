@@ -1,7 +1,9 @@
 # Plan 016: Session 5 audit, fixes in priority order
 
 Four read-only audits on 2026-09-25 (workflow + runtime, /live + booth state machine, Sanity content, copy), merged
-and spot-checked against the code. Nothing here is implemented yet. P1 = a judge or the recording can hit it.
+and spot-checked against the code. P1 = a judge or the recording can hit it.
+
+**Status (Sep 25):** P1 #1-10 done and deployed (commits a8638b0, b626477). #11 (full wipe) waits for the rehearsal. P2-P4 open.
 
 ## P1: things a judge or the recording will hit
 
