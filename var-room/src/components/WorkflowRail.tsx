@@ -52,17 +52,13 @@ export function WorkflowRail() {
         {FLOW.map((name, i) => (
           <li key={name} className="crumbs-item">
             {i > 0 && (
-              <span className="crumb-sep" aria-hidden>
-                ›
-              </span>
+              <Chevron />
             )}
             {crumb(name)}
           </li>
         ))}
         <li className="crumbs-item">
-          <span className="crumb-sep" aria-hidden>
-            ›
-          </span>
+          <Chevron />
           <span className="crumb-ends">
             {crumb(ENDS[0])}
             <span className="crumb-or">or</span>
@@ -72,5 +68,14 @@ export function WorkflowRail() {
       </ol>
       <p className="rail-meta">{shown ? (live ? 'Match running' : 'Match finished') : 'No match running'}</p>
     </section>
+  )
+}
+
+// Drawn, not a text glyph: a › sits on the text baseline and drops below the pills' centre line.
+function Chevron() {
+  return (
+    <svg className="crumb-sep" width="16" height="16" viewBox="0 0 16 16" aria-hidden>
+      <path d="M6 3.5 10.5 8 6 12.5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
   )
 }

@@ -739,3 +739,16 @@ input {
   font-weight: 400;
   opacity: 0.75;
 }
+
+.crumb-sep {
+  display: block;
+  box-sizing: content-box;
+  padding: 0 var(--space-2);
+  font-size: 0;
+  color: var(--color-ink-2);
+  opacity: 0.45;
+}
+.crumb-or {
+  color: var(--color-ink-2);
+  opacity: 0.55;
+}
