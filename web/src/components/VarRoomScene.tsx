@@ -26,10 +26,9 @@ export function VarRoomScene({incident, start}: Props) {
       incident={incident}
       barLeft={<>VAR check · {CHECK[incident.incidentType ?? ''] ?? 'review'}</>}
       barRight={
-        <span className="flex flex-col items-end">
-          <span className="font-sans text-xs font-normal normal-case">the real check took</span>
-          {formatClock(incident.realDelaySeconds)}
-        </span>
+        <p className="text-sm">
+          The real check took <span className="tabular font-semibold text-chalk">{formatClock(incident.realDelaySeconds)}</span>
+        </p>
       }
       media={<MonitorWall incident={incident} />}
       mediaRatio={WALL_RATIO}

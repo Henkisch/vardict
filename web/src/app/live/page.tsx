@@ -219,7 +219,7 @@ export default function LivePage() {
           live={voting}
           barRight={
             voting || counting ? (
-              <span className="text-5xl font-extrabold leading-none text-chalk">{Math.ceil(secondsLeft)}</span>
+              <span className="font-display text-5xl font-extrabold leading-none text-chalk tabular">{Math.ceil(secondsLeft)}</span>
             ) : undefined
           }
           media={<Clip clip={incident.clip} fallbackText={incident.fallbackText} />}

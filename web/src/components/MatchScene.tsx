@@ -26,7 +26,7 @@ export function MatchScene({incident, barLeft, barRight, live = false, media, me
   return (
     <div className="flex flex-col gap-4 lg:min-h-0 lg:flex-1">
       <section className="flex min-w-0 flex-col overflow-hidden rounded-xl bg-pitch lg:min-h-0 lg:flex-1 lg:flex-row">
-        <div className="flex shrink-0 flex-col justify-between gap-6 p-5 lg:w-96 xl:w-[26rem]">
+        <div className="flex shrink-0 flex-col gap-6 p-5 lg:w-96 xl:w-[26rem]">
           <div className="flex flex-col gap-3">
             <p className="text-sm text-muted">Under review{incident.controlCase ? ' · the control case' : ''}</p>
             <Scorebug home={home} away={away} minute={incident.minute} />
@@ -37,9 +37,9 @@ export function MatchScene({incident, barLeft, barRight, live = false, media, me
           </div>
           <div className="flex items-stretch gap-3">
             <span className={`w-1.5 shrink-0 ${live ? 'bg-overturn' : 'bg-var'}`} aria-hidden />
-            <div className="flex min-w-0 flex-1 items-end justify-between gap-3">
+            <div className="flex min-w-0 flex-col gap-1">
               <p className="font-display text-2xl font-extrabold uppercase leading-tight">{barLeft}</p>
-              {barRight && <p className="shrink-0 font-display text-2xl font-bold text-muted">{barRight}</p>}
+              {barRight && <div className="text-muted">{barRight}</div>}
             </div>
           </div>
         </div>
