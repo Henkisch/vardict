@@ -513,3 +513,7 @@ cached (`x-vercel-cache: HIT`) after the next deploy.
   with the same colours. The verdict screen now carries the scorebug too, and its path explanations sit in one
   column (a backlog item).
 - **Not verified:** phone widths. Chrome ignored the window resize, so check `/live` on a phone after the deploy.
+- **Deployed:** pushed to `main` (Vercel ready in 27 s); Stockley Park deployed to the Dashboard as its own org app.
+  One stumble: `pnpm deploy` is pnpm's own workspace command, so the flags were rejected; `pnpm run deploy` works.
+  The auto-mode permission check blocked my curl check of `/api/reset` without a key (it points at the live wipe
+  endpoint). Fair; the real check is Henrik pressing Full wipe in the booth.

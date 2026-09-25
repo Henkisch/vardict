@@ -408,8 +408,9 @@ at once). Routes: one `/live` that follows the run (Henrik asked twice; kept, si
 **Stockley Park (session 5):** built in `var-room/` as a broadcast gallery: workflow graph (current stage lit, visit
 counts, path with times), The call (on-pitch call vs VAR recommendation, one button posting to `/api/start`), a live
 feed that diffs `botVotes` counters into bot waves and lists each fan vote, the match-day list, and Full wipe
-(type WIPE; only run data). Henrik chose: no pick-any-incident, no persona table, no /live mirror. Runs locally in
-the Dashboard; not yet deployed there (plan 013 step 4, needs Henrik's OK). Full wipe needs `/api/reset` pushed.
+(type WIPE; only run data). Henrik chose: no pick-any-incident, no persona table, no /live mirror. Deployed to the
+Dashboard (app `o52zsk96ekrcjpml3l5s09vx`, https://www.sanity.io/@o7aI6GMzu/application/o52zsk96ekrcjpml3l5s09vx);
+redeploy with `pnpm --filter var-room run deploy -- --yes`.
 
 **Polish backlog (Henrik: "do that in the end"):** animations between states, and don't swap the content before the
 transition plays (hold the old state until the transition starts). Also more layout polish on /live.
