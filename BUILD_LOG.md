@@ -559,3 +559,7 @@ cached (`x-vercel-cache: HIT`) after the next deploy.
 - **Mute everywhere (Henrik):** the crowd kept playing after a link to Results, with no switch there. The sound
   state now lives with the audio engine (`soundState`/`subscribeSound`), and every header has the same
   `SoundToggle`. Checked: Enter the stadium → "Mute" → Results still shows "Mute".
+- **Incident page tightened (Henrik: "a bit too much unused space"):** four stacked full-width bands became
+  `/live`'s shape: one plate with the incident on a rail (teams, title, situation, the three calls as a compact
+  row, the democracy clock) and the clip filling the rest, capped to the screen height. "Every round" and "The
+  outcry" sit side by side under it.

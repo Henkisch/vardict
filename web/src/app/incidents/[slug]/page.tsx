@@ -40,97 +40,104 @@ export default function IncidentPage() {
       : undefined
   return (
     <Frame>
-      <section className="flex flex-col gap-3 rounded-xl bg-pitch p-5 lg:p-8">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <Link href="/incidents" className="text-sm text-muted hover:text-chalk">
-            ← All results
-          </Link>
-          <OutcomeBadge outcome={outcome} />
-        </div>
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-          <Scorebug home={home} away={away} minute={incident.minute} />
-          <span className="text-sm text-muted">
-            {incident.match.competition} · final score {incident.match.score.home}–{incident.match.score.away}
-          </span>
-        </div>
-        <h1 className="font-display text-5xl font-extrabold uppercase leading-[0.95] text-balance lg:text-6xl">{incident.title}</h1>
-        {incident.situation && <p className="max-w-3xl text-xl text-muted">{incident.situation}</p>}
-        {controlVerdict && <p className="text-lg text-var">Control case. {controlVerdict}</p>}
-      </section>
-
-      <section className="grid gap-3 sm:grid-cols-3">
-        {/* Who won the argument is marked: the VAR's call if the fans kept it, the referee's if they overturned it. */}
-        <Call label="The referee said" value={incident.originalCall} state={outcome === 'overturned' ? 'won' : isDecided(outcome) ? 'lost' : undefined} />
-        <Call label="The VAR said" value={incident.varRecommendation} accent state={outcome === 'upheld' ? 'won' : isDecided(outcome) ? 'lost' : undefined} />
-        <People outcome={outcome} />
-      </section>
-
-      <section className="grid gap-4 lg:grid-cols-[minmax(0,56rem)_minmax(0,1fr)]">
-        <Clip clip={incident.clip} fallbackText={incident.fallbackText} />
-        <div className="flex flex-col gap-2 rounded-lg bg-pitch p-5">
-          <p className="text-sm text-muted">Time added by democracy</p>
-          <p className="font-display text-5xl font-extrabold text-var tabular">
-            {formatClock(incident.realDelaySeconds + votedSeconds)}
-          </p>
-          <p className="text-sm text-muted tabular">
-            {formatClock(incident.realDelaySeconds)} real VAR review + {formatClock(votedSeconds)} of voting over{' '}
-            {incident.rounds.length} {incident.rounds.length === 1 ? 'round' : 'rounds'}.
-          </p>
-        </div>
-      </section>
-
-      <section className="flex flex-col gap-4">
-        <h2 className="font-display text-2xl font-bold uppercase">Every round</h2>
-        {runs.length === 0 && <p className="text-muted">Nobody has sent this one to the people yet.</p>}
-        {runs.map((run, i) => {
-          const runResult = OUTCOME_LABEL[runOutcome(run)]
-          return (
-          <div key={run[0].workflowInstanceId} className="flex flex-col gap-2">
-            <p className="flex items-center gap-3 text-sm text-muted">
-              Run {i + 1} <span className={`font-semibold ${runResult.tone}`}>{runResult.label}</span>
-            </p>
-            <ol className="flex flex-col gap-2">
-              {run.map((round) => {
-                const total = round.uphold + round.overturn
-                const pct = total ? Math.round((100 * round.uphold) / total) : 50
-                return (
-                  <li key={round._id} className="grid grid-cols-[9rem_minmax(0,1fr)_10rem] items-center gap-3">
-                    <span className="text-sm">
-                      {roundLabel(round.round)}
-                      {round.loop > 1 && <span className="text-muted"> · loop {round.loop}</span>}
-                    </span>
-                    <div className="flex h-4 overflow-hidden rounded bg-overturn" title={`${pct}% uphold`}>
-                      <div className="bar h-full bg-uphold" style={{width: `${pct}%`}} />
-                    </div>
-                    <span className={`text-right font-display text-lg font-bold uppercase ${round.result ? RESULT[round.result].tone : 'text-muted'}`}>
-                      {pct}% {round.result ? RESULT[round.result].label : 'open'}
-                    </span>
-                  </li>
-                )
-              })}
-            </ol>
+      {/* The same shape as /live's MatchScene: the incident on a rail, the footage beside it. */}
+      <section className="flex flex-col overflow-hidden rounded-xl bg-pitch lg:flex-row">
+        <div className="flex shrink-0 flex-col gap-5 p-5 lg:w-[30rem] lg:p-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <Link href="/incidents" className="text-sm text-muted hover:text-chalk">
+              ← All results
+            </Link>
+            <OutcomeBadge outcome={outcome} />
           </div>
-          )
-        })}
+          <div className="flex flex-col gap-3">
+            <Scorebug home={home} away={away} minute={incident.minute} />
+            <h1 className="font-display text-4xl font-extrabold uppercase leading-[0.95] text-balance xl:text-5xl">{incident.title}</h1>
+            {incident.situation && <p className="text-lg leading-snug text-muted">{incident.situation}</p>}
+            <p className="text-sm text-muted">
+              {incident.match.competition} · final score {incident.match.score.home}–{incident.match.score.away}
+            </p>
+            {controlVerdict && <p className="text-var">Control case. {controlVerdict}</p>}
+          </div>
+          {/* Who won the argument is marked: the VAR's call if the fans kept it, the referee's if they overturned it. */}
+          <div className="grid grid-cols-3 gap-2">
+            <Call label="Referee" value={incident.originalCall} state={outcome === 'overturned' ? 'won' : isDecided(outcome) ? 'lost' : undefined} />
+            <Call label="VAR" value={incident.varRecommendation} accent state={outcome === 'upheld' ? 'won' : isDecided(outcome) ? 'lost' : undefined} />
+            <People outcome={outcome} />
+          </div>
+          <div className="flex items-stretch gap-3">
+            <span className="w-1.5 shrink-0 bg-var" aria-hidden />
+            <div className="flex flex-col gap-1">
+              <p className="text-sm text-muted">Time added by democracy</p>
+              <p className="font-display text-4xl font-extrabold leading-none text-var tabular">
+                {formatClock(incident.realDelaySeconds + votedSeconds)}
+              </p>
+              <p className="text-sm text-muted tabular">
+                {formatClock(incident.realDelaySeconds)} real VAR review + {formatClock(votedSeconds)} of voting over{' '}
+                {incident.rounds.length} {incident.rounds.length === 1 ? 'round' : 'rounds'}
+              </p>
+            </div>
+          </div>
+        </div>
+        <div className="min-w-0 flex-1 p-2 lg:py-6 lg:pl-0 lg:pr-6">
+          {/* Never taller than the screen leaves room for: capped at 16:9 of the viewport height minus the chrome. */}
+          <div className="ml-auto w-full lg:max-w-[calc((100dvh-9rem)*16/9)]">
+            <Clip clip={incident.clip} fallbackText={incident.fallbackText} />
+          </div>
+        </div>
       </section>
 
-      <section className="flex flex-col gap-2">
-        <h2 className="font-display text-2xl font-bold uppercase">The outcry · {incident.outcry.level}/5</h2>
-        <p className="max-w-prose leading-relaxed">{incident.outcry.summary}</p>
-        <ul className="flex flex-col gap-1 text-sm">
-          {incident.outcry.sources.map((url) => (
-            <li key={url}>
-              <a className="text-muted underline" href={url} target="_blank" rel="noreferrer">
-                {new URL(url).hostname.replace('www.', '')}
-              </a>
-            </li>
-          ))}
-        </ul>
-      </section>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <section className="flex flex-col gap-4 rounded-xl bg-pitch p-5 lg:p-6">
+          <h2 className="font-display text-2xl font-bold uppercase">Every round</h2>
+          {runs.length === 0 && <p className="text-muted">Nobody has sent this one to the people yet.</p>}
+          {runs.map((run, i) => {
+            const runResult = OUTCOME_LABEL[runOutcome(run)]
+            return (
+              <div key={run[0].workflowInstanceId} className="flex flex-col gap-2">
+                <p className="flex items-center gap-3 text-sm text-muted">
+                  Run {i + 1} <span className={`font-semibold ${runResult.tone}`}>{runResult.label}</span>
+                </p>
+                <ol className="flex flex-col gap-2">
+                  {run.map((round) => {
+                    const total = round.uphold + round.overturn
+                    const pct = total ? Math.round((100 * round.uphold) / total) : 50
+                    return (
+                      <li key={round._id} className="grid grid-cols-[9rem_minmax(0,1fr)_10rem] items-center gap-3">
+                        <span className="text-sm">{roundLabel(round.round)}</span>
+                        <div className="flex h-4 overflow-hidden rounded bg-overturn" title={`${pct}% uphold`}>
+                          <div className="bar h-full bg-uphold" style={{width: `${pct}%`}} />
+                        </div>
+                        <span className={`text-right font-display text-lg font-bold uppercase ${round.result ? RESULT[round.result].tone : 'text-muted'}`}>
+                          {pct}% {round.result ? RESULT[round.result].label : 'open'}
+                        </span>
+                      </li>
+                    )
+                  })}
+                </ol>
+              </div>
+            )
+          })}
+        </section>
 
-      <nav aria-label="Other incidents" className="flex flex-wrap gap-x-4 gap-y-2 pb-6 text-sm">
+        <section className="flex flex-col gap-3 rounded-xl bg-pitch p-5 lg:p-6">
+          <h2 className="font-display text-2xl font-bold uppercase">The outcry · {incident.outcry.level}/5</h2>
+          <p className="max-w-prose leading-relaxed">{incident.outcry.summary}</p>
+          <ul className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+            {incident.outcry.sources.map((url) => (
+              <li key={url}>
+                <a className="text-muted underline hover:text-chalk" href={url} target="_blank" rel="noreferrer">
+                  {new URL(url).hostname.replace('www.', '')}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </section>
+      </div>
+
+      <nav aria-label="Other incidents" className="flex flex-wrap items-baseline gap-x-4 gap-y-2 px-1 pb-6 text-sm">
+        <span className="text-muted">More incidents</span>
         {incident.others.map((other) => (
-          <Link key={other.slug} href={`/incidents/${other.slug}`} className="text-muted underline">
+          <Link key={other.slug} href={`/incidents/${other.slug}`} className="underline hover:text-var">
             {other.title}
           </Link>
         ))}
@@ -143,10 +150,10 @@ export default function IncidentPage() {
 function Call({label, value, accent = false, state}: {label: string; value: string; accent?: boolean; state?: 'won' | 'lost'}) {
   return (
     <div
-      className={`flex flex-col gap-1 rounded-lg p-4 ${state === 'won' ? 'bg-raised ring-2 ring-chalk' : 'bg-pitch'} ${state === 'lost' ? 'opacity-50' : ''}`}
+      className={`flex min-w-0 flex-col gap-1 rounded-lg p-3 ${state === 'won' ? 'bg-raised ring-2 ring-chalk' : 'bg-ink/40'} ${state === 'lost' ? 'opacity-50' : ''}`}
     >
       <p className="text-sm text-muted">{label}</p>
-      <p className={`font-display text-3xl font-extrabold uppercase leading-none ${accent ? 'text-var' : ''}`}>
+      <p className={`font-display text-xl font-extrabold uppercase leading-none ${accent ? 'text-var' : ''}`}>
         {CALL_LABELS[value] ?? value}
       </p>
       {state === 'won' && <p className="text-sm font-semibold">Stands</p>}
@@ -159,10 +166,10 @@ function People({outcome}: {outcome: ReturnType<typeof incidentOutcome>}) {
   const {label, tone} = OUTCOME_LABEL[outcome]
   const waiting = outcome === 'notVoted'
   return (
-    <div className={`flex flex-col gap-1 rounded-lg p-4 ${waiting ? 'border border-dashed border-line' : 'bg-pitch'}`}>
+    <div className={`flex min-w-0 flex-col gap-1 rounded-lg p-3 ${waiting ? 'border border-dashed border-line' : 'bg-ink/40'}`}>
       <p className="text-sm text-muted">The people</p>
-      <p className={`font-display text-3xl font-extrabold uppercase leading-none ${tone}`}>
-        {outcome === 'upheld' ? 'Kept it' : outcome === 'overturned' ? 'Overturned it' : waiting ? 'Not voted yet' : label}
+      <p className={`font-display text-xl font-extrabold uppercase leading-none ${tone}`}>
+        {outcome === 'upheld' ? 'Kept it' : outcome === 'overturned' ? 'Overturned it' : waiting ? 'Not yet' : label}
       </p>
     </div>
   )
