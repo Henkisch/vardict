@@ -4,8 +4,9 @@ import Link from 'next/link'
 import {useParams} from 'next/navigation'
 
 import {Clip} from '@/components/Clip'
+import {OutcomeBadge} from '@/components/OutcomeBadge'
 import {useLiveQuery} from '@/lib/live'
-import {groupRuns, runOutcome, incidentOutcome, OUTCOME_LABEL} from '@/lib/outcome'
+import {groupRuns, runOutcome, incidentOutcome, isDecided, OUTCOME_LABEL} from '@/lib/outcome'
 import {CALL_LABELS, formatClock, roundLabel, type IncidentResult} from '@/lib/queries'
 
 const RESULT = {
@@ -30,17 +31,11 @@ export default function IncidentPage() {
   const outcome = incidentOutcome(incident.rounds)
   // The control case: VAR was simply wrong. Overturning it is the "right" call.
   const controlVerdict =
-    incident.controlCase && outcome !== 'notVoted' && outcome !== 'open'
+    incident.controlCase && isDecided(outcome)
       ? outcome === 'upheld'
         ? 'The people upheld a decision the referees themselves admit was wrong.'
         : 'The people refused to rubber-stamp a decision the referees admit was wrong.'
       : undefined
-  const peopleFallback = {
-    parked: 'Back in the VAR room',
-    open: 'Still being decided',
-    notVoted: 'Not voted yet',
-  } as const
-
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-4 py-8 sm:px-8">
       <header className="flex flex-col gap-2 border-b border-line pb-6">
@@ -52,7 +47,8 @@ export default function IncidentPage() {
             ← Back to results
           </Link>
         </div>
-        <p className="text-sm uppercase tracking-[0.2em] text-muted">
+        <OutcomeBadge outcome={outcome} className="mt-2 self-start" />
+        <p className="text-sm text-muted">
           {incident.match.competition} · {home.name} {incident.match.score.home}–{incident.match.score.away} {away.name}
         </p>
         <h1 className="font-display text-5xl font-extrabold uppercase text-balance">{incident.title}</h1>
@@ -60,22 +56,17 @@ export default function IncidentPage() {
         {controlVerdict && <p className="text-lg text-var">Control case. {controlVerdict}</p>}
       </header>
 
-      <section className="grid gap-4 sm:grid-cols-3">
-        <Call label="On the pitch" value={incident.originalCall} />
-        <Call label="The VAR room" value={incident.varRecommendation} />
-        {outcome === 'upheld' ? (
-          <Call label="The people" value={incident.varRecommendation} />
-        ) : outcome === 'overturned' ? (
-          <Call label="The people" value={incident.originalCall} tone="text-overturn" />
-        ) : (
-          <Call label="The people" fallback={peopleFallback[outcome]} />
-        )}
+      <section className="grid gap-3 sm:grid-cols-3">
+        {/* Who won the argument is marked: the VAR's call if the fans kept it, the referee's if they overturned it. */}
+        <Call label="The referee said" value={incident.originalCall} state={outcome === 'overturned' ? 'won' : isDecided(outcome) ? 'lost' : undefined} />
+        <Call label="The VAR said" value={incident.varRecommendation} accent state={outcome === 'upheld' ? 'won' : isDecided(outcome) ? 'lost' : undefined} />
+        <People outcome={outcome} />
       </section>
 
       <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
         <Clip clip={incident.clip} fallbackText={incident.fallbackText} />
-        <div className="flex flex-col gap-2 rounded-lg border border-line bg-pitch p-5">
-          <p className="text-xs uppercase tracking-[0.2em] text-muted">Time added by democracy</p>
+        <div className="flex flex-col gap-2 rounded-lg bg-pitch p-5">
+          <p className="text-sm text-muted">Time added by democracy</p>
           <p className="font-display text-5xl font-extrabold text-var tabular">
             {formatClock(incident.realDelaySeconds + votedSeconds)}
           </p>
@@ -93,8 +84,8 @@ export default function IncidentPage() {
           const runResult = OUTCOME_LABEL[runOutcome(run)]
           return (
           <div key={run[0].workflowInstanceId} className="flex flex-col gap-2">
-            <p className="text-sm uppercase tracking-[0.2em] text-muted">
-              Run {i + 1} <span className={runResult.tone}>· {runResult.label}</span>
+            <p className="flex items-center gap-3 text-sm text-muted">
+              Run {i + 1} <span className={`font-semibold ${runResult.tone}`}>{runResult.label}</span>
             </p>
             <ol className="flex flex-col gap-2">
               {run.map((round) => {
@@ -146,12 +137,30 @@ export default function IncidentPage() {
   )
 }
 
-function Call({label, value, fallback, tone}: {label: string; value?: string; fallback?: string; tone?: string}) {
+// One side of the argument. Once decided, the call that stands is marked and the other one fades.
+function Call({label, value, accent = false, state}: {label: string; value: string; accent?: boolean; state?: 'won' | 'lost'}) {
   return (
-    <div className="rounded-lg border border-line bg-pitch p-4">
-      <p className="text-xs uppercase tracking-[0.2em] text-muted">{label}</p>
-      <p className={`font-display text-3xl font-extrabold uppercase ${tone ?? ''}`}>
-        {value ? (CALL_LABELS[value] ?? value) : <span className="text-muted">{fallback}</span>}
+    <div
+      className={`flex flex-col gap-1 rounded-lg p-4 ${state === 'won' ? 'bg-raised ring-2 ring-chalk' : 'bg-pitch'} ${state === 'lost' ? 'opacity-50' : ''}`}
+    >
+      <p className="text-sm text-muted">{label}</p>
+      <p className={`font-display text-3xl font-extrabold uppercase leading-none ${accent ? 'text-var' : ''}`}>
+        {CALL_LABELS[value] ?? value}
+      </p>
+      {state === 'won' && <p className="text-sm font-semibold">Stands</p>}
+    </div>
+  )
+}
+
+// The people's part, coloured by where the vote is.
+function People({outcome}: {outcome: ReturnType<typeof incidentOutcome>}) {
+  const {label, tone} = OUTCOME_LABEL[outcome]
+  const waiting = outcome === 'notVoted'
+  return (
+    <div className={`flex flex-col gap-1 rounded-lg p-4 ${waiting ? 'border border-dashed border-line' : 'bg-pitch'}`}>
+      <p className="text-sm text-muted">The people</p>
+      <p className={`font-display text-3xl font-extrabold uppercase leading-none ${tone}`}>
+        {outcome === 'upheld' ? 'Kept it' : outcome === 'overturned' ? 'Overturned it' : waiting ? 'Not voted yet' : label}
       </p>
     </div>
   )

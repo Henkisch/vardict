@@ -171,7 +171,7 @@ export type IncidentResult = {
 // LIVE_QUERY computes, so the page can show one incident-independent total at the top.
 export const INCIDENTS_QUERY = `{
   "incidents": *[_type == "incident"] | order(match->date asc){
-    title, "slug": slug.current, controlCase, varRecommendation, finalCall, realDelaySeconds,
+    title, "slug": slug.current, minute, controlCase, originalCall, varRecommendation, finalCall, realDelaySeconds,
     match->{date, homeTeam->${team}, awayTeam->${team}},
     "rounds": ${ROUNDS}
   },
@@ -184,7 +184,9 @@ export const INCIDENTS_QUERY = `{
 export type IncidentOverviewRow = {
   title: string
   slug: string
+  minute: number
   controlCase?: boolean
+  originalCall: string
   varRecommendation: string
   finalCall?: string
   realDelaySeconds: number

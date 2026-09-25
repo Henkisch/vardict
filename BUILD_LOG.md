@@ -533,3 +533,9 @@ cached (`x-vercel-cache: HIT`) after the next deploy.
   are gone, "The Sanity workflow"), every region on one outer edge with its content at one shared inset
   (`--space-inset`), the redundant footer border removed, and Full wipe as a red outlined button that opens a red
   warning box ("Wipe all run data?") with the consequences, a typed WIPE and "Wipe everything".
+- **Results pages get states (Henrik: "indicate status depending on voting/decision state etc. now everything looks
+  the same"):** one shared status system (`OUTCOME_LABEL` + `OutcomeBadge`): a coloured left edge and a chip per
+  state (to play: dimmed + dashed, live: red pulse, too close / back in the VAR room: amber, upheld: green, overturned:
+  red), and the final call shown on decided cards. New `live` outcome: a round being voted used to read "Still being
+  decided", the same as one waiting for a press. On the incident page the call that stands is ringed and marked
+  "Stands", and the other one fades.
