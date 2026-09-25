@@ -431,6 +431,8 @@ export type StartResult =
   | {status: 'started'; instanceId: string; incidentId: string; newSeason?: true}
   // checkOnly: the VAR check started (a run waiting in the VAR room); the next press sends it to the people.
   | {status: 'checking'; instanceId: string; incidentId: string; newSeason?: true}
+  // sendOnly with nothing live: the VAR check this press was meant for has ended (or was never started).
+  | {status: 'nothingToSend'}
   | {status: 'recommended'; instanceId: string; incidentId: string}
   // A voting stage was waiting for its press (Go to extra time, Take the next penalty): its ballot is now open.
   | {status: 'kickedOff'; instanceId: string; incidentId: string; stage: string}
@@ -483,16 +485,22 @@ async function releaseStartLock(runtime: Runtime): Promise<void> {
 // `checkOnly` (the /live waiting screen's "Start the VAR check"): with nothing running, start the run but leave
 // it in the VAR room instead of opening the vote. With a run already live it changes nothing, so two people
 // pressing at once can't skip the VAR room.
-export async function startNext(runtime: Runtime, pick?: string, {checkOnly = false}: {checkOnly?: boolean} = {}): Promise<StartResult> {
+// `sendOnly` ("Send to the people", "Go to extra time", "Penalty"): only move a live run on. With nothing live it
+// answers nothingToSend, so a stale screen can't start the next incident straight into a vote.
+export async function startNext(
+  runtime: Runtime,
+  pick?: string,
+  {checkOnly = false, sendOnly = false}: {checkOnly?: boolean; sendOnly?: boolean} = {},
+): Promise<StartResult> {
   if (!(await acquireStartLock(runtime))) return {status: 'busy', stage: 'starting'}
   try {
-    return await startNextLocked(runtime, pick, checkOnly)
+    return await startNextLocked(runtime, pick, checkOnly, sendOnly)
   } finally {
     await releaseStartLock(runtime)
   }
 }
 
-async function startNextLocked(runtime: Runtime, pick: string | undefined, checkOnly: boolean): Promise<StartResult> {
+async function startNextLocked(runtime: Runtime, pick: string | undefined, checkOnly: boolean, sendOnly: boolean): Promise<StartResult> {
   const {engine, content, workflows, tag} = runtime
 
   // Validate the pick before anything else can act on it - in particular, before any abort below.
@@ -505,6 +513,7 @@ async function startNextLocked(runtime: Runtime, pick: string | undefined, check
   }
 
   const [live] = await liveInstances(runtime)
+  if (sendOnly && !live) return {status: 'nothingToSend'}
   if (checkOnly && live) {
     return live.currentStage === 'varRoom'
       ? {status: 'checking', instanceId: live._id, incidentId: docId(live.subjectId)}

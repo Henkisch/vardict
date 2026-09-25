@@ -631,3 +631,10 @@ cached (`x-vercel-cache: HIT`) after the next deploy.
   claimed "the people have upheld all five". Now it's "Full time: see the results", and the full-time screen says
   "All five decisions are in", with a quiet "Or start a new season".
 - **Full audit (Henrik set the goal: "walk through workflows, logics and data in detail"):** four read-only passes in parallel (workflow + runtime, /live + booth state machine, Sanity content, copy), merged into `plans/016-session5-audit.md`. The top claims were spot-checked in code before planning. Nothing fixed yet.
+- **Plan 016, P1 code (1-8):** a judge alone no longer hits the start limit (3 → 12 presses a minute); votes are
+  refused before the kick-off countdown ends (server `notOpen`, buttons locked, the page behind the overlay `inert`);
+  a parked run polls fast; `/live` drops a held verdict once another incident's VAR check has started; "next" skips
+  the incident whose result was just written (its finalCall lands a moment later); the vote receipt rolls back when
+  the request fails; the booth holds its button ("Opening the vote…") in the gap after Send; and every press names
+  its step, so a "send" with nothing live answers `nothingToSend` instead of starting a run straight into a vote
+  (tested).

@@ -9,13 +9,14 @@ const OPERATOR_KEY = process.env.SANITY_APP_OPERATOR_KEY
 
 // `check`: only start the VAR check (the run waits in the VAR room for the next press), like /live's waiting screen.
 export async function sendToThePeople(incidentId?: string, {check = false}: {check?: boolean} = {}): Promise<StartResult> {
+  // Every press names its step (check or send), so a stale booth can't start a run straight into a vote.
   const response = await fetch(`${WEB_URL}/api/start`, {
     method: 'POST',
     headers: {
       'content-type': 'application/json',
       ...(OPERATOR_KEY ? {'x-operator-key': OPERATOR_KEY} : {}),
     },
-    body: JSON.stringify({...(incidentId ? {incidentId} : {}), ...(check ? {step: 'check'} : {})}),
+    body: JSON.stringify({...(incidentId ? {incidentId} : {}), step: check ? 'check' : 'send'}),
   })
   return response.json().catch(() => ({status: `http ${response.status}`}))
 }

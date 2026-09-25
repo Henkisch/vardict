@@ -770,4 +770,13 @@ describe('runtime', () => {
     expect(sent).toMatchObject({status: 'recommended', instanceId: check.instanceId})
     expect(await runtime.content.fetch<number>('count(*[_type == "referendum"])')).toBe(1)
   })
+
+  test('sendOnly with nothing live starts nothing (a stale screen cannot skip the VAR check)', async () => {
+    const {runtime} = await setup()
+    expect(await startNext(runtime, undefined, {sendOnly: true})).toEqual({status: 'nothingToSend'})
+    expect(await runtime.content.fetch<number>('count(*[_type == "referendum"])')).toBe(0)
+    const check = await startNext(runtime, undefined, {checkOnly: true})
+    expect(check.status).toBe('checking')
+    expect((await startNext(runtime, undefined, {sendOnly: true})).status).toBe('recommended')
+  })
 })

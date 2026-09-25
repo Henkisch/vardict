@@ -30,7 +30,11 @@ export default function LivePage() {
   const {state, refresh, boost} = useLiveState<LiveState>(
     '/api/live?q=live',
     // A live run (the VAR room included) polls like a vote: the booth can send it on at any moment.
-    (s) => (s?.run && runPhase(s.referendum, now) === 'decided' ? 'between' : runPhase(s?.referendum, now)),
+    (s) => {
+      const phase = runPhase(s?.referendum, now)
+      // A live run (VAR check, or parked after a round nobody voted in) polls like a vote: the booth can press on.
+      return s?.run && (phase === 'decided' || phase === 'parked') ? 'between' : phase
+    },
     (s) => !s?.run,
   )
   const ref = state?.referendum
@@ -70,7 +74,8 @@ export default function LivePage() {
     boost()
     const response = await fetch(
       '/api/start',
-      check ? {method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify({step: 'check'})} : {method: 'POST'},
+      // Every press names its step, so the server never starts a run straight into a vote from a stale screen.
+      {method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify({step: check ? 'check' : 'send'})},
     ).catch(() => undefined)
     const body = response ? await response.json().catch(() => ({})) : {}
     // Fetch the new round straight away (and once more, in case the effect was still being drained).
@@ -78,9 +83,11 @@ export default function LivePage() {
     setTimeout(refresh, 1500)
     const message =
       body.status === 'busy'
-        ? 'A vote is already live.'
-        : body.status === 'coolingDown'
-          ? `The VAR room needs ${body.retryInSeconds} more seconds.`
+        ? "Something's already under way. Give it a few seconds."
+        : body.status === 'nothingToSend'
+          ? 'That VAR check has ended. The screen is catching up.'
+          : body.status === 'coolingDown'
+            ? `The VAR room needs a moment. Try again in ${body.retryInSeconds} s.`
           : body.status === 'rateLimited'
             ? 'Easy. Try again in a minute.'
             : body.status === 'dailyLimit'
@@ -110,7 +117,9 @@ export default function LivePage() {
   const [watched, setWatched] = useState<string>()
   const [acknowledged, setAcknowledged] = useState<string>()
   if ((voting || counting) && ref && watched !== ref._id) setWatched(ref._id)
-  const showVerdict = Boolean(ref?.result && (between || (ref._id === watched && acknowledged !== ref._id)))
+  // ...unless someone (the VAR Room, another tab) has already started the next incident's VAR check.
+  const movedOn = Boolean(state?.run && ref && state.run.incidentId !== ref.incident._id)
+  const showVerdict = Boolean(ref?.result && !movedOn && (between || (ref._id === watched && acknowledged !== ref._id)))
 
   const parked = phase === 'parked'
   const decided = phase === 'decided'
@@ -220,7 +229,8 @@ export default function LivePage() {
 
   return (
     <div className="stadium flex min-h-dvh flex-col lg:h-dvh lg:overflow-hidden">
-    <main className="mx-auto flex w-full max-w-[1920px] flex-1 flex-col gap-3 px-4 py-3 sm:px-6 lg:min-h-0 lg:overflow-hidden">
+    {/* While the kick-off countdown covers the screen, nothing behind it can be reached (no early votes by keyboard). */}
+    <main inert={countingDown} className="mx-auto flex w-full max-w-[1920px] flex-1 flex-col gap-3 px-4 py-3 sm:px-6 lg:min-h-0 lg:overflow-hidden">
       <SiteHeader
         current="live"
         center={state && <StepIndicator step={step} detail={step === 'var-room' ? undefined : roundName} />}
@@ -294,6 +304,7 @@ export default function LivePage() {
                     setTimeout(refresh, 4000)
                   }}
                   closed={counting}
+                  locked={countingDown}
                   weight={HUMAN_VOTE_WEIGHT}
                 />
                 <p className="text-xs text-muted">

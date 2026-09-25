@@ -16,7 +16,9 @@ const INCIDENT_ID_PATTERN = /^[a-zA-Z0-9._-]{1,64}$/
 export async function POST(request: Request) {
   const off = paused()
   if (off) return off
-  if (rateLimited(`start:${clientKey(request)}`, 3, 60_000)) {
+  // A judge alone presses fast: Start the VAR check, Send to the people, Go to extra time, Penalty can be four
+  // presses in 30 s (a human vote ends a round early). 12 a minute still stops a script hammering it.
+  if (rateLimited(`start:${clientKey(request)}`, 12, 60_000)) {
     return Response.json({status: 'rateLimited'}, {status: 429, headers: CORS})
   }
   const parsed = await readJson<{incidentId?: unknown; step?: unknown}>(request, {headers: CORS, allowEmpty: true})
@@ -27,8 +29,10 @@ export async function POST(request: Request) {
   }
 
   try {
-    // {step: 'check'}: /live's waiting screen starts the VAR check only (anyone may; it never skips a step).
-    const result = await startNext(getRuntime(), requested, {checkOnly: parsed.body.step === 'check'})
+    // {step: 'check'}: start the VAR check only. {step: 'send'}: only move a run that's already live on (never start
+    // one straight into a vote). Anyone may press either; neither can skip a step.
+    const step = parsed.body.step
+    const result = await startNext(getRuntime(), requested, {checkOnly: step === 'check', sendOnly: step === 'send'})
     const status =
       result.status === 'busy'
         ? 409
@@ -36,7 +40,9 @@ export async function POST(request: Request) {
           ? 429
           : result.status === 'unknownIncident'
             ? 400
-            : 200
+            : result.status === 'nothingToSend'
+              ? 409
+              : 200
     return Response.json(result, {status, headers: CORS})
   } catch (error) {
     console.error('start failed', error)

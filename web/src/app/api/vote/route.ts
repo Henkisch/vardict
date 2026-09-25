@@ -29,8 +29,8 @@ export async function POST(request: Request) {
   }
 
   const {content} = getRuntime()
-  const referendum = await content.fetch<{closesAt: string; result?: string; humans: number; humansToday: number} | null>(
-    `*[_type == "referendum" && _id == $id][0]{closesAt, result,
+  const referendum = await content.fetch<{closesAt: string; windowOpensAt: string; result?: string; humans: number; humansToday: number} | null>(
+    `*[_type == "referendum" && _id == $id][0]{closesAt, windowOpensAt, result,
       "humans": count(*[_type == "vote" && referendum._ref == $id && simulated != true]),
       "humansToday": count(*[_type == "vote" && simulated != true && dateTime(castAt) > dateTime(now()) - 60*60*24])}`,
     {id: referendumId},
@@ -39,6 +39,8 @@ export async function POST(request: Request) {
   if (referendum.result || Date.now() >= Date.parse(referendum.closesAt)) {
     return Response.json({status: 'closed'}, {status: 409})
   }
+  // Not before the kick-off countdown ends: a vote now would end the round (finishEarly) before it has opened.
+  if (Date.now() < Date.parse(referendum.windowOpensAt)) return Response.json({status: 'notOpen'}, {status: 409})
 
   // Caps the documents one round, and one day across all rounds, can create; fresh session ids would
   // otherwise be unlimited, and the Free plan's document count is a hard cap.

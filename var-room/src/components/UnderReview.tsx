@@ -80,6 +80,8 @@ function Review({run}: {run: Run}) {
 
   // No run: the next incident waits for its VAR check. A run in the VAR room: its check is under way.
   const checking = run?.currentStage === 'varRoom'
+  // Sent to the people, but the round isn't there yet (the run has left the VAR room first): hold the button.
+  const opening = Boolean(run && !checking && (phase === 'next' || phase === 'parked'))
   const incident = phase === 'next' ? data?.next : ref?.incident
   const check = `VAR check · ${CHECK[incident?.incidentType ?? ''] ?? 'review'}`
   const now_ =
@@ -101,22 +103,25 @@ function Review({run}: {run: Run}) {
         : 'Penalties!'
       : !incident
         ? 'Start a new season'
-        : checking || phase === 'parked'
+        : run
           ? 'Send to the people'
           : 'Start the VAR check'
-  const locked = busy || phase === 'kickoff' || phase === 'voting' || phase === 'counting'
+  const locked = busy || opening || phase === 'kickoff' || phase === 'voting' || phase === 'counting'
 
   async function press() {
     setBusy(true)
     setMessage(undefined)
-    const startCheck = phase === 'next' && !checking
+    // No run live: the first press starts the VAR check. A run live: move it on.
+    const startCheck = !run && phase !== 'between'
     const result = await sendToThePeople(undefined, {check: startCheck}).catch(() => ({status: 'unreachable'}) as const)
     setBusy(false)
     setMessage(
       result.status === 'started' || result.status === 'recommended' || result.status === 'kickedOff' || result.status === 'checking'
         ? undefined
-        : result.status === 'busy'
-          ? 'Busy. Press again in a moment.'
+        : result.status === 'nothingToSend'
+          ? 'That VAR check has ended. Start a new one.'
+          : result.status === 'busy'
+            ? 'Busy. Press again in a moment.'
           : result.status === 'coolingDown' && 'retryInSeconds' in result
             ? `Cooling down: ${result.retryInSeconds} s.`
             : `Refused: ${result.status}`,
@@ -166,7 +171,7 @@ function Review({run}: {run: Run}) {
           {now_.detail && <span className="lower-third-detail">{now_.detail}</span>}
         </p>
         <button type="button" className="press" onClick={press} disabled={locked}>
-          {busy ? 'Sending…' : locked ? 'Fans have the call' : button}
+          {busy ? 'Sending…' : opening ? 'Opening the vote…' : locked ? 'Fans have the call' : button}
         </button>
         {message && <p className="warn">{message}</p>}
       </div>

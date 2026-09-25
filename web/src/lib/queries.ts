@@ -32,7 +32,10 @@ export const LIVE_QUERY = `{
     incident->${INCIDENT_CARD}
   },
   // Who the VAR room is looking at while nothing is live: next in line, same order as /api/start picks.
-  "next": *[_type == "incident" && !defined(finalCall) && !(_id in path("drafts.**"))]{
+  // Not the incident the latest round just decided: its result and its finalCall are written in two steps, and in
+  // between it would still look undecided (a "Next incident" pointing at itself, or no "Full time" on the last one).
+  "next": *[_type == "incident" && !defined(finalCall) && !(_id in path("drafts.**"))
+    && _id != coalesce(*[_type == "referendum"] | order(windowOpensAt desc)[0...1][result in ["upheld", "overturned"]][0].incident._ref, "")]{
     ..., "last": *[_type == "referendum" && references(^._id)] | order(windowOpensAt desc)[0].windowOpensAt,
     "date": match->date
   } | order(coalesce(last, "0") asc, date asc)[0]${INCIDENT_CARD},

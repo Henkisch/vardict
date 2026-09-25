@@ -24,6 +24,7 @@ export function VoteButtons({
   onVoted,
   outcomes,
   closed = false,
+  locked = false,
   weight,
 }: {
   referendumId: string
@@ -35,6 +36,8 @@ export function VoteButtons({
   outcomes?: {uphold: string; overturn: string}
   // The window has closed (counting): no more buttons; a voter keeps their receipt.
   closed?: boolean
+  // The kick-off countdown is still running: the buttons show but can't be pressed yet.
+  locked?: boolean
   // How much one human vote counts, for the receipt.
   weight?: number
 }) {
@@ -52,11 +55,21 @@ export function VoteButtons({
     } catch {
       // Not supported: the receipt on screen is the feedback.
     }
+    // The receipt shows at once; a request that never arrives must take it back, not leave it lying.
     const response = await fetch('/api/vote', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({referendumId, choice, sessionId: sessionId()}),
-    })
+    }).catch(() => undefined)
+    if (!response) {
+      setVotes((v) => {
+        const next = {...v}
+        delete next[referendumId]
+        return next
+      })
+      setError("No connection. Your vote didn't count. Try again.")
+      return
+    }
     const body = await response.json().catch(() => ({}))
     if (body.status === 'voted') onVoted?.()
     if (body.status === 'alreadyVoted') setVotes((v) => ({...v, [referendumId]: body.choice}))
@@ -68,9 +81,11 @@ export function VoteButtons({
       })
       setError(
         body.status === 'closed'
-          ? 'Too late: that window has closed.'
+          ? 'Too late: this round has closed.'
+          : body.status === 'notOpen'
+            ? 'Not yet: the vote opens when the countdown ends.'
           : body.status === 'full'
-            ? 'This round is full. Catch the next one.'
+            ? 'The stands are full. Catch the next round.'
             : body.status === 'paused'
               ? 'Voting is paused.'
               : 'Your vote didn’t count. Try again.',
@@ -89,8 +104,9 @@ export function VoteButtons({
           <button
             key={choice}
             type="button"
+            disabled={locked}
             onClick={() => void vote(choice)}
-            className={`font-display font-extrabold uppercase text-ink transition-transform duration-150 hover:brightness-110 focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-chalk active:scale-[0.97] ${
+            className={`font-display font-extrabold uppercase text-ink transition-transform duration-150 hover:brightness-110 focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-chalk active:scale-[0.97] disabled:cursor-wait disabled:opacity-60 ${
               huge ? 'rounded-2xl text-6xl' : 'rounded-lg py-4 text-2xl'
             } ${choice === 'uphold' ? 'bg-uphold' : 'bg-overturn'}`}
           >
