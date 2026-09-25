@@ -13,10 +13,11 @@ rotate the session-1 tokens, make the agent session public.
 VAR gets two complaints: it's often wrong, and it takes forever. VARdict answers both, in the wrong direction. The
 VAR room makes its call, but the call only stands if the public confirms it in a live vote:
 
-- **Over 55% uphold:** the call stands.
-- **Under 45%:** back to the VAR room.
-- **In between:** extra time, then a penalty shootout of 10-second votes, best of five.
-- **Overturned three times:** the match is abandoned and must be replayed.
+- **Over 55% uphold:** the VAR's call stands.
+- **Under 45%:** the fans overturn it, and their call is final. Sometimes that's the referee's call, sometimes a
+  decision nobody made on the day (Pickford gets his red card).
+- **In between:** 30 seconds of extra time, then one sudden-death penalty.
+- **Nobody human votes:** no decision. Back to the VAR room.
 
 A "Time added by democracy" clock keeps score of how much longer football now takes.
 
@@ -32,30 +33,30 @@ It's built on five real Premier League VAR decisions, picked because they still 
 Real people are rare at a demo, so a **simulated crowd** votes too, and I'm upfront about it:
 
 - **60 bots per round,** each with a fixed persona: home fans, away fans, neutrals who lean on how loud the
-  real-world outcry was, a bloc of pundits who all vote in the last five seconds, and one chaos voter who always
-  sides with the minority.
+  real-world outcry was, a bloc of pundits who all vote at the end, and one chaos voter who always sides with the
+  minority.
 - **Seeded,** so demo runs are repeatable.
 - **Stored separately** from human votes and labelled on every screen.
-- **Outweighed by humans:** one human vote counts ×20, so a single phone decides any close round. Democracy, but
-  some votes count more.
+- **Outweighed by humans:** one human vote counts ×8 and ends the round. Vote with the crowd and you settle it;
+  vote against it and you drag it into extra time. Democracy, but some votes count more.
 
 ## Demo
 
 - Big screen: **https://live-vardict.vercel.app/live**
-- Phone: **https://live-vardict.vercel.app/vote** (or scan the QR code on the big screen)
 - Results, one page per incident, for example https://live-vardict.vercel.app/incidents/luis-diaz-tottenham-liverpool-2023
 
 **Testing it (no login needed):**
-1. Open `/live` and press **Send to the people**.
-2. Vote on the big screen, or scan the QR code and vote on your phone.
-3. Watch the bars move as the bots arrive in waves. Close rounds go to extra time and then a shootout.
+1. Open `/live`, enter the stadium and press **Start the VAR check**: the monitor wall plays the incident.
+2. Press **Send to the people**, then vote Uphold or Overturn (60 seconds, or until you vote).
+3. Watch the verdict. Vote against the crowd's lean to force extra time and a sudden-death penalty.
 
 There's a cap of one live vote at a time and 40 runs a day, so if the button says the VAR room is busy, somebody
 else is voting.
 
-<!-- TODO: demo video: /live on a big screen, phone voting in frame, the VAR Room firing recommend, one incident
-     reaching the shootout, the control-case result. -->
-<!-- TODO: screenshots: VAR Room scene, live vote, shootout, results page, VAR Room console (Dashboard). -->
+<!-- TODO: demo video: /live on a big screen, the VAR Room console starting the check and sending it to the people,
+     one incident reaching the sudden-death penalty, the control-case result. -->
+<!-- TODO: screenshots: waiting screen, VAR room monitor wall, live vote + receipt, verdict with the workflow path,
+     results page, VAR Room console (Dashboard). -->
 
 ## Code
 

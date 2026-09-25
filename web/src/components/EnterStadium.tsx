@@ -1,6 +1,7 @@
 'use client'
 
 import type {Fixture} from '@/lib/queries'
+import {HUMAN_VOTE_WEIGHT} from 'workflows/shared'
 
 // Match-day intro: what this is, tonight's fixtures, and the button that lets the crowd in (and starts the sound,
 // since browsers only play audio after a click).
@@ -13,11 +14,13 @@ export function EnterStadium({fixtures, onEnter}: {fixtures: Fixture[]; onEnter:
           <h1 className="font-display text-7xl font-extrabold uppercase tracking-wide sm:text-8xl">
             VAR<span className="text-var">dict</span>
           </h1>
-          <p className="mt-2 text-2xl">VAR, finally in the fans&apos; hands.</p>
+          <p className="mt-2 text-2xl">Football fixed VAR. We fixed it with democracy.</p>
+          <p className="text-lg text-muted">Now it&apos;s slower and less accurate.</p>
         </div>
         <p className="max-w-xl text-lg text-muted">
-          Five real Premier League VAR decisions. The VAR room makes its call, then you and the crowd keep it or
-          overturn it. Too close? Extra time. Still too close? One sudden-death penalty.
+          Five real Premier League VAR decisions. The VAR room makes its call, then you and a simulated crowd keep it
+          or overturn it. Your vote counts ×{HUMAN_VOTE_WEIGHT} and ends the round. Too close? Extra time. Still too
+          close? One sudden-death penalty.
         </p>
         <ol className="w-full divide-y divide-line rounded-xl bg-pitch/80 text-left">
           {fixtures.map((f, i) => (

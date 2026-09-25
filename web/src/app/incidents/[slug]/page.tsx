@@ -77,7 +77,7 @@ export default function IncidentPage() {
           <div className="flex items-stretch gap-3">
             <span className="w-1.5 shrink-0 bg-var" aria-hidden />
             <div className="flex flex-col gap-1">
-              <p className="text-sm text-muted">Time added by democracy</p>
+              <p className="text-sm text-muted">Total delay</p>
               <p className="font-display text-4xl font-extrabold leading-none text-var tabular">
                 {formatClock(incident.realDelaySeconds + votedSeconds)}
               </p>
@@ -105,7 +105,7 @@ export default function IncidentPage() {
             return (
               <div key={run[0].workflowInstanceId} className="flex flex-col gap-2">
                 <p className="flex items-center gap-3 text-sm text-muted">
-                  Run {i + 1} <span className={`font-semibold ${runResult.tone}`}>{runResult.label}</span>
+                  Attempt {i + 1} <span className={`font-semibold ${runResult.tone}`}>{runResult.label}</span>
                 </p>
                 <ol className="flex flex-col gap-2">
                   {run.map((round) => {
@@ -118,7 +118,7 @@ export default function IncidentPage() {
                           <div className="bar h-full bg-uphold" style={{width: `${pct}%`}} />
                         </div>
                         <span className={`text-right font-display text-lg font-bold uppercase ${round.result ? RESULT[round.result].tone : 'text-muted'}`}>
-                          {pct}% {round.result ? RESULT[round.result].label : 'open'}
+                          {pct}% {round.result ? RESULT[round.result].label : 'voting'}
                         </span>
                       </li>
                     )

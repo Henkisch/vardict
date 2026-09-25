@@ -24,7 +24,7 @@ const PERSONA_COUNTERS = PERSONAS.map(
 
 const RESULTS: Record<string, string> = {
   upheld: "Upheld. The VAR's call stands",
-  overturned: 'Overturned. The on-field call stands',
+  overturned: "Overturned. The fans' call stands",
   tooClose: 'Too close. Waiting for the next press',
   noVotes: 'No humans voted. Back to the VAR room',
   aborted: 'Stopped. The run was aborted',
@@ -135,7 +135,7 @@ export function VoteFeed() {
         <span className="overturn">{100 - pct}% Overturn</span>
       </p>
       <p className="feed-counts">
-        {data.bots.uphold + data.bots.overturn} simulated in {data.bots.waves} waves · {humansUp + humansDown} fans ×{HUMAN_VOTE_WEIGHT}
+        {data.bots.uphold + data.bots.overturn} simulated in {data.bots.waves} waves · {humansUp + humansDown} {humansUp + humansDown === 1 ? 'fan' : 'fans'} ×{HUMAN_VOTE_WEIGHT}
       </p>
       <ol className="entries">
         {entries.length === 0 && <li className="muted">Listening for votes…</li>}

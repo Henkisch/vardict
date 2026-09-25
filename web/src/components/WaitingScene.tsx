@@ -14,7 +14,7 @@ export function WaitingScene({incident, fixtures, start}: {incident: IncidentCar
             <span className="h-2 w-2 rounded-full bg-var motion-safe:animate-pulse" aria-hidden />
             Waiting for the VAR check
           </p>
-          <p className="text-sm text-muted">Next up{incident.controlCase ? ' · the control case' : ''}</p>
+          <p className="text-sm text-muted">Next up{incident.controlCase ? ' · the control case (this one has a right answer)' : ''}</p>
           <Scorebug home={home} away={away} minute={incident.minute} size="lg" />
           <h2 className="font-display text-5xl font-extrabold uppercase leading-[0.95] text-balance xl:text-6xl">{incident.title}</h2>
           {incident.situation && <p className="max-w-2xl text-xl leading-snug text-muted">{incident.situation}</p>}

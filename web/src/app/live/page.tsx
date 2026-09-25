@@ -181,7 +181,7 @@ export default function LivePage() {
   const tickerIncident = showVerdict || voting || counting || parked ? ref?.incident._id : state?.next?._id
   const start = <StartButton onClick={press} busy={Boolean(starting)} message={startMessage} />
   const nextLabel =
-    ref?.round === 'regular' ? 'Go to extra time' : ref?.round === 'extraTime' ? 'Penalties!' : 'Take the next penalty'
+    ref?.round === 'regular' ? 'Go to extra time' : 'Take the penalty'
   const verdictAction = between ? (
     <StartButton onClick={press} busy={Boolean(starting)} message={startMessage} label={nextLabel} />
   ) : (
@@ -255,8 +255,8 @@ export default function LivePage() {
           ) : state ? (
             <section className="flex flex-1 flex-col items-center justify-center gap-4 py-16 text-center">
               <p className="text-sm text-muted">Full time</p>
-              <p className="font-display text-5xl font-extrabold uppercase">All five decisions are in</p>
-              <p className="max-w-xl text-lg text-muted">The people have spoken. Democracy is complete, and slower.</p>
+              <p className="font-display text-5xl font-extrabold uppercase">Every decision is in</p>
+              <p className="max-w-xl text-lg text-muted">The people have spoken. Eventually.</p>
               <FullTimeLink />
               <button
                 type="button"
@@ -269,7 +269,7 @@ export default function LivePage() {
               {startMessage && <p className="text-sm text-muted">{startMessage}</p>}
             </section>
           ) : (
-            <p className="py-16 text-center text-muted">Connecting to the VAR room…</p>
+            <p className="py-16 text-center text-muted">Opening the stadium…</p>
           )
         ) : incident && ref ? (
           <MatchScene
@@ -308,7 +308,7 @@ export default function LivePage() {
                 />
                 <p className="text-xs text-muted">
                   Over 55% keeps it · under 45% overturns · in between: {ref.round === 'regular' ? 'extra time' : 'a sudden-death penalty'}.
-                  Your vote counts ×{HUMAN_VOTE_WEIGHT} against {ref.bots} simulated fans.
+                  Your vote counts ×{HUMAN_VOTE_WEIGHT} and closes the round. Everyone else is a simulated fan.
                 </p>
               </div>
             }
@@ -350,7 +350,7 @@ function StartButton({
   onClick,
   busy,
   message,
-  label = 'Let the fans decide',
+  label = 'Send to the people',
   busyLabel = label === 'Start the VAR check' ? 'Starting the VAR check' : 'Opening the vote',
   align = 'end',
 }: {

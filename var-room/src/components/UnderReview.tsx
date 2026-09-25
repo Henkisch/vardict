@@ -21,6 +21,17 @@ type Board = {ref: Ref | null; next: Incident | null}
 
 // L1-L3 of the booth (design.md): the incident under review, what's happening to it now, and the one press. The
 // press posts to the same /api/start as /live's button, so it follows the run step by step.
+// The start route's refusals in plain words (plan 016).
+const REFUSED: Record<string, string> = {
+  rateLimited: 'Too many presses. Wait a minute.',
+  dailyLimit: 'Daily limit reached. Back tomorrow.',
+  paused: 'Paused (VARDICT_PAUSED is on).',
+  unreachable: "Can't reach the stadium (web app).",
+  forbidden: 'Operator key rejected.',
+  unknownIncident: 'That incident was not found.',
+  error: 'The server hit an error. Check the Vercel logs.',
+}
+
 type Run = {currentStage: string} | null
 
 // The live run from the private workflows dataset: whether a VAR check is running decides the first press.
@@ -94,13 +105,15 @@ function Review({run}: {run: Run}) {
           : phase === 'between'
             ? {label: 'Too close to call', detail: `after ${roundLabel(ref!.round).toLowerCase()}`}
             : phase === 'parked'
-              ? {label: check, detail: 'back from the fans: nobody voted'}
-              : {label: check}
+              ? {label: check, detail: 'back from the fans: no human voted'}
+              : run
+                ? {label: check}
+                : {label: 'Waiting for the VAR check', detail: check}
   const button =
     phase === 'between'
       ? ref?.round === 'regular'
         ? 'Go to extra time'
-        : 'Penalties!'
+        : 'Take the penalty'
       : !incident
         ? 'Start a new season'
         : run
@@ -124,7 +137,7 @@ function Review({run}: {run: Run}) {
             ? 'Busy. Press again in a moment.'
           : result.status === 'coolingDown' && 'retryInSeconds' in result
             ? `Cooling down: ${result.retryInSeconds} s.`
-            : `Refused: ${result.status}`,
+            : (REFUSED[result.status] ?? `Refused: ${result.status}`),
     )
   }
 

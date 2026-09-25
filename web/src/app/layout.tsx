@@ -6,7 +6,7 @@ const barlow = Barlow({variable: '--font-barlow', subsets: ['latin'], weight: ['
 const condensed = Barlow_Condensed({variable: '--font-condensed', subsets: ['latin'], weight: ['500', '700', '800']})
 
 export const metadata: Metadata = {
-  title: 'VARdict',
+  title: {default: 'VARdict', template: '%s · VARdict'},
   description: 'Football fixed VAR. We fixed it with democracy. Now it’s slower and less accurate.',
 }
 

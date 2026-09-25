@@ -47,7 +47,13 @@ function Wipe({running}: {running: number}) {
     setMessage(
       result.status === 'wiped' && 'deleted' in result
         ? `Wiped. ${plural(result.deleted ?? 0, 'vote or round', 'votes and rounds')} deleted, ${plural(result.cleared ?? 0, 'final call', 'final calls')} cleared${result.aborted ? `, ${plural(result.aborted, 'live run', 'live runs')} aborted` : ''}.`
-        : `Refused: ${result.status}`,
+        : result.status === 'forbidden'
+          ? 'Refused: the operator key was rejected.'
+          : result.status === 'busy'
+            ? 'Busy: a press is in progress. Try again in a moment.'
+            : result.status === 'unreachable'
+              ? "Can't reach the stadium (web app)."
+              : `Refused: ${result.status}`,
     )
     if (result.status === 'wiped') setOpen(false)
   }

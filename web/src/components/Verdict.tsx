@@ -3,32 +3,29 @@ import {Scorebug} from '@/components/Scorebug'
 import {WorkflowPath} from '@/components/WorkflowPath'
 import {CALL_LABELS, formatClock, type LiveReferendum} from '@/lib/queries'
 import type {Phase} from '@/lib/run-status'
-import {HUMAN_VOTE_WEIGHT, SHOOTOUT_ROUNDS_TO_WIN, WINDOW_SECONDS} from 'workflows/shared'
+import {HUMAN_VOTE_WEIGHT, WINDOW_SECONDS} from 'workflows/shared'
 
 type Copy = {headline: string; tone: string; next: string}
 
 // What a result means, in words. The screen holds here until someone presses: nothing moves on by itself.
-function copyFor(ref: LiveReferendum, phase: Phase): Copy {
+function copyFor(ref: LiveReferendum): Copy {
+  // One sudden-death penalty (workflow v4): it always decides, so there's no running score to show.
   const shootout = ref.round.startsWith('shootout')
   const won = ref.shootout.filter((r) => r === 'upheld').length
   const lost = ref.shootout.filter((r) => r === 'overturned').length
-  if (shootout && phase === 'between') {
-    return ref.result === 'upheld'
-      ? {headline: 'Scored', tone: 'text-uphold', next: `The VAR leads ${won}–${lost}. First to ${SHOOTOUT_ROUNDS_TO_WIN}.`}
-      : {headline: 'Saved', tone: 'text-overturn', next: `The people lead ${lost}–${won}. First to ${SHOOTOUT_ROUNDS_TO_WIN}.`}
-  }
   if (ref.result === 'tooClose') {
     return ref.round === 'regular'
       ? {headline: 'Too close to call', tone: 'text-var', next: `Between 45% and 55%. ${WINDOW_SECONDS.extraTime} seconds of extra time.`}
       : {headline: 'Still too close', tone: 'text-var', next: 'Extra time settled nothing. Sudden death: one penalty decides it.'}
   }
   if (ref.result === 'noVotes') {
-    return {headline: 'No fans voted', tone: 'text-var', next: "The crowd can't decide alone. Back to the VAR room."}
+    return {headline: 'No humans voted', tone: 'text-var', next: "The simulated crowd can't decide alone. Back to the VAR room."}
   }
   const how = shootout ? ' on the penalty' : ref.round === 'extraTime' ? ' in extra time' : ''
   const overturnedTo = CALL_LABELS[ref.incident.overturnedCall] ?? ref.incident.overturnedCall
   if (ref.result === 'upheld' || (shootout && won > lost)) {
-    return {headline: `Upheld${how}`, tone: 'text-uphold', next: 'The fans confirmed the VAR. The call stands.'}
+    const varCall = CALL_LABELS[ref.incident.varRecommendation] ?? ref.incident.varRecommendation
+    return {headline: `Upheld${how}`, tone: 'text-uphold', next: `The fans backed the VAR. The call stands: ${varCall}.`}
   }
   // The fans' call is final (workflow v4): the overturned call stands (incident.overturnedCall).
   return {headline: `Overturned${how}`, tone: 'text-overturn', next:
@@ -38,7 +35,7 @@ function copyFor(ref: LiveReferendum, phase: Phase): Copy {
 }
 
 export function Verdict({round: ref, phase, action}: {round: LiveReferendum; phase: Phase; action: React.ReactNode}) {
-  const copy = copyFor(ref, phase)
+  const copy = copyFor(ref)
   const shootout = ref.round.startsWith('shootout')
   return (
     <section className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto">

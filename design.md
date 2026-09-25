@@ -1,7 +1,7 @@
 # Design — VARdict
 
 The locked design system for VARdict's two screens: **/live** (the stadium, Next.js in `web/`) and the **VAR Room**
-(the officials' booth at "Stockley Park", App SDK in `var-room/`). Every redesign reads this first. Extend this file; don't override
+(the officials' booth, App SDK in `var-room/`). Every redesign reads this first. Extend this file; don't override
 it per page. Written with Henrik in session 5 (Hallmark redesign).
 
 **Brief.** Audience: judges watching a screen recording at 1080p, a few seconds per cut. The eye hits the footage
@@ -28,7 +28,7 @@ Every screen has exactly these levels, loudest first. Nothing may be louder than
 
 - **/live** (macrostructure: Photographic, adapted to an app): the footage or the verdict fills the stage. The
   incident rides on the left rail as a scorebug; the decision strip under it reads referee → VAR → you.
-- **Stockley Park** (macrostructure: Map / Diagram, adapted): an "Under review" band on top (L1 + L2 + L3), the
+- **VAR Room** (macrostructure: Map / Diagram, adapted): an "Under review" band on top (L1 + L2 + L3), the
   workflow as a single thin rail under it, then the vote swing + live feed and the match-day list. The workflow
   rail is the diagram; it names stages, it doesn't explain them.
 - One surface step per region: the stage sits on `--color-paper-2`, nothing inside it gets its own border.

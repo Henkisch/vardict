@@ -647,3 +647,10 @@ cached (`x-vercel-cache: HIT`) after the next deploy.
   (from `/api/live`); old start messages clear on a scene change; the booth's match day marks a running check or a
   parked run as Live. Quorum extension is documented as test-only. Schema: results include noVotes/aborted,
   rounds list one sudden-death penalty, no loop cap, and finalCall/team descriptions match the rules.
+- **Plan 016, P3 (wording):** one name per thing ("Send to the people" for the second press everywhere; "Take the
+  penalty" for the one penalty; the dead "Scored/Saved, first to 1" copy is gone); the rule that surprises people is
+  said out loud (your vote counts ×8 and ends the round; everyone else is simulated); "No humans voted" instead of
+  "No fans voted" (the bots did vote); the upheld verdict names the call; the full-time screen doesn't explain its
+  own joke; the pitch line is on the intro; tab titles per page; the booth's refusals are in plain words; "1 fan",
+  "Attempt 1", "Total delay". SUBMISSION.md, design.md and CLAUDE.md now describe the current rules (no QR code,
+  no shootout of five, no abandoned, no Stockley Park).

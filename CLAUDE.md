@@ -191,13 +191,14 @@ anything identifying in a vote.
 
 One instance per incident. Percentages are the share voting **uphold**.
 
+Current (v4 logic, windows since session 5; the v2 diagram with loops and Abandoned is history):
+
 ```
-VarRoom --recommend--> Referendum
-Referendum: over 55% -> Upheld | under 45% -> VarRoom | 45–55% -> ExtraTime
-ExtraTime:  over 55% -> Upheld | under 45% -> VarRoom | 45–55% -> Shootout
-Shootout:   wins 3 of 5 rounds -> Upheld | loses 3 of 5 -> VarRoom
-VarRoom on 3rd loop -> Abandoned ("match to be replayed")
-Upheld, Abandoned: terminal
+VarRoom --recommend--> Referendum        (each vote stage waits for a press: kick-off)
+Referendum: over 55% -> Upheld | under 45% -> Overturned | 45–55% -> ExtraTime | no human vote -> VarRoom
+ExtraTime:  over 55% -> Upheld | under 45% -> Overturned | 45–55% -> Shootout  | no human vote -> VarRoom
+Shootout:   one sudden-death penalty, over 50% -> Upheld, else Overturned        | no human vote -> VarRoom
+Upheld (finalCall = varRecommendation), Overturned (finalCall = overturnedCall ?? originalCall): terminal
 ```
 
 Rules (defaults, may change after the first test):
@@ -207,9 +208,8 @@ Rules (defaults, may change after the first test):
 | Regular window | 60 s (session 5, Henrik: time to watch the clip twice; was 20) |
 | Extra-time window | 30 s (was 10) |
 | Penalty | one sudden-death round of 15 s (was 8) |
-| Quorum | 20 votes per round, else the window extends once by 15 s |
+| Quorum | 20 votes per round, else the window extends once by 15 s. Test-only since v4: no human = noVotes first, one human vote finishes the round with the whole crowd (plan 016 #21) |
 | Human vote weight | 1 human vote = 8 bot votes (session 5; was 20, but then a lone vote could never land in 45-55%, so extra time never happened. At 8, voting against the crowd's lean forces extra time on every incident: `scripts/crowd-odds.ts`). Quorum counts heads; the split counts weight |
-| Loop cap | 3 trips to VarRoom, then Abandoned |
 
 Human vote weight, shootout-rounds-to-win and loop cap live in one place, `workflows/shared.ts` (plan 011): a
 dependency-free module so browser-imported code (`web/src/lib/queries.ts`, `run-status.ts`, `outcome.ts`) can

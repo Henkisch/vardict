@@ -10,7 +10,7 @@ import {WorkflowRail} from './components/WorkflowRail'
 import {useNow} from './useNow'
 import './App.css'
 
-// The VAR Room (Stockley Park): the officials' booth. PGMOL's real VAR hub sits there, miles from any ground; /live is the
+// The VAR Room: the officials' booth (PGMOL's real hub is at Stockley Park, miles from any ground); /live is the
 // stadium. Content from `production`, workflow state from the private `workflows` dataset (readable because
 // the Dashboard hands the app a logged-in user's token).
 const config: SanityConfig[] = [

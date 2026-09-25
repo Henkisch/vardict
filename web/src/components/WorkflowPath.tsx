@@ -11,10 +11,10 @@ type Stage = 'varRoom' | 'referendum' | 'extraTime' | 'shootout' | 'upheld' | 'o
 
 const EXPLAIN: Record<Stage, string> = {
   varRoom: 'The VAR room reviews the footage and recommends a call.',
-  referendum: `The fans vote for ${WINDOW_SECONDS.referendum} s. Over 55% keeps the call, under 45% overturns it.`,
+  referendum: `The fans vote for ${WINDOW_SECONDS.referendum} s, or until a human votes. Over 55% keeps the call, under 45% overturns it.`,
   extraTime: `Too close to call: ${WINDOW_SECONDS.extraTime} more seconds, same thresholds.`,
   shootout: `Still too close: sudden death. One ${WINDOW_SECONDS.shootout}-second vote decides it.`,
-  upheld: 'The people confirmed the call. It stands.',
+  upheld: 'The fans confirmed the call. It stands.',
   overturned: 'The fans overruled the VAR, and their call is final.',
 }
 
@@ -58,7 +58,7 @@ function stepsFor(run: RunRound[], phase: Phase): Step[] {
     steps.push(last.result === 'upheld' ? {stage: 'upheld', label: 'Upheld'} : {stage: 'overturned', label: 'Overturned'})
   } else if (phase === 'between') {
     const next = last.round === 'regular' ? 'extraTime' : 'shootout'
-    steps.push({stage: next, label: next === 'extraTime' ? 'Extra time' : 'Next penalty', current: true})
+    steps.push({stage: next, label: next === 'extraTime' ? 'Extra time' : 'Penalty', current: true})
   }
   return steps
 }
