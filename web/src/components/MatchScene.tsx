@@ -43,7 +43,7 @@ export function MatchScene({incident, barLeft, barRight, live = false, media, me
             </div>
           </div>
         </div>
-        <FitBox ratio={mediaRatio} align="end" className="p-2 lg:flex-1">
+        <FitBox ratio={mediaRatio} align="end" valign="start" className="p-2 lg:flex-1 lg:py-5 lg:pl-0 lg:pr-5">
           {media}
         </FitBox>
       </section>

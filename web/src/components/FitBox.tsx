@@ -8,6 +8,8 @@ type Props = {
   className?: string
   // Where the fitted box sits when there's room to spare: centred, or against the right edge (desktop).
   align?: 'center' | 'end'
+  // Vertically: centred, or against the top so it lines up with content beside it (desktop).
+  valign?: 'center' | 'start'
   children: React.ReactNode
 }
 
@@ -15,7 +17,7 @@ type Props = {
 // shape at any window size. Measured with a ResizeObserver: CSS container-height units resolve to 0 inside this
 // nested flex layout in Chrome. Before the first measurement (and on phones, where the page scrolls) the child
 // just takes the full width.
-export function FitBox({ratio, className = '', align = 'center', children}: Props) {
+export function FitBox({ratio, className = '', align = 'center', valign = 'center', children}: Props) {
   const box = useRef<HTMLDivElement>(null)
   const [width, setWidth] = useState<number>()
 
@@ -33,7 +35,7 @@ export function FitBox({ratio, className = '', align = 'center', children}: Prop
 
   return (
     // contain:size so the box is sized by the layout alone, never by the (fitted) content it measures.
-    <div ref={box} className={`flex min-h-0 items-center justify-center lg:[contain:size] ${align === 'end' ? 'lg:justify-end' : ''} ${className}`}>
+    <div ref={box} className={`flex min-h-0 items-center justify-center lg:[contain:size] ${align === 'end' ? 'lg:justify-end' : ''} ${valign === 'start' ? 'lg:items-start' : ''} ${className}`}>
       <div className="w-full" style={width ? {width} : undefined}>
         {children}
       </div>
