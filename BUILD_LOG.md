@@ -563,3 +563,4 @@ cached (`x-vercel-cache: HIT`) after the next deploy.
   `/live`'s shape: one plate with the incident on a rail (teams, title, situation, the three calls as a compact
   row, the democracy clock) and the clip filling the rest, capped to the screen height. "Every round" and "The
   outcry" sit side by side under it.
+- **Verdict path strip in plain words:** "VAR room → Fans vote → Extra time → Penalty → Upheld / Overturned" under "The path through the Sanity workflow", like the booth. The stage names stay in code only.

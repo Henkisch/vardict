@@ -4,7 +4,7 @@ import type {Phase} from '@/lib/run-status'
 import type {RunRound} from '@/lib/queries'
 
 // The payoff: the path this decision actually took through the Sanity Workflow (`peoples-var`), stage by stage,
-// with the real stage names. Derived from the run's referendums, which are public; the engine's own state lives in
+// in plain words (VAR room, Fans vote, ...). Derived from the run's referendums, which are public; the engine's own state lives in
 // the private workflows dataset.
 
 type Stage = 'varRoom' | 'referendum' | 'extraTime' | 'shootout' | 'upheld' | 'overturned'
@@ -16,6 +16,16 @@ const EXPLAIN: Record<Stage, string> = {
   shootout: `Still too close: sudden death. One ${WINDOW_SECONDS.shootout}-second vote decides it.`,
   upheld: 'The people confirmed the call. It stands.',
   overturned: 'The fans overruled the VAR. The on-field call stands.',
+}
+
+// Plain words only (Henrik, as in the VAR Room booth): the stage names stay in code.
+const PLAIN: Record<Stage, string> = {
+  varRoom: 'VAR room',
+  referendum: 'Fans vote',
+  extraTime: 'Extra time',
+  shootout: 'Penalty',
+  upheld: 'Upheld',
+  overturned: 'Overturned',
 }
 
 const RESULT_TONE = {upheld: 'text-uphold', overturned: 'text-overturn', tooClose: 'text-var', noVotes: 'text-muted'} as const
@@ -37,7 +47,7 @@ function stepsFor(run: RunRound[], phase: Phase): Step[] {
       loop = round.loop
     }
     const stage = stageOf(round.round)
-    const label = stage === 'shootout' ? 'Penalty' : stage === 'extraTime' ? 'Extra time' : 'Referendum'
+    const label = PLAIN[stage]
     steps.push({stage, label, result: round.result, current: !round.result})
   }
   const last = run.at(-1)
@@ -60,16 +70,16 @@ export function WorkflowPath({run, phase}: {run: RunRound[]; phase: Phase}) {
   return (
     <section className="flex flex-col gap-3 px-1">
       <p className="text-sm text-muted">
-        The path through the workflow <span className="font-mono text-chalk">peoples-var</span>
+        The path through the Sanity workflow
       </p>
       <ol className="flex flex-wrap items-center gap-x-2 gap-y-2">
         {steps.map((step, i) => (
           <li key={i} className="flex items-center gap-2">
             {i > 0 && <span className="text-line" aria-hidden>→</span>}
-            <span className={`rounded-full border px-3 py-1 font-mono text-sm ${step.current ? 'border-var text-var' : 'border-line'}`}>
-              {step.stage}
+            <span className={`rounded-full border px-3 py-1 text-sm font-semibold ${step.current ? 'border-var text-var' : 'border-line'}`}>
+              {step.label}
               {step.result && (
-                <span className={`ml-1.5 font-sans ${RESULT_TONE[step.result]}`}>
+                <span className={`ml-1.5 font-normal ${RESULT_TONE[step.result]}`}>
                   {step.stage === 'shootout' ? PENALTY_WORD[step.result] : RESULT_WORD[step.result]}
                 </span>
               )}
@@ -80,7 +90,7 @@ export function WorkflowPath({run, phase}: {run: RunRound[]; phase: Phase}) {
       <ul className="flex flex-col gap-1 text-sm text-muted">
         {explained.map((stage) => (
           <li key={stage}>
-            <span className="font-mono text-chalk">{stage}</span> {EXPLAIN[stage]}
+            <span className="font-semibold text-chalk">{PLAIN[stage]}:</span> {EXPLAIN[stage]}
           </li>
         ))}
       </ul>

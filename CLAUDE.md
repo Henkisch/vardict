@@ -390,8 +390,8 @@ video and post → Oct 4 publish. If behind, cut in this order: the Teletext pag
 crowd, the zoomed monitor, the pundit ticker. Never cut the step-by-step flow.
 
 **Payoff (Henrik):** show which workflow stages the run walked through. Done as a "path through the workflow" strip on
-the verdict screen, with the real stage names (`varRoom → referendum → extraTime → shootout → upheld/abandoned`) and
-one line explaining each stage. Derived from the run's public referendums.
+the verdict screen, in plain words (VAR room → Fans vote → Extra time → Penalty → Upheld/Overturned; session 5, Henrik: no code names on
+screen) and one line explaining each stage. Derived from the run's public referendums.
 
 **Status:** step 1 (step-by-step flow) is live: `peoples-var` **v3** deployed (the ballot's `open` action has no `when`,
 so a person kicks off every voting stage), plus `kickOff` in the runtime, the kick-off overlay, the verdict screen and the
