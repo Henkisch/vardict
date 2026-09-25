@@ -75,7 +75,7 @@ def clip(youtube_id, channel, start, end):
 
 INCIDENTS = [
     dict(key='diaz', title='Luis Díaz goal: "check complete"', slug='luis-diaz-tottenham-liverpool-2023', minute=34,
-         incidentType='offside', lawsInvolved=laws(11, 5), originalCall='noGoal', varRecommendation='noGoal',
+         incidentType='offside', lawsInvolved=laws(11, 5), originalCall='noGoal', varRecommendation='noGoal', overturnedCall='goal',
          recommendationFavours='home', realDelaySeconds=40, controlCase=True,
          situation="Spurs 0–0 Liverpool, 34'. Díaz scores, flag goes up. VAR: offside stands.",
          outcry=dict(level=5,
@@ -85,7 +85,7 @@ INCIDENTS = [
          clip=clip('BnSo_5MTcGY', 'TNT Sports', 18, 48),
          fallbackText="Premier League, Tottenham v Liverpool, 0–0 in the first half. Luis Díaz scores but the flag goes up. The VAR sees he is onside, mistakenly believes the goal was given, and says 'check complete'. The goal stays disallowed. Tottenham win 2–1."),
     dict(key='maupay', title='Penalty after the final whistle', slug='maupay-brighton-man-utd-2020', minute=97,
-         incidentType='handball', lawsInvolved=laws(12, 14, 5), originalCall='noPenalty', varRecommendation='penalty',
+         incidentType='handball', lawsInvolved=laws(12, 14, 5), originalCall='noPenalty', varRecommendation='penalty', overturnedCall='noPenalty',
          recommendationFavours='away', realDelaySeconds=150,  # estimate: whistle ~97:00 to the kick at 99:45
          situation="Brighton 2–2 Man Utd, 90+7'. Full-time whistle blows. VAR: Maupay handball, penalty after the final whistle.",
          outcry=dict(level=4,
@@ -96,7 +96,7 @@ INCIDENTS = [
          clip=clip('_2t489AY06k', 'TNT Sports', 134, 164),
          fallbackText="Premier League, Brighton v Manchester United, 2–2 deep in stoppage time. Maguire's header hits Maupay's arm and the referee blows for full time. VAR calls him to the monitor after the whistle, and he awards a penalty. Fernandes scores it in the 100th minute."),
     dict(key='pickford', title='Pickford on Van Dijk: offside only', slug='pickford-van-dijk-everton-liverpool-2020', minute=6,
-         incidentType='redCard', lawsInvolved=laws(11, 12), originalCall='noPenalty', varRecommendation='noFoul',
+         incidentType='redCard', lawsInvolved=laws(11, 12), originalCall='noPenalty', varRecommendation='noFoul', overturnedCall='redCard',
          recommendationFavours='home', realDelaySeconds=60,  # estimate: routine offside check, no official figure
          situation="Everton 0–0 Liverpool, 6'. Pickford wipes out Van Dijk. VAR: offside, no foul, no card.",
          outcry=dict(level=5,
@@ -107,7 +107,7 @@ INCIDENTS = [
          clip=clip('6XQJSG-IWLU', 'TNT Sports', 64, 94),
          fallbackText="Premier League, Everton v Liverpool, early in a Merseyside derby. Pickford lunges knee-high at Van Dijk in the box and misses the ball entirely. The flag goes up for offside and VAR checks only that. No penalty and no card, and Van Dijk is out for the season."),
     dict(key='gordon', title='Gordon goal: three checks, one verdict', slug='gordon-newcastle-arsenal-2023', minute=64,
-         incidentType='goalLine', lawsInvolved=laws(9, 11, 12), originalCall='goal', varRecommendation='goal',
+         incidentType='goalLine', lawsInvolved=laws(9, 11, 12), originalCall='goal', varRecommendation='goal', overturnedCall='noGoal',
          recommendationFavours='home', realDelaySeconds=246,
          situation="Newcastle 0–0 Arsenal, 64'. Gordon taps in: ball out? offside? push? VAR: goal stands.",
          outcry=dict(level=5,
@@ -118,7 +118,7 @@ INCIDENTS = [
          clip=clip('9nSgsgq46aI', 'The Telegraph', 120, 150),
          fallbackText="Premier League, Newcastle v Arsenal, 0–0 in the second half. Willock keeps the ball in near the byline, Joelinton tangles with Gabriel, and Gordon taps in from the goal line. VAR checks ball out, offside and a push, over four minutes. The goal stands and Arsenal lose their unbeaten start."),
     dict(key='milenkovic', title='The 374-second offside check', slug='milenkovic-west-ham-forest-2025', minute=61,
-         incidentType='offside', lawsInvolved=laws(11), originalCall='goal', varRecommendation='goal',
+         incidentType='offside', lawsInvolved=laws(11), originalCall='goal', varRecommendation='goal', overturnedCall='noGoal',
          recommendationFavours='away', realDelaySeconds=374,
          situation="West Ham 0–1 Forest, 61'. Milenkovic scores, offside check. 6 min 14 s later, VAR: goal stands.",
          outcry=dict(level=3,

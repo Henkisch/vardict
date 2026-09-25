@@ -57,8 +57,8 @@ function IncidentRow({incident}: {incident: IncidentOverviewRow}) {
   const {edge} = OUTCOME_LABEL[outcome]
   const decided = isDecided(outcome)
   const {homeTeam: home, awayTeam: away} = incident.match
-  // The final call: the VAR's if the fans kept it, the referee's if they overturned it (workflow v4).
-  const finalCall = outcome === 'upheld' ? incident.varRecommendation : outcome === 'overturned' ? incident.originalCall : undefined
+  // The final call: the VAR's if the fans kept it, the overturned call if they didn't (workflow v4).
+  const finalCall = outcome === 'upheld' ? incident.varRecommendation : outcome === 'overturned' ? incident.overturnedCall : undefined
   // The control case: VAR was simply wrong, so overturning it is "right".
   const controlVerdict =
     incident.controlCase && decided

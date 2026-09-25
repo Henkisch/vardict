@@ -18,7 +18,7 @@ import {WaitingScene} from '@/components/WaitingScene'
 import {Verdict} from '@/components/Verdict'
 import {VoteButtons} from '@/components/VoteButtons'
 import {useCloseWhenCounting, useLiveState, useNow} from '@/lib/live'
-import {HUMAN_VOTE_WEIGHT, roundLabel, type LiveState} from '@/lib/queries'
+import {CALL_LABELS, HUMAN_VOTE_WEIGHT, roundLabel, type LiveState} from '@/lib/queries'
 import {runPhase} from '@/lib/run-status'
 import {cue, setIntensity, startStadium} from '@/lib/stadium-audio'
 
@@ -28,7 +28,8 @@ export default function LivePage() {
   // the VAR check at any moment.
   const {state, refresh, boost} = useLiveState<LiveState>(
     '/api/live?q=live',
-    (s) => runPhase(s?.referendum, now),
+    // A live run (the VAR room included) polls like a vote: the booth can send it on at any moment.
+    (s) => (s?.run && runPhase(s.referendum, now) === 'decided' ? 'between' : runPhase(s?.referendum, now)),
     (s) => !s?.run,
   )
   const ref = state?.referendum
@@ -266,6 +267,10 @@ export default function LivePage() {
                     key={ref._id}
                     referendumId={ref._id}
                     size="panel"
+                    outcomes={{
+                      uphold: CALL_LABELS[incident.varRecommendation] ?? incident.varRecommendation,
+                      overturn: CALL_LABELS[incident.overturnedCall] ?? incident.overturnedCall,
+                    }}
                     onVoted={() => {
                       refresh()
                       setTimeout(refresh, 2000)

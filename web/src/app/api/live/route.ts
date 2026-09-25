@@ -47,7 +47,8 @@ export async function GET(request: Request) {
     // just an open one: shootout rounds are 10 s windows, so a 5 s edge cache plus the client's 3 s poll can
     // otherwise show the next round most of a round late.
     const phase = runPhase(result.referendum, Date.now())
-    const live = phase === 'voting' || phase === 'counting' || phase === 'between'
+    // A run in the VAR room is live too: the next press opens the vote, and every screen must see it in time.
+    const live = phase === 'voting' || phase === 'counting' || phase === 'between' || Boolean(result.run)
     const cache = live
       ? 'public, s-maxage=1, stale-while-revalidate=1'
       : 'public, s-maxage=5, stale-while-revalidate=5'

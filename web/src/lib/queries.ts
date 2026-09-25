@@ -10,7 +10,7 @@ export {CALL_LABELS, HUMAN_VOTE_WEIGHT}
 const team = '{name, shortName, primaryColor}'
 
 const INCIDENT_CARD = `{
-  _id, title, "slug": slug.current, situation, minute, varRecommendation, originalCall, controlCase, fallbackText,
+  _id, title, "slug": slug.current, situation, minute, varRecommendation, originalCall, "overturnedCall": coalesce(overturnedCall, originalCall), controlCase, fallbackText,
   realDelaySeconds, finalCall, incidentType,
   clip{youtubeId, startSeconds, endSeconds, keySeconds, channel, embedAllowed},
   match->{competition, homeTeam->${team}, awayTeam->${team}}
@@ -44,7 +44,7 @@ export const LIVE_QUERY = `{
   "pundits": *[_type == "punditLine"]{_id, text, pundit, trigger, "incident": incident._ref},
   "fixtures": *[_type == "incident"] | order(match->date asc){
     _id, title, "home": match->homeTeam->name, "away": match->awayTeam->name, "competition": match->competition,
-    originalCall, varRecommendation, finalCall
+    originalCall, varRecommendation, finalCall, "overturnedCall": coalesce(overturnedCall, originalCall)
   }
 }`
 
@@ -56,6 +56,8 @@ export type Fixture = {
   away: string
   competition: string
   originalCall: string
+  // The call that stands if the fans overturn the VAR (incident.overturnedCall, else the referee's).
+  overturnedCall: string
   varRecommendation: string
   // Set once the fans decide: the VAR's call if upheld, the referee's if overturned (workflow v4).
   finalCall?: string
@@ -90,6 +92,8 @@ export type IncidentCard = {
     minute: number
     varRecommendation: string
     originalCall: string
+    // The call that stands if the fans overturn the VAR (incident.overturnedCall, else the referee's).
+    overturnedCall: string
     controlCase?: boolean
     fallbackText: string
     realDelaySeconds: number
@@ -145,7 +149,7 @@ const ROUNDS = `*[_type == "referendum" && references(^._id)] | order(windowOpen
   }`
 
 export const INCIDENT_QUERY = `*[_type == "incident" && slug.current == $slug][0]{
-  title, situation, minute, originalCall, varRecommendation, finalCall, controlCase, realDelaySeconds, fallbackText,
+  title, situation, minute, originalCall, "overturnedCall": coalesce(overturnedCall, originalCall), varRecommendation, finalCall, controlCase, realDelaySeconds, fallbackText,
   clip{youtubeId, startSeconds, endSeconds, channel, embedAllowed},
   outcry{level, summary, sources},
   match->{competition, date, venue, score, homeTeam->${team}, awayTeam->${team}},
@@ -171,6 +175,8 @@ export type IncidentResult = {
   situation?: string
   minute: number
   originalCall: string
+  // The call that stands if the fans overturn the VAR (incident.overturnedCall, else the referee's).
+  overturnedCall: string
   varRecommendation: string
   finalCall?: string
   controlCase?: boolean
@@ -187,7 +193,7 @@ export type IncidentResult = {
 // LIVE_QUERY computes, so the page can show one incident-independent total at the top.
 export const INCIDENTS_QUERY = `{
   "incidents": *[_type == "incident"] | order(match->date asc){
-    title, "slug": slug.current, minute, controlCase, originalCall, varRecommendation, finalCall, realDelaySeconds,
+    title, "slug": slug.current, minute, controlCase, originalCall, "overturnedCall": coalesce(overturnedCall, originalCall), varRecommendation, finalCall, realDelaySeconds,
     match->{date, homeTeam->${team}, awayTeam->${team}},
     "rounds": ${ROUNDS}
   },
@@ -203,6 +209,8 @@ export type IncidentOverviewRow = {
   minute: number
   controlCase?: boolean
   originalCall: string
+  // The call that stands if the fans overturn the VAR (incident.overturnedCall, else the referee's).
+  overturnedCall: string
   varRecommendation: string
   finalCall?: string
   realDelaySeconds: number

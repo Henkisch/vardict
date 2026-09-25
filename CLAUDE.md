@@ -159,7 +159,7 @@ demo video and screenshots, since they can't log in.
 
 | Type | Key fields | Notes |
 | --- | --- | --- |
-| incident | title, slug, match (ref), minute, incidentType, lawsInvolved (refs), situation, originalCall, varRecommendation, recommendationFavours, finalCall, realDelaySeconds, clip, fallbackText, outcry, controlCase, crowdSeed | Three separate call fields tell the story as data. situation = ≤140-char context line shown with the clip during the vote. controlCase marks the one clear-cut incident |
+| incident | title, slug, match (ref), minute, incidentType, lawsInvolved (refs), situation, originalCall, varRecommendation, overturnedCall, recommendationFavours, finalCall, realDelaySeconds, clip, fallbackText, outcry, controlCase, crowdSeed | Three separate call fields tell the story as data. situation = ≤140-char context line shown with the clip during the vote. controlCase marks the one clear-cut incident |
 | match | homeTeam, awayTeam (refs), competition, date, venue, score | |
 | team | name, shortName, primaryColor | Colors used in the voting UI |
 | law | number, title, summary | IFAB Laws of the Game, summaries in our own words |
@@ -400,7 +400,8 @@ to the VAR room. Known issue: the first "Send to the people" took ~13 s before t
 + open on the server, then polling), while later presses took ~3 s.
 
 **Workflow v4 (Henrik, session 4):** the fans' call is final. Over 55% keeps the VAR's call (`upheld`), under 45%
-overturns it (`overturned`, terminal: the on-field call becomes the final call), 45-55% goes to extra time and then
+overturns it (`overturned`, terminal: `incident.overturnedCall` becomes the final call - the referee's call when the VAR
+changed it, the other call when the VAR backed the referee, e.g. Pickford → red card, Díaz → goal; session 5), 45-55% goes to extra time and then
 one sudden-death penalty. A round with no human vote is no decision: back to `varRoom`. Loops and "abandoned" are
 gone. Windows are 60 s / 30 s / 15 s since workflow v5 (session 5), and a human vote closes the round early (the rest of the seeded crowd votes
 at once). Routes: one `/live` that follows the run (Henrik asked twice; kept, since per-step routes go stale).

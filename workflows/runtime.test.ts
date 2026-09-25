@@ -207,6 +207,17 @@ describe('runtime', () => {
     expect(incident.finalCall).toBe('goal')
   })
 
+  test('overturning writes overturnedCall when the VAR backed the referee (Pickford: red card)', async () => {
+    const {runtime, instanceId, referendum} = await start([
+      incidentDoc({originalCall: 'noPenalty', varRecommendation: 'noFoul', overturnedCall: 'redCard'}),
+    ])
+    const ref = await referendum()
+    await setBotVotes(runtime, ref._id, 20, 40)
+    await closeWindow(runtime, instanceId, Date.parse(ref.closesAt))
+    const incident = await runtime.content.fetch<{finalCall?: string}>('*[_id == "incident-1"][0]{finalCall}')
+    expect(incident.finalCall).toBe('redCard')
+  })
+
   test('no human vote: no decision, back to the VAR room', async () => {
     const {runtime, instanceId, referendum, stage} = await start(undefined, {requireHumanVote: true})
     const ref = await referendum()

@@ -22,11 +22,15 @@ export function VoteButtons({
   referendumId,
   size,
   onVoted,
+  outcomes,
 }: {
   referendumId: string
   size: 'huge' | 'panel'
   // Called once the vote is stored: the round closes early (see /api/vote), so the screen should refetch.
   onVoted?: () => void
+  // What each choice means for this incident, shown under the button (Uphold → the VAR's call, Overturn → the
+  // overturned call), so nobody has to guess what overturning a "no foul" gives.
+  outcomes?: {uphold: string; overturn: string}
 }) {
   // Votes by referendum id, so a new round shows fresh buttons.
   const [votes, setVotes] = useState<Record<string, Choice>>({})
@@ -77,6 +81,9 @@ export function VoteButtons({
             } ${choice === 'uphold' ? 'bg-uphold' : 'bg-overturn'} ${mine && mine !== choice ? 'opacity-25' : ''}`}
           >
             {choice === 'uphold' ? 'Uphold' : 'Overturn'}
+            {outcomes && mine !== choice && (
+              <span className={`block font-sans font-semibold normal-case ${huge ? 'text-xl' : 'text-sm'}`}>→ {outcomes[choice]}</span>
+            )}
             {mine === choice && <span className={`block font-bold ${huge ? 'text-xl' : 'text-sm'}`}>Your vote</span>}
           </button>
         ))}

@@ -65,9 +65,13 @@ export default function IncidentPage() {
           </div>
           {/* Who won the argument is marked: the VAR's call if the fans kept it, the referee's if they overturned it. */}
           <div className="grid grid-cols-3 gap-2">
-            <Call label="Referee" value={incident.originalCall} state={outcome === 'overturned' ? 'won' : isDecided(outcome) ? 'lost' : undefined} />
+            <Call
+              label="Referee"
+              value={incident.originalCall}
+              state={outcome === 'overturned' && incident.overturnedCall === incident.originalCall ? 'won' : isDecided(outcome) ? 'lost' : undefined}
+            />
             <Call label="VAR" value={incident.varRecommendation} accent state={outcome === 'upheld' ? 'won' : isDecided(outcome) ? 'lost' : undefined} />
-            <People outcome={outcome} />
+            <People outcome={outcome} call={outcome === 'upheld' ? incident.varRecommendation : incident.overturnedCall} />
           </div>
           <div className="flex items-stretch gap-3">
             <span className="w-1.5 shrink-0 bg-var" aria-hidden />
@@ -167,14 +171,14 @@ function Call({label, value, accent = false, state}: {label: string; value: stri
 }
 
 // The people's part, coloured by where the vote is.
-function People({outcome}: {outcome: ReturnType<typeof incidentOutcome>}) {
+function People({outcome, call}: {outcome: ReturnType<typeof incidentOutcome>; call: string}) {
   const {label, tone} = OUTCOME_LABEL[outcome]
   const waiting = outcome === 'notVoted'
   return (
     <div className={`flex min-w-0 flex-col gap-1 rounded-lg p-3 ${waiting ? 'border border-dashed border-line' : 'bg-ink/40'}`}>
       <p className="text-sm text-muted">The people</p>
       <p className={`font-display text-xl font-extrabold uppercase leading-none ${tone}`}>
-        {outcome === 'upheld' ? 'Kept it' : outcome === 'overturned' ? 'Overturned it' : waiting ? 'Not yet' : label}
+        {isDecided(outcome) ? (CALL_LABELS[call] ?? call) : waiting ? 'Not yet' : label}
       </p>
     </div>
   )

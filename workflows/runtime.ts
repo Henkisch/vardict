@@ -136,8 +136,10 @@ function handlers(content: SanityClient, now: () => number, onOpened: (referendu
   // The fans overturned the VAR's recommendation: the on-field call stands, and becomes the final call.
   const overrule: EffectHandler = async (params) => {
     const id = docId(params.incidentId)
-    const {originalCall} = await content.fetch<{originalCall: string}>('*[_id == $id][0]{originalCall}', {id})
-    await content.patch(id).set({finalCall: originalCall}).commit()
+    // The call the fans overturn to: the incident's overturnedCall, else the referee's call. Not always the referee's:
+    // when the VAR backed the referee (Pickford, Díaz, Gordon, Milenkovic), overturning means the other call.
+    const {call} = await content.fetch<{call: string}>('*[_id == $id][0]{"call": coalesce(overturnedCall, originalCall)}', {id})
+    await content.patch(id).set({finalCall: call}).commit()
   }
 
   const byKind = {open, extend, finalize, overrule}

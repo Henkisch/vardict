@@ -111,6 +111,15 @@ export const incident = defineType({
       validation: (rule) => rule.required(),
     }),
     defineField({
+      name: 'overturnedCall',
+      title: 'If the fans overturn it',
+      type: 'string',
+      group: 'calls',
+      description:
+        "The call that stands if the fans overrule the VAR. Usually the referee's call, but not when the VAR backed the referee: then it's the call the VAR could have made (Pickford: red card; Díaz: goal). Empty means the referee's call.",
+      options: {list: CALLS},
+    }),
+    defineField({
       name: 'recommendationFavours',
       title: 'VAR recommendation favours',
       type: 'string',

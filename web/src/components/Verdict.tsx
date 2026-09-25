@@ -26,12 +26,12 @@ function copyFor(ref: LiveReferendum, phase: Phase): Copy {
     return {headline: 'No fans voted', tone: 'text-var', next: "The crowd can't decide alone. Back to the VAR room."}
   }
   const how = shootout ? ' on the penalty' : ref.round === 'extraTime' ? ' in extra time' : ''
-  const onPitch = CALL_LABELS[ref.incident.originalCall] ?? ref.incident.originalCall
+  const overturnedTo = CALL_LABELS[ref.incident.overturnedCall] ?? ref.incident.overturnedCall
   if (ref.result === 'upheld' || (shootout && won > lost)) {
     return {headline: `Upheld${how}`, tone: 'text-uphold', next: 'The fans confirmed the VAR. The call stands.'}
   }
-  // The fans' call is final (workflow v4): the on-field call stands.
-  return {headline: `Overturned${how}`, tone: 'text-overturn', next: `The fans overruled the VAR. ${onPitch} stands.`}
+  // The fans' call is final (workflow v4): the overturned call stands (incident.overturnedCall).
+  return {headline: `Overturned${how}`, tone: 'text-overturn', next: `The fans overruled the VAR. ${overturnedTo} stands.`}
 }
 
 export function Verdict({round: ref, phase, action}: {round: LiveReferendum; phase: Phase; action: React.ReactNode}) {

@@ -600,3 +600,16 @@ cached (`x-vercel-cache: HIT`) after the next deploy.
 - **"I started the VAR check, yet the button remains LET THE FANS DECIDE":** working as intended (that press is step two), but the VAR room step looked too much like the screen before it. It now says "The VAR check is under way. Seen enough?" over the button, and the lower-third tab pulses while the check runs.
 - **Full wipe only when there is something to wipe (Henrik):** the booth counts votes/rounds, final calls and running matches live and says what a wipe would clear; with nothing there it reads "Nothing to wipe: a clean slate" and the button is off. Also: Upheld / Overturned sit together as one pair on the rail.
 - **Workflow rail rebuilt as a breadcrumb (Henrik: "still no good ui, broken... think of it like a breadcrumb"):** real › separators instead of pseudo-element arrows; done stages in chalk, the current one a filled amber pill, the rest dimmed; the ending reads "Upheld or Overturned" and fills green/red when reached.
+- **A real content bug, caught by Henrik: "for van dijk, if decision is overturned, should be penalty and red card
+  right?!"** Workflow v4's rule "overturned → the on-field call stands" only works when the VAR *changed* the call
+  (Maupay). In 4 of 5 incidents the VAR backed the referee, so overturning it landed on the same call: Pickford
+  "overturned" to No penalty, Díaz (the control case) to No goal, Gordon and Milenkovic to Goal. New field
+  `incident.overturnedCall` ("If the fans overturn it"), which the overrule effect writes (falling back to the
+  referee's call). The values were checked against the facts: Pickford → **red card**, not a penalty, since Van Dijk
+  was offside first; Díaz → goal; Gordon and Milenkovic → no goal; Maupay → no penalty. Set on the published
+  incidents by `scripts/set-overturned-calls.ts` (which also corrected Pickford's test-round result), added to the
+  seed, tested, and the Studio redeployed. The vote buttons now say what each choice means (Uphold → No foul,
+  Overturn → Red card), and the verdict names the call that stands.
+- **The booth outran `/live`:** Henrik pressed Start the VAR check and Send to the people within seconds, and
+  `/live`, polling every 8 s behind a 5 s cache, was still on the waiting screen when the vote opened. Now any live
+  run (the VAR room included) polls every 3 s with a 1 s cache, and the kick-off head start is 5 s instead of 3.
