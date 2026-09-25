@@ -14,8 +14,10 @@ type Props = {
   // A live moment (the vote) gets the red tab; the VAR room gets amber.
   live?: boolean
   // The footage, and its shape (16:9 for one screen, wider for the monitor wall).
-  media: React.ReactNode
+  media: React.ReactNode | ((stacked: boolean) => React.ReactNode)
   mediaRatio: number
+  // The media's stacked shape, if it has one (the monitor wall): FitBox picks the better fit.
+  mediaStackedRatio?: number
   // The last step of the strip under the panel: the button, or the vote.
   // A question over the action, only where the action alone doesn't explain itself (the vote).
   actionLabel?: string
@@ -25,7 +27,7 @@ type Props = {
 // The frame every step on /live shares (design.md). L1: the incident under review on the left rail (scorebug, title,
 // situation) beside the footage (above it on phones). L2: one lower-third under it. Then the strip that tells the
 // decision left to right: what the referee said, what the VAR says, and the fans' part (L3).
-export function MatchScene({incident, barLeft, barRight, live = false, media, mediaRatio, actionLabel, action}: Props) {
+export function MatchScene({incident, barLeft, barRight, live = false, media, mediaRatio, mediaStackedRatio, actionLabel, action}: Props) {
   const {homeTeam: home, awayTeam: away} = incident.match
   // The panel has auto height and the strip under it takes the rest of the screen (Henrik). The footage's height
   // limit is the whole frame minus the strip's own content, measured here, so it never outgrows the screen.
@@ -63,7 +65,7 @@ export function MatchScene({incident, barLeft, barRight, live = false, media, me
             </div>
           </div>
         </div>
-        <FitBox ratio={mediaRatio} align="end" valign="start" maxHeight={room} className="p-2 lg:flex-1 lg:py-5 lg:pl-0 lg:pr-5">
+        <FitBox ratio={mediaRatio} align="end" valign="start" maxHeight={room} stackedRatio={mediaStackedRatio} className="p-2 lg:flex-1 lg:py-5 lg:pl-0 lg:pr-5">
           {media}
         </FitBox>
       </section>

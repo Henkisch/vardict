@@ -1,5 +1,5 @@
 import {MatchScene} from '@/components/MatchScene'
-import {MonitorWall, WALL_RATIO} from '@/components/MonitorWall'
+import {MonitorWall, WALL_RATIO, WALL_RATIO_STACKED} from '@/components/MonitorWall'
 import {formatClock, type IncidentCard} from '@/lib/queries'
 
 type Props = {
@@ -30,8 +30,9 @@ export function VarRoomScene({incident, start}: Props) {
           The real check took <span className="tabular font-semibold text-chalk">{formatClock(incident.realDelaySeconds)}</span>
         </p>
       }
-      media={<MonitorWall incident={incident} />}
+      media={(stacked) => <MonitorWall incident={incident} stacked={stacked} />}
       mediaRatio={WALL_RATIO}
+      mediaStackedRatio={WALL_RATIO_STACKED}
       action={start}
     />
   )

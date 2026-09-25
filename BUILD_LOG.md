@@ -544,3 +544,7 @@ cached (`x-vercel-cache: HIT`) after the next deploy.
   rest of the screen with its content centred. Because nothing stretches the panel any more, the footage's height
   limit is measured from the whole frame minus the strip's content (`MatchScene`, `FitBox maxHeight`). Henrik:
   "there we have it!"
+- **Monitor wall picks its shape:** Henrik wanted the main monitor on its own row for longer. Instead of a fixed
+  breakpoint, `FitBox` compares both shapes in the space it has (side by side: main at 3/4 of the wall, stacked:
+  main at full width over three) and picks whichever gives the main monitor more width. It measured stacked on a
+  1377×868 window. The Monitors aren't re-mounted when the shape changes (same children, new grid classes).
