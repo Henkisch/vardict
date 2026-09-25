@@ -614,3 +614,10 @@ cached (`x-vercel-cache: HIT`) after the next deploy.
   `/live`, polling every 8 s behind a 5 s cache, was still on the waiting screen when the vote opened. Now any live
   run (the VAR room included) polls every 3 s with a 1 s cache, and the kick-off head start is 5 s instead of 3.
 - **Waiting screen flashed between the VAR room and the vote:** on Send to the people the run leaves the VAR room a moment before its round exists, and `/live` fell back to "waiting". Now any live run with no vote or verdict on screen keeps the VAR room up.
+- **Vote feedback (Henrik: "we need to add some affordance and feedback like, we've got your vote, and something is
+  happening"):** a vote turns the two buttons into a receipt: a check mark, "Vote counted: Overturn → Red card", and
+  a line with a spinner saying what happens now ("The rest of the crowd is voting…", then "Counting the votes…").
+  The receipt stays through the count, and phones get a short buzz.
+- **"Red card doesn't stand, it's the new decision":** the verdict copy now tells the two apart: "The referee's call
+  stands: No penalty" when overturning restores the referee's call, and "New decision: Red card" when it doesn't.
+  The path strip's explanation had the same mistake.

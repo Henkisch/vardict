@@ -248,3 +248,16 @@ body {
     opacity: 0.75;
   }
 }
+
+/* The vote receipt lands: rare (once per round per person), so a small scale-in. */
+@media (prefers-reduced-motion: no-preference) {
+  .receipt-in {
+    animation: receipt-in 360ms var(--ease-out-expo) both;
+  }
+}
+@keyframes receipt-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}

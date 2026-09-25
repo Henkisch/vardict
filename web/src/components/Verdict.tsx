@@ -31,7 +31,10 @@ function copyFor(ref: LiveReferendum, phase: Phase): Copy {
     return {headline: `Upheld${how}`, tone: 'text-uphold', next: 'The fans confirmed the VAR. The call stands.'}
   }
   // The fans' call is final (workflow v4): the overturned call stands (incident.overturnedCall).
-  return {headline: `Overturned${how}`, tone: 'text-overturn', next: `The fans overruled the VAR. ${overturnedTo} stands.`}
+  return {headline: `Overturned${how}`, tone: 'text-overturn', next:
+      ref.incident.overturnedCall === ref.incident.originalCall
+        ? `The fans overruled the VAR. The referee's call stands: ${overturnedTo}.`
+        : `The fans overruled the VAR. New decision: ${overturnedTo}.`}
 }
 
 export function Verdict({round: ref, phase, action}: {round: LiveReferendum; phase: Phase; action: React.ReactNode}) {

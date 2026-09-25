@@ -15,7 +15,7 @@ const EXPLAIN: Record<Stage, string> = {
   extraTime: `Too close to call: ${WINDOW_SECONDS.extraTime} more seconds, same thresholds.`,
   shootout: `Still too close: sudden death. One ${WINDOW_SECONDS.shootout}-second vote decides it.`,
   upheld: 'The people confirmed the call. It stands.',
-  overturned: 'The fans overruled the VAR. The on-field call stands.',
+  overturned: 'The fans overruled the VAR, and their call is final.',
 }
 
 // Plain words only (Henrik, as in the VAR Room booth): the stage names stay in code.

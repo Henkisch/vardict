@@ -264,24 +264,22 @@ export default function LivePage() {
                 <div className="jumbotron rounded-lg p-2">
                   <Bars uphold={ref.uphold} overturn={ref.overturn} size="small" />
                 </div>
-                {voting ? (
-                  <VoteButtons
-                    key={ref._id}
-                    referendumId={ref._id}
-                    size="panel"
-                    outcomes={{
-                      uphold: CALL_LABELS[incident.varRecommendation] ?? incident.varRecommendation,
-                      overturn: CALL_LABELS[incident.overturnedCall] ?? incident.overturnedCall,
-                    }}
-                    onVoted={() => {
-                      refresh()
-                      setTimeout(refresh, 2000)
-                      setTimeout(refresh, 4000)
-                    }}
-                  />
-                ) : (
-                  <p className="font-display text-3xl font-bold uppercase text-var">Counting…</p>
-                )}
+                <VoteButtons
+                  key={ref._id}
+                  referendumId={ref._id}
+                  size="panel"
+                  outcomes={{
+                    uphold: CALL_LABELS[incident.varRecommendation] ?? incident.varRecommendation,
+                    overturn: CALL_LABELS[incident.overturnedCall] ?? incident.overturnedCall,
+                  }}
+                  onVoted={() => {
+                    refresh()
+                    setTimeout(refresh, 2000)
+                    setTimeout(refresh, 4000)
+                  }}
+                  closed={counting}
+                  weight={HUMAN_VOTE_WEIGHT}
+                />
                 <p className="text-xs text-muted">
                   Over 55% keeps it · under 45% overturns · in between: {ref.round === 'regular' ? 'extra time' : 'a sudden-death penalty'}.
                   Your vote counts ×{HUMAN_VOTE_WEIGHT} against {ref.bots} simulated fans.
