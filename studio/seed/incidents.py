@@ -98,7 +98,7 @@ INCIDENTS = [
     dict(key='pickford', title='Pickford on Van Dijk: offside only', slug='pickford-van-dijk-everton-liverpool-2020', minute=6,
          incidentType='redCard', lawsInvolved=laws(11, 12), originalCall='noPenalty', varRecommendation='noFoul', overturnedCall='redCard',
          recommendationFavours='home', realDelaySeconds=60,  # estimate: routine offside check, no official figure
-         situation="Everton 0–0 Liverpool, 6'. Pickford wipes out Van Dijk. VAR: offside, no foul, no card.",
+         situation="Everton 0–1 Liverpool, 6'. Pickford wipes out Van Dijk. VAR: offside, no foul, no card.",
          outcry=dict(level=5,
                      summary="Van Dijk's knee was wrecked and he missed most of the season, yet Pickford got no card and no retrospective ban because VAR only checked the offside. Liverpool demanded an explanation, and the referee later conceded Pickford should have been sent off.",
                      sources=['https://www.nbcsports.com/soccer/news/pickford-van-dijk-var-pgmol-statement',

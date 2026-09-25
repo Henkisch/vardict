@@ -27,7 +27,7 @@ real Sanity project and the public site — don't run them without the operator'
 | 013 | VAR Room in the Dashboard + operator controls | P2 | S–M | 005, 009 | DONE (session 5: rebuilt as Stockley Park; Full wipe instead of new season; deployed to the Dashboard, app o52zsk96ekrcjpml3l5s09vx) |
 | 014 | Link previews show the democracy clock (OG) | P3 | S–M | 010 | TODO |
 | 015 | Spike: declare the `finalCall` guard | P3 | S | 002 | TODO |
-| 016 | Session 5 audit: fixes in priority order (P1-P4) | P1 | M | — | TODO (awaiting Henrik's go) |
+| 016 | Session 5 audit: fixes in priority order (P1-P4) | P1 | M | — | IN PROGRESS (P1 done: code 1-8 + content 9-10; #11 full wipe before judging; P2-P4 open) |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (one-line reason) | REJECTED (one-line rationale)
 

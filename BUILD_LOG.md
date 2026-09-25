@@ -638,3 +638,4 @@ cached (`x-vercel-cache: HIT`) after the next deploy.
   the request fails; the booth holds its button ("Opening the vote…") in the gap after Send; and every press names
   its step, so a "send" with nothing live answers `nothingToSend` instead of starting a run straight into a vote
   (tested).
+- **Plan 016, P1 content (9-10):** Pickford's situation now reads 0–1 (Mané scored on 3'), and three pundit lines no longer state old rules (×8, not twenty bots; about a minute per decision; overturned isn't always the on-field call). Published data patched with `scripts/fix-content-016.ts`, seed files updated to match.

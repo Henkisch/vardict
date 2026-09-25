@@ -7,7 +7,7 @@
 {"_id": "pundit-07", "_type": "punditLine", "trigger": "voting", "pundit": "gaffer", "text": "The away end has clearly not seen the replay. Or the match."}
 {"_id": "pundit-08", "_type": "punditLine", "trigger": "voting", "pundit": "stats", "text": "The pundit bloc hasn't voted yet. They never commit early. Neither do I."}
 {"_id": "pundit-09", "_type": "punditLine", "trigger": "voting", "pundit": "oldPro", "text": "That chaos voter again. Every ground has one. Usually in the car park."}
-{"_id": "pundit-10", "_type": "punditLine", "trigger": "voting", "pundit": "stats", "text": "One human vote is worth twenty bots. I've been saying that for years."}
+{"_id": "pundit-10", "_type": "punditLine", "trigger": "voting", "pundit": "stats", "text": "One human vote is worth eight bots. I've been saying that for years."}
 {"_id": "pundit-11", "_type": "punditLine", "trigger": "tooClose", "pundit": "gaffer", "text": "Too close to call. Just like my last three contract talks."}
 {"_id": "pundit-12", "_type": "punditLine", "trigger": "tooClose", "pundit": "oldPro", "text": "Extra time for a decision. Brilliant. The pies will be cold."}
 {"_id": "pundit-13", "_type": "punditLine", "trigger": "tooClose", "pundit": "stats", "text": "Forty-nine versus fifty-one. Statistically, a coin. Emotionally, a war."}
@@ -16,11 +16,11 @@
 {"_id": "pundit-16", "_type": "punditLine", "trigger": "penaltySaved", "pundit": "stats", "text": "Saved! The people guessed right. Or guessed. Hard to tell."}
 {"_id": "pundit-17", "_type": "punditLine", "trigger": "penaltySaved", "pundit": "oldPro", "text": "The people keep it out! Nobody's been this happy about a vote since Eurovision."}
 {"_id": "pundit-18", "_type": "punditLine", "trigger": "upheld", "pundit": "gaffer", "text": "Upheld. The VAR was right all along. Nobody will ever admit it."}
-{"_id": "pundit-19", "_type": "punditLine", "trigger": "upheld", "pundit": "stats", "text": "Confirmed by the people. Adds roughly four minutes per decision. Worth it."}
+{"_id": "pundit-19", "_type": "punditLine", "trigger": "upheld", "pundit": "stats", "text": "Confirmed by the people. Adds about a minute per decision. Worth it."}
 {"_id": "pundit-20", "_type": "punditLine", "trigger": "upheld", "pundit": "oldPro", "text": "The call stands. Took twice as long. Felt twice as fair. Wasn't."}
 {"_id": "pundit-21", "_type": "punditLine", "trigger": "overturned", "pundit": "gaffer", "text": "Overturned! The fans have overruled the experts. Somewhere a VAR official is updating his CV."}
 {"_id": "pundit-22", "_type": "punditLine", "trigger": "overturned", "pundit": "stats", "text": "The people have overruled the experts. A first for this country, surely."}
-{"_id": "pundit-23", "_type": "punditLine", "trigger": "overturned", "pundit": "oldPro", "text": "The on-field call stands. The referee was right all along. Nobody tell him."}
+{"_id": "pundit-23", "_type": "punditLine", "trigger": "overturned", "pundit": "oldPro", "text": "The crowd has overruled the officials. Nobody tell the referee."}
 {"_id": "pundit-24", "_type": "punditLine", "trigger": "noVotes", "pundit": "gaffer", "text": "Nobody voted. Democracy's biggest problem, in one empty stand."}
 {"_id": "pundit-25", "_type": "punditLine", "trigger": "noVotes", "pundit": "oldPro", "text": "Not a single fan voted. Back to the VAR room, and back to the pies."}
 {"_id": "pundit-26", "_type": "punditLine", "trigger": "noVotes", "pundit": "stats", "text": "Turnout: zero. Even the bots look embarrassed."}
