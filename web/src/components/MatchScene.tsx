@@ -13,7 +13,8 @@ type Props = {
   media: React.ReactNode
   mediaRatio: number
   // The last step of the strip under the panel: the button, or the vote.
-  actionLabel: string
+  // A question over the action, only where the action alone doesn't explain itself (the vote).
+  actionLabel?: string
   action: React.ReactNode
 }
 
@@ -47,12 +48,16 @@ export function MatchScene({incident, barLeft, barRight, live = false, media, me
         </FitBox>
       </section>
 
-      <section className="grid shrink-0 items-center gap-x-6 gap-y-4 px-1 sm:grid-cols-[auto_auto_auto_minmax(0,1fr)]">
-        <Call label="Referee" value={CALL_LABELS[incident.originalCall] ?? incident.originalCall} />
-        <span className="hidden self-end font-display text-3xl leading-none text-line sm:block" aria-hidden>→</span>
-        <Call label="VAR" value={CALL_LABELS[incident.varRecommendation] ?? incident.varRecommendation} highlight />
-        <div className="flex min-w-0 flex-col gap-2 sm:pl-4">
-          <p className="text-sm text-muted">{actionLabel}</p>
+      <section className="flex shrink-0 flex-col gap-4 px-1 sm:flex-row sm:items-end sm:justify-between sm:gap-8">
+        <div className="flex items-end gap-5">
+          <Call label="Referee" value={CALL_LABELS[incident.originalCall] ?? incident.originalCall} />
+          <span className="pb-1 font-display text-3xl leading-none text-muted" aria-hidden>
+            →
+          </span>
+          <Call label="VAR" value={CALL_LABELS[incident.varRecommendation] ?? incident.varRecommendation} highlight />
+        </div>
+        <div className="flex min-w-0 flex-col gap-2 sm:items-end">
+          {actionLabel && <p className="text-sm text-muted">{actionLabel}</p>}
           {action}
         </div>
       </section>

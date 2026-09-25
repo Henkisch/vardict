@@ -33,7 +33,6 @@ export function VarRoomScene({incident, start}: Props) {
       }
       media={<MonitorWall incident={incident} />}
       mediaRatio={WALL_RATIO}
-      actionLabel="Does the VAR get it right? Let the stadium decide."
       action={start}
     />
   )

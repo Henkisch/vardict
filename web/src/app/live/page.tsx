@@ -226,7 +226,7 @@ export default function LivePage() {
           mediaRatio={16 / 9}
           actionLabel={voting ? 'Keep the VAR\'s call, or overturn it?' : 'The fans have voted'}
           action={
-            <div className="flex flex-col gap-2">
+            <div className="flex w-full flex-col gap-2 sm:w-[40rem]">
               <div className="jumbotron rounded-lg p-2">
                 <Bars uphold={ref.uphold} overturn={ref.overturn} size="small" />
               </div>
@@ -280,12 +280,12 @@ function StartButton({
   label?: string
 }) {
   return (
-    <div className="flex flex-col items-center gap-2">
+    <div className="flex flex-col items-center gap-2 sm:items-end">
       <button
         type="button"
         onClick={onClick}
         disabled={busy}
-        className="w-full rounded-lg bg-var px-8 py-4 font-display text-3xl font-extrabold uppercase text-ink hover:brightness-110 focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-chalk disabled:opacity-60"
+        className="w-full whitespace-nowrap rounded-lg bg-var px-10 py-3 font-display text-2xl font-extrabold uppercase text-ink sm:w-auto sm:min-w-80 hover:brightness-110 focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-chalk disabled:opacity-60"
       >
         {busy ? 'Opening the vote…' : label}
       </button>
