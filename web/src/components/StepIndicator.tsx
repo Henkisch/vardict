@@ -7,7 +7,7 @@ export type Step = 'var-room' | 'vote' | 'verdict'
 const STEPS: {id: Step; label: string}[] = [
   {id: 'var-room', label: 'VAR room'},
   {id: 'vote', label: 'Fans vote'},
-  {id: 'verdict', label: 'Verdict'},
+  {id: 'verdict', label: 'VARdict'},
 ]
 
 // Where the run is, as three steps, with the workflow stage it maps to. Also mirrored into the address bar
