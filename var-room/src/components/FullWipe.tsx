@@ -4,6 +4,8 @@ import {HAS_OPERATOR_KEY, wipeRunData} from '../api'
 
 // A clean slate before recording or judging. Deletes only run data (votes, rounds) and clears final calls;
 // incidents and every other piece of content stay. Inline confirm: the Dashboard iframe may block confirm().
+const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`
+
 export function FullWipe() {
   const [open, setOpen] = useState(false)
   const [typed, setTyped] = useState('')
@@ -17,7 +19,7 @@ export function FullWipe() {
     setTyped('')
     setMessage(
       result.status === 'wiped' && 'deleted' in result
-        ? `Wiped: ${result.deleted} votes and rounds deleted, ${result.cleared} final calls cleared, ${result.aborted} live runs aborted.`
+        ? `Wiped. ${plural(result.deleted ?? 0, 'vote or round', 'votes and rounds')} deleted, ${plural(result.cleared ?? 0, 'final call', 'final calls')} cleared${result.aborted ? `, ${plural(result.aborted, 'live run', 'live runs')} aborted` : ''}.`
         : `Refused: ${result.status}`,
     )
     if (result.status === 'wiped') setOpen(false)
@@ -26,14 +28,13 @@ export function FullWipe() {
   return (
     <section className="wipe">
       {!open ? (
-        <div className="row">
+        <div className="wipe-row">
+          <p className="small muted" aria-live="polite">
+            {message ?? (HAS_OPERATOR_KEY ? 'Clean slate before a recording or judging.' : 'Needs SANITY_APP_OPERATOR_KEY.')}
+          </p>
           <button type="button" className="ghost" onClick={() => setOpen(true)} disabled={!HAS_OPERATOR_KEY}>
             Full wipe…
           </button>
-          <span className="small muted">
-            {HAS_OPERATOR_KEY ? 'Clean slate before a recording or judging.' : 'Needs SANITY_APP_OPERATOR_KEY.'}
-          </span>
-          {message && <span className="small">{message}</span>}
         </div>
       ) : (
         <div className="wipe-confirm">

@@ -5,7 +5,9 @@
   --color-paper: oklch(15% 0.012 155);
   --color-paper-2: oklch(20% 0.03 158);
   --color-paper-3: oklch(25% 0.032 158);
+  --color-surface: oklch(17% 0.02 157);
   --color-rule: oklch(33% 0.035 160);
+  --color-rule-soft: oklch(22% 0.025 158);
   --color-ink: oklch(95% 0.01 140);
   --color-ink-2: oklch(76% 0.03 155);
   --color-accent: oklch(81% 0.165 80);
@@ -563,4 +565,103 @@ input {
   .rec::before {
     animation: none;
   }
+}
+
+/* Bottom region, round 2 (Henrik: "feels messy"): equal columns that share a floor, a footer row for the wipe. */
+.booth-grid {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: stretch;
+}
+.feed,
+.board {
+  padding: var(--space-4) var(--space-6) var(--space-6);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  min-height: 18rem;
+}
+.feed-head {
+  padding-bottom: var(--space-3);
+}
+.feed-empty {
+  max-width: 28rem;
+  margin-top: var(--space-4);
+  color: var(--color-ink-2);
+}
+.fixtures {
+  gap: 0;
+}
+.fixture {
+  display: grid;
+  grid-template-columns: 6.5rem minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  border-top: 1px solid var(--color-rule-soft);
+}
+.fixture:first-child {
+  border-top: 0;
+}
+.fixture-teams {
+  font: 700 var(--text-base) / 1 var(--font-display);
+  text-transform: uppercase;
+  color: var(--color-ink-2);
+}
+.fixture.next .fixture-name,
+.fixture.next .fixture-teams {
+  color: var(--color-ink);
+  font-weight: 600;
+}
+.fixture.next .fixture-status {
+  color: var(--color-accent);
+  font-weight: 600;
+}
+.wipe {
+  padding: var(--space-4) var(--space-2) 0;
+  border-top: 1px solid var(--color-rule-soft);
+}
+.wipe-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-4);
+}
+@media (max-width: 900px) {
+  .booth-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .feed,
+  .board {
+    min-height: 0;
+  }
+  .fixture {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .fixture-teams {
+    grid-column: 1 / -1;
+  }
+}
+.lower {
+  text-transform: none;
+  font-weight: 500;
+}
+
+/* Calls stacked: label over value (Henrik). */
+.calls {
+  align-items: flex-end;
+  gap: var(--space-6);
+}
+.call {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
+}
+.calls .call strong {
+  margin-left: 0;
+  line-height: 1;
+}
+.call-arrow {
+  color: var(--color-rule);
+  font-size: var(--text-xl);
+  line-height: 1;
 }

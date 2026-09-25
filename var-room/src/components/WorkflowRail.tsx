@@ -23,9 +23,11 @@ export function WorkflowRail() {
     }`,
   })
   const live = Boolean(data && !data.completedAt)
-  const visits = (name: string) => data?.stages.filter((s) => s.name === name).length ?? 0
+  // An aborted run (a wipe, or an operator pick) has nothing to show: the rail goes back to idle.
+  const shown = data && !data.abortedAt ? data : undefined
+  const visits = (name: string) => shown?.stages.filter((s) => s.name === name).length ?? 0
   const stage = (name: string) => {
-    const current = data?.currentStage === name
+    const current = shown?.currentStage === name
     const state = current ? (live ? 'current' : `ended ${name}`) : visits(name) ? 'visited' : ''
     return (
       <li key={name} className={`rail-stage ${state}`} aria-current={current && live ? 'step' : undefined}>
@@ -46,7 +48,7 @@ export function WorkflowRail() {
         {ENDS.map(stage)}
       </ol>
       <p className="rail-meta mono">
-        {data ? `${data._id.replace('dev.wf-instance.', '#')} · ${live ? 'live' : data.abortedAt ? 'aborted' : 'done'}` : 'no runs yet'}
+        {shown ? `${shown._id.replace('dev.wf-instance.', '#')} · ${live ? 'live' : 'done'}` : 'waiting for a run'}
       </p>
     </section>
   )

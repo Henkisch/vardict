@@ -564,8 +564,9 @@ async function startNextLocked(runtime: Runtime, pick?: string): Promise<StartRe
   const nextInLine = () =>
     content.fetch<string | null>(
       `*[_type == "incident" && !defined(finalCall) && !(_id in path("drafts.**"))]{
-        _id, "last": *[_type == "referendum" && references(^._id)] | order(windowOpensAt desc)[0].windowOpensAt
-      } | order(coalesce(last, "0") asc)[0]._id`,
+        _id, "last": *[_type == "referendum" && references(^._id)] | order(windowOpensAt desc)[0].windowOpensAt,
+        "date": match->date
+      } | order(coalesce(last, "0") asc, date asc)[0]._id`,
     )
 
   let incidentId = pick ?? (await nextInLine())

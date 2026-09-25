@@ -517,3 +517,10 @@ cached (`x-vercel-cache: HIT`) after the next deploy.
   One stumble: `pnpm deploy` is pnpm's own workspace command, so the flags were rejected; `pnpm run deploy` works.
   The auto-mode permission check blocked my curl check of `/api/reset` without a key (it points at the live wipe
   endpoint). Fair; the real check is Henrik pressing Full wipe in the booth.
+- **Round two on the booth:** Henrik: top "great", bottom "feels messy". The feed and match day are now two equal
+  panels that end at the same line, match day shows the teams and marks what's "Next up", the wipe is a footer row
+  with a grammatical result line, and the rail goes idle after an aborted run. The screenshot also caught a real
+  bug: after a wipe every incident ties at "never played", and next-in-line had no tie-breaker, so the booth's top
+  said Pickford while its list said Brighton. Both screens and `/api/start` now break ties by match date.
+- Henrik's two quick calls: stack the calls (label over value), and turn the pundit line into a full-width
+  bottom crawl, "Studio" tab plus a seamless CSS marquee (still under reduced motion).

@@ -29,8 +29,9 @@ export function UnderReview() {
       },
       "next": *[_type == "incident" && !defined(finalCall) && !(_id in path("drafts.**"))]{
         ${INCIDENT_FIELDS},
-        "last": *[_type == "referendum" && references(^._id)] | order(windowOpensAt desc)[0].windowOpensAt
-      } | order(coalesce(last, "0") asc)[0]
+        "last": *[_type == "referendum" && references(^._id)] | order(windowOpensAt desc)[0].windowOpensAt,
+        "date": match->date
+      } | order(coalesce(last, "0") asc, date asc)[0]
     }`,
   })
   const now = useNow(250)
@@ -121,15 +122,19 @@ export function UnderReview() {
         </p>
         <Scorebug home={incident.home} away={incident.away} minute={incident.minute} />
         <h2 className="review-title">{incident.title}</h2>
-        <p className="calls">
-          <span>
-            Referee <strong>{CALL_LABELS[incident.originalCall]}</strong>
+        <div className="calls">
+          <p className="call">
+            <span>Referee</span>
+            <strong>{CALL_LABELS[incident.originalCall]}</strong>
+          </p>
+          <span className="call-arrow" aria-hidden>
+            →
           </span>
-          <span aria-hidden>→</span>
-          <span>
-            VAR <strong className="accent">{CALL_LABELS[incident.varRecommendation]}</strong>
-          </span>
-        </p>
+          <p className="call">
+            <span>VAR</span>
+            <strong className="accent">{CALL_LABELS[incident.varRecommendation]}</strong>
+          </p>
+        </div>
       </div>
       <div className="review-action">
         <p className={`lower-third ${now_.live ? 'live' : ''}`}>

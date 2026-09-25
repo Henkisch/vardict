@@ -106,7 +106,7 @@ export function VoteFeed() {
     return (
       <section className="feed">
         <p className="feed-head">Live from the Content Lake</p>
-        <p className="muted">No round yet.</p>
+        <p className="feed-empty">Waiting for the first whistle. Every bot wave and every fan's vote lands here as it happens.</p>
       </section>
     )
   }

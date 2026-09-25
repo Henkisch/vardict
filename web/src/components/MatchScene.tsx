@@ -49,7 +49,7 @@ export function MatchScene({incident, barLeft, barRight, live = false, media, me
 
       <section className="grid shrink-0 items-center gap-x-6 gap-y-4 px-1 sm:grid-cols-[auto_auto_auto_minmax(0,1fr)]">
         <Call label="Referee" value={CALL_LABELS[incident.originalCall] ?? incident.originalCall} />
-        <span className="hidden font-display text-3xl text-line sm:block" aria-hidden>→</span>
+        <span className="hidden self-end font-display text-3xl leading-none text-line sm:block" aria-hidden>→</span>
         <Call label="VAR" value={CALL_LABELS[incident.varRecommendation] ?? incident.varRecommendation} highlight />
         <div className="flex min-w-0 flex-col gap-2 sm:pl-4">
           <p className="text-sm text-muted">{actionLabel}</p>
@@ -62,8 +62,8 @@ export function MatchScene({incident, barLeft, barRight, live = false, media, me
 
 function Call({label, value, highlight = false}: {label: string; value: string; highlight?: boolean}) {
   return (
-    <p className="flex items-baseline gap-2 whitespace-nowrap">
-      <span className="text-lg text-muted">{label}</span>
+    <p className="flex flex-col gap-1 whitespace-nowrap">
+      <span className="text-sm text-muted">{label}</span>
       <span className={`font-display text-4xl font-extrabold uppercase leading-none ${highlight ? 'text-var' : ''}`}>{value}</span>
     </p>
   )

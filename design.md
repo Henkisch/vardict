@@ -42,8 +42,10 @@ Floodlit night. Anchor hue 155 (pitch green). Values mirror the original hex pal
 
 - `--color-paper`    oklch(15% 0.012 155): the night
 - `--color-paper-2`  oklch(20% 0.030 158): the pitch (stage surfaces)
+- `--color-surface`  oklch(17% 0.020 157): quiet panels below the stage (booth feed, match day)
 - `--color-paper-3`  oklch(25% 0.032 158): raised (a hovered row, the current stage)
 - `--color-rule`     oklch(33% 0.035 160): dividers, only where a list needs one
+- `--color-rule-soft` oklch(22% 0.025 158): row separators inside a surface
 - `--color-ink`      oklch(95% 0.010 140): chalk
 - `--color-ink-2`    oklch(76% 0.030 155): secondary text
 - `--color-accent`   oklch(81% 0.165 80): VAR amber. L3 fill, the current stage, the VAR's call. ≤ 3% of a view

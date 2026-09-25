@@ -171,8 +171,8 @@ export default function LivePage() {
   const incident = ref?.incident
 
   return (
-    <div className="stadium flex min-h-dvh flex-col">
-    <main className="mx-auto flex w-full max-w-[1920px] flex-1 flex-col gap-3 px-4 py-3 sm:px-6 lg:h-dvh lg:overflow-hidden">
+    <div className="stadium flex min-h-dvh flex-col lg:h-dvh lg:overflow-hidden">
+    <main className="mx-auto flex w-full max-w-[1920px] flex-1 flex-col gap-3 px-4 py-3 sm:px-6 lg:min-h-0 lg:overflow-hidden">
       <header className="grid shrink-0 grid-cols-[auto_1fr] items-center gap-x-6 gap-y-2 md:grid-cols-[auto_1fr_auto]">
         <p className="font-display text-2xl font-extrabold uppercase leading-none">
           VAR<span className="text-var">dict</span>
@@ -252,8 +252,8 @@ export default function LivePage() {
           }
         />
       ) : null}
-      {state && <PunditTicker lines={state.pundits} trigger={trigger} incidentId={tickerIncident} />}
     </main>
+    {state && <PunditTicker lines={state.pundits} trigger={trigger} incidentId={tickerIncident} />}
     </div>
   )
 }

@@ -93,6 +93,23 @@ body {
   background-size: 4px 4px;
 }
 
+/* The studio crawl: two copies side by side, moved by half their width, so the loop has no seam. */
+@media (prefers-reduced-motion: no-preference) {
+  .ticker-crawl {
+    animation: ticker-crawl linear infinite;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ticker-copy {
+    display: none;
+  }
+}
+@keyframes ticker-crawl {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .ticker-in {
     animation: ticker-in 500ms cubic-bezier(0.2, 0.8, 0.2, 1);

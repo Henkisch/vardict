@@ -10,7 +10,9 @@ type Row = {
   controlCase?: boolean
   finalCall?: string
   rounds: number
-  last?: {result?: string}
+  last?: {result?: string; windowOpensAt: string}
+  home: {shortName: string}
+  away: {shortName: string}
 }
 
 // The match-day list: which incidents are decided, which is live, which are still to play. Read only; the
@@ -20,18 +22,38 @@ export function IncidentBoard() {
     query: `*[_type == "incident" && !(_id in path("drafts.**"))] | order(match->date asc){
       ${INCIDENT_FIELDS}, finalCall,
       "rounds": count(*[_type == "referendum" && references(^._id)]),
-      "last": *[_type == "referendum" && references(^._id)] | order(windowOpensAt desc)[0]{result}
+      "last": *[_type == "referendum" && references(^._id)] | order(windowOpensAt desc)[0]{result, windowOpensAt}
     }`,
   })
+  const liveId = data.find((row) => row.last && !row.last.result)?._id
+  // Next in line, the same rule as /api/start (ties go to the earliest match; `data` is already in match order): undecided, longest since its last round (never played first).
+  const nextId = liveId
+    ? undefined
+    : data
+        .filter((row) => !row.finalCall)
+        .sort((a, b) => (a.last?.windowOpensAt ?? '0').localeCompare(b.last?.windowOpensAt ?? '0'))[0]?._id // stable: ties keep match-date order
+
   return (
     <section className="board" aria-label="Match day">
       <p className="feed-head">Match day</p>
       <ol className="fixtures">
         {data.map((row) => {
-          const live = Boolean(row.last && !row.last.result)
-          const status = live ? 'Live' : row.finalCall ? CALL_LABELS[row.finalCall] : row.rounds ? `${row.rounds} rounds` : 'To play'
+          const live = row._id === liveId
+          const next = row._id === nextId
+          const status = live
+            ? 'Live'
+            : row.finalCall
+              ? CALL_LABELS[row.finalCall]
+              : next
+                ? 'Next up'
+                : row.rounds
+                  ? `${row.rounds} ${row.rounds === 1 ? 'round' : 'rounds'}`
+                  : 'To play'
           return (
-            <li key={row._id} className={`fixture ${live ? 'live' : row.finalCall ? 'done' : ''}`}>
+            <li key={row._id} className={`fixture ${live ? 'live' : next ? 'next' : row.finalCall ? 'done' : ''}`}>
+              <span className="fixture-teams">
+                {row.home.shortName} <span className="lower">v</span> {row.away.shortName}
+              </span>
               <span className="fixture-name">{row.title}</span>
               <span className="fixture-status">{status}</span>
             </li>
