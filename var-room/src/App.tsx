@@ -4,9 +4,9 @@ import {Suspense, type ReactNode} from 'react'
 
 import {FullWipe} from './components/FullWipe'
 import {IncidentBoard} from './components/IncidentBoard'
-import {TheCall} from './components/TheCall'
+import {UnderReview} from './components/UnderReview'
 import {VoteFeed} from './components/VoteFeed'
-import {WorkflowGraph} from './components/WorkflowGraph'
+import {WorkflowRail} from './components/WorkflowRail'
 import {useNow} from './useNow'
 import './App.css'
 
@@ -19,7 +19,7 @@ const config: SanityConfig[] = [
 ]
 
 const Loading = ({children}: {children: ReactNode}) => (
-  <Suspense fallback={<section className="panel muted">Patching in…</section>}>{children}</Suspense>
+  <Suspense fallback={<section className="muted">Patching in…</section>}>{children}</Suspense>
 )
 
 function WallClock() {
@@ -31,31 +31,27 @@ export default function App() {
   return (
     <SanityApp config={config} fallback={<p className="muted pad">Opening Stockley Park…</p>}>
       <main className="booth">
-        <header className="booth-head">
-          <div>
-            <h1>
-              Stockley <span className="accent">Park</span>
-            </h1>
-            <p className="small muted">VAR hub · officials only · the stadium is on /live</p>
-          </div>
-          <p className="booth-status small">
-            <span className="rec">● REC</span> <WallClock />
+        <header className="chrome">
+          <p className="wordmark">
+            Stockley <span className="accent">Park</span>
+            <span className="chrome-note">The VAR hub. The stadium is on /live</span>
+          </p>
+          <p className="chrome-status">
+            <span className="rec">REC</span> <WallClock />
           </p>
         </header>
         <Loading>
-          <WorkflowGraph />
+          <UnderReview />
+        </Loading>
+        <Loading>
+          <WorkflowRail />
         </Loading>
         <div className="booth-grid">
-          <div className="booth-col">
-            <Loading>
-              <TheCall />
-            </Loading>
-            <Loading>
-              <IncidentBoard />
-            </Loading>
-          </div>
           <Loading>
             <VoteFeed />
+          </Loading>
+          <Loading>
+            <IncidentBoard />
           </Loading>
         </div>
         <FullWipe />

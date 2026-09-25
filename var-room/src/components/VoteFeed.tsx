@@ -23,10 +23,10 @@ const PERSONA_COUNTERS = PERSONAS.map(
 ).join(', ')
 
 const RESULTS: Record<string, string> = {
-  upheld: "UPHELD · the VAR's call stands",
-  overturned: 'OVERTURNED · the on-field call stands',
-  tooClose: 'TOO CLOSE · waiting for the next press',
-  noVotes: 'NO FANS VOTED · back to the VAR room',
+  upheld: "Upheld. The VAR's call stands",
+  overturned: 'Overturned. The on-field call stands',
+  tooClose: 'Too close. Waiting for the next press',
+  noVotes: 'No fans voted. Back to the VAR room',
 }
 
 const clock = (at: number) => new Date(at).toLocaleTimeString('en-GB')
@@ -61,7 +61,7 @@ export function VoteFeed() {
     const first = last.id === undefined
     if (data._id !== last.id) {
       // A new round (or the booth just opened): start counting from here, without replaying history as news.
-      if (!first) fresh.push({key: `round-${data._id}`, at: Date.now(), kind: 'round', text: `WHISTLE · ${roundLabel(data.round)} · ${data.title}`})
+      if (!first) fresh.push({key: `round-${data._id}`, at: Date.now(), kind: 'round', text: `Whistle: ${roundLabel(data.round).toLowerCase()} opens`})
       seen.current = {id: data._id, waves: first ? data.bots.waves : 0, bots: first ? data.bots : undefined, votes: new Set(first ? data.votes.map((v) => v._id) : []), result: first ? data.result : undefined}
     }
     const state = seen.current
@@ -79,7 +79,7 @@ export function VoteFeed() {
         key: `wave-${data._id}-${data.bots.waves}`,
         at: Date.now(),
         kind: 'wave',
-        text: `BOT WAVE ${data.bots.waves} · ${up} uphold, ${down} overturn · ${parts.join(', ')}`,
+        text: `Wave ${data.bots.waves}: ${up} uphold, ${down} overturn (${parts.join(', ')})`,
       })
       state.waves = data.bots.waves
       state.bots = data.bots
@@ -92,7 +92,7 @@ export function VoteFeed() {
         at: Date.parse(vote.castAt),
         kind: 'human',
         tone: vote.choice,
-        text: `FAN ON A PHONE · ${vote.choice.toUpperCase()} · counts ×${HUMAN_VOTE_WEIGHT}`,
+        text: `A fan votes ${vote.choice} (counts ×${HUMAN_VOTE_WEIGHT})`,
       })
     }
     if (data.result && data.result !== state.result) {
@@ -104,11 +104,9 @@ export function VoteFeed() {
 
   if (!data) {
     return (
-      <section className="panel feed">
-        <header className="panel-head">
-          <h2>Live feed</h2>
-        </header>
-        <p className="muted">No round yet. Press Send to the people.</p>
+      <section className="feed">
+        <p className="feed-head">Live from the Content Lake</p>
+        <p className="muted">No round yet.</p>
       </section>
     )
   }
@@ -121,28 +119,29 @@ export function VoteFeed() {
   const onAir = !data.result && left > 0
 
   return (
-    <section className="panel feed">
-      <header className="panel-head">
-        <h2>Live feed · Content Lake</h2>
-        <p className={`on-air mono small ${onAir ? 'on' : ''}`}>{onAir ? `● VOTING ${left}s` : data.result ? 'CLOSED' : 'COUNTING'}</p>
-      </header>
-      <p className="mono small muted">
-        {roundLabel(data.round)} · {data.title}
+    <section className="feed" aria-label="Live vote feed">
+      <p className="feed-head">
+        Live from the Content Lake
+        <span className={`feed-state ${onAir ? 'on' : ''}`}>{onAir ? `voting · ${left}` : data.result ? 'closed' : 'counting'}</span>
       </p>
-      <div className="split">
-        <div className="split-uphold" style={{width: `${pct}%`}}>
-          {pct}% UPHOLD
-        </div>
-        <div className="split-overturn">{100 - pct}% OVERTURN</div>
+      <div className="split" role="img" aria-label={`${pct}% uphold, ${100 - pct}% overturn`}>
+        <div className="split-uphold" style={{width: `${pct}%`}} />
+        <span className="split-mark" style={{left: '45%'}} aria-hidden />
+        <span className="split-mark" style={{left: '55%'}} aria-hidden />
       </div>
-      <p className="mono small muted">
-        bots {data.bots.uphold}↑ {data.bots.overturn}↓ in {data.bots.waves} waves · fans {humansUp}↑ {humansDown}↓ ×{HUMAN_VOTE_WEIGHT}
+      <p className="split-words">
+        <span className="uphold">Uphold {pct}%</span>
+        <span className="overturn">{100 - pct}% Overturn</span>
       </p>
-      <ol className="entries mono">
+      <p className="feed-counts">
+        {data.bots.uphold + data.bots.overturn} simulated in {data.bots.waves} waves · {humansUp + humansDown} fans ×{HUMAN_VOTE_WEIGHT}
+      </p>
+      <ol className="entries">
         {entries.length === 0 && <li className="muted">Listening for votes…</li>}
         {entries.map((e) => (
           <li key={e.key} className={`entry ${e.kind} ${e.tone ?? ''}`}>
-            <span className="muted">{clock(e.at)}</span> {e.text}
+            <time className="mono">{clock(e.at)}</time>
+            <span>{e.text}</span>
           </li>
         ))}
       </ol>

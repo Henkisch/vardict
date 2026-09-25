@@ -24,7 +24,7 @@ export function FullWipe() {
   }
 
   return (
-    <section className="panel wipe">
+    <section className="wipe">
       {!open ? (
         <div className="row">
           <button type="button" className="ghost" onClick={() => setOpen(true)} disabled={!HAS_OPERATOR_KEY}>

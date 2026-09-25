@@ -66,5 +66,18 @@ export const ROUND_LABELS: Record<string, string> = {regular: 'Regular time', ex
 export const roundLabel = (round: string) => ROUND_LABELS[round] ?? 'Sudden-death penalty'
 
 // Published incidents only, with the fixture line every panel shows.
-export const INCIDENT_FIELDS = `_id, title, minute, originalCall, varRecommendation, controlCase,
-  "fixture": match->homeTeam->shortName + " v " + match->awayTeam->shortName`
+export const INCIDENT_FIELDS = `_id, title, minute, originalCall, varRecommendation, controlCase, incidentType,
+  "fixture": match->homeTeam->shortName + " v " + match->awayTeam->shortName,
+  "home": match->homeTeam->{shortName, primaryColor}, "away": match->awayTeam->{shortName, primaryColor}`
+
+export type Team = {shortName: string; primaryColor?: string}
+
+// What the VAR is checking, by incidentType (matches /live's VarRoomScene).
+export const CHECK: Record<string, string> = {
+  offside: 'possible offside',
+  handball: 'possible handball',
+  penalty: 'possible penalty',
+  redCard: 'possible red card',
+  mistakenIdentity: 'player identity',
+  goalLine: 'goal-line',
+}

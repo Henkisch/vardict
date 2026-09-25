@@ -24,28 +24,16 @@ export function IncidentBoard() {
     }`,
   })
   return (
-    <section className="panel board">
-      <header className="panel-head">
-        <h2>Match day</h2>
-      </header>
+    <section className="board" aria-label="Match day">
+      <p className="feed-head">Match day</p>
       <ol className="fixtures">
         {data.map((row) => {
-          const live = row.last && !row.last.result
-          const status = live
-            ? 'LIVE'
-            : row.finalCall
-              ? `FT · ${CALL_LABELS[row.finalCall]}`
-              : row.rounds
-                ? `${row.rounds} ROUNDS · open`
-                : 'TO PLAY'
+          const live = Boolean(row.last && !row.last.result)
+          const status = live ? 'Live' : row.finalCall ? CALL_LABELS[row.finalCall] : row.rounds ? `${row.rounds} rounds` : 'To play'
           return (
             <li key={row._id} className={`fixture ${live ? 'live' : row.finalCall ? 'done' : ''}`}>
-              <span className="mono small muted">{row.minute}&apos;</span>
-              <span className="fixture-name">
-                {row.title}
-                <span className="muted small"> · {row.fixture}{row.controlCase ? ' · control case' : ''}</span>
-              </span>
-              <span className="mono small fixture-status">{status}</span>
+              <span className="fixture-name">{row.title}</span>
+              <span className="fixture-status">{status}</span>
             </li>
           )
         })}
