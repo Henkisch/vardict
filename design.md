@@ -1,7 +1,7 @@
 # Design — VARdict
 
-The locked design system for VARdict's two screens: **/live** (the stadium, Next.js in `web/`) and **Stockley Park**
-(the officials' booth, App SDK in `var-room/`). Every redesign reads this first. Extend this file; don't override
+The locked design system for VARdict's two screens: **/live** (the stadium, Next.js in `web/`) and the **VAR Room**
+(the officials' booth at "Stockley Park", App SDK in `var-room/`). Every redesign reads this first. Extend this file; don't override
 it per page. Written with Henrik in session 5 (Hallmark redesign).
 
 **Brief.** Audience: judges watching a screen recording at 1080p, a few seconds per cut. The eye hits the footage

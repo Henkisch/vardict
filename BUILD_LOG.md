@@ -524,3 +524,8 @@ cached (`x-vercel-cache: HIT`) after the next deploy.
   said Pickford while its list said Brighton. Both screens and `/api/start` now break ties by match date.
 - Henrik's two quick calls: stack the calls (label over value), and turn the pundit line into a full-width
   bottom crawl, "Studio" tab plus a seamless CSS marquee (still under reduced motion).
+- **Strip and name:** Henrik flagged a misaligned arrow, a line over the button that only repeated it, and a
+  button "humongously big". The arrow is now inline with the calls, the line is gone (the vote step keeps its
+  question), and the button is sized to its label. Then: "should stockley park be just VAR ROOM??" Yes. Judges get
+  "VAR Room" at once, and it matches `/live` and the `varRoom` stage. "Stockley Park, miles from the stadium" stays
+  as the tagline. `--title` only works for new apps; `app.title` in `sanity.cli.ts` renamed it on redeploy.
