@@ -664,3 +664,4 @@ cached (`x-vercel-cache: HIT`) after the next deploy.
 - **Not done from P4:** `clip.keySeconds` per incident (the replay and zoom monitors aim at the clip's midpoint).
   Setting them needs someone to watch each clip; it's a Studio field for Henrik. Focus isn't moved to the new
   scene's heading after a press (the announcement covers screen readers).
+- **Booth match day (Henrik):** a Match / Incident / Decision header row, and decided rows read "Upheld · Penalty" (green) or "Overturned · Red card" (red), like the waiting screen.

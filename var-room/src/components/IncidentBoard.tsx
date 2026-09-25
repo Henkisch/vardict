@@ -3,6 +3,7 @@ import {useQuery} from '@sanity/sdk-react'
 import {CALL_LABELS, INCIDENT_FIELDS} from '../api'
 
 type Row = {
+  varRecommendation: string
   _id: string
   title: string
   minute: number
@@ -46,6 +47,11 @@ function Board({runIncident}: {runIncident?: string}) {
   return (
     <section className="board" aria-label="Match day">
       <p className="feed-head">Match day</p>
+      <p className="fixture fixture-head" aria-hidden>
+        <span>Match</span>
+        <span>Incident</span>
+        <span className="fixture-status">Decision</span>
+      </p>
       <ol className="fixtures">
         {data.map((row) => {
           const live = row._id === liveId
@@ -53,14 +59,18 @@ function Board({runIncident}: {runIncident?: string}) {
           const status = live
             ? 'Live'
             : row.finalCall
-              ? CALL_LABELS[row.finalCall]
+              ? // Upheld: the fans kept the VAR's call. Overturned: their own call stands.
+                `${row.finalCall === row.varRecommendation ? 'Upheld' : 'Overturned'} · ${CALL_LABELS[row.finalCall] ?? row.finalCall}`
               : next
                 ? 'Next up'
                 : row.rounds
                   ? `${row.rounds} ${row.rounds === 1 ? 'round' : 'rounds'}`
                   : 'To play'
           return (
-            <li key={row._id} className={`fixture ${live ? 'live' : next ? 'next' : row.finalCall ? 'done' : ''}`}>
+            <li
+              key={row._id}
+              className={`fixture ${live ? 'live' : next ? 'next' : row.finalCall ? (row.finalCall === row.varRecommendation ? 'done upheld' : 'done overturned') : ''}`}
+            >
               <span className="fixture-teams">
                 {row.home.shortName} <span className="lower">v</span> {row.away.shortName}
               </span>

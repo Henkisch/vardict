@@ -757,3 +757,19 @@ input {
 .team-chip {
   box-shadow: 0 0 0 1px oklch(95% 0.01 140 / 0.35);
 }
+
+/* Match day: a header row, and decided rows coloured by the outcome (Henrik). */
+.fixture-head {
+  padding-top: 0;
+  font-size: 0.75rem;
+  color: var(--color-ink-2);
+  border-top: 0;
+}
+.fixture.done.upheld .fixture-status {
+  color: var(--color-uphold);
+  font-weight: 600;
+}
+.fixture.done.overturned .fixture-status {
+  color: var(--color-overturn);
+  font-weight: 600;
+}
