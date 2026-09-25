@@ -279,9 +279,13 @@ describe('runtime', () => {
     const {runtime, instanceId, referendum} = await start()
     const ref = await referendum()
     await setBotVotes(runtime, ref._id, 30, 30)
-    await castHumanVote(runtime, ref._id, 'uphold') // +20 weighted uphold: 50/80 = 62.5%
+    await castHumanVote(runtime, ref._id, 'uphold') // one human = RULES.humanVoteWeight weighted uphold votes
+    const w = RULES.humanVoteWeight
     const result = await closeWindow(runtime, instanceId, Date.parse(ref.closesAt))
-    expect(result).toMatchObject({status: 'closed', upholdPct: 62.5, votes: 61})
+    expect(result).toMatchObject({status: 'closed', votes: 61})
+    if (result.status !== 'closed') throw new Error('unreachable')
+    expect(result.upholdPct).toBeCloseTo((100 * (30 + w)) / (60 + w), 1)
+    // At 30/30 bots, one uphold vote tips it over 55% as long as it counts at least 7 bots.
     expect((await referendum()).result).toBe('upheld')
   })
 

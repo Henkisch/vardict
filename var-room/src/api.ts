@@ -51,7 +51,7 @@ export const CALL_LABELS: Record<string, string> = {
 }
 
 // Must match workflows/shared.ts HUMAN_VOTE_WEIGHT (see comment on CALL_LABELS above for why this isn't an import).
-export const HUMAN_VOTE_WEIGHT = 20
+export const HUMAN_VOTE_WEIGHT = 8
 
 // Must match workflows/shared.ts PERSONAS.
 export const PERSONAS = ['homeFan', 'awayFan', 'neutral', 'pundit', 'chaos'] as const

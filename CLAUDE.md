@@ -208,7 +208,7 @@ Rules (defaults, may change after the first test):
 | Extra-time window | 30 s (was 10) |
 | Penalty | one sudden-death round of 15 s (was 8) |
 | Quorum | 20 votes per round, else the window extends once by 15 s |
-| Human vote weight | 1 human vote = 20 bot votes (Henrik, session 3: few real voters; one human = 25% of a 60-bot round). Quorum counts heads; the split counts weight. Shown on /live and /vote |
+| Human vote weight | 1 human vote = 8 bot votes (session 5; was 20, but then a lone vote could never land in 45-55%, so extra time never happened. At 8, voting against the crowd's lean forces extra time on every incident: `scripts/crowd-odds.ts`). Quorum counts heads; the split counts weight |
 | Loop cap | 3 trips to VarRoom, then Abandoned |
 
 Human vote weight, shootout-rounds-to-win and loop cap live in one place, `workflows/shared.ts` (plan 011): a

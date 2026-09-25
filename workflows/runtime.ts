@@ -592,7 +592,7 @@ async function startNextLocked(runtime: Runtime, pick: string | undefined, check
   let newSeason: true | undefined
 
   if (!incidentId) {
-    // Every incident has a final call - one human vote counts x20, so a handful of judges can uphold all
+    // Every incident has a final call - one human vote counts several bots, so a handful of judges can uphold all
     // five in an afternoon. Rather than fail forever, the next press starts a new season: round history
     // stays, only finalCall resets so the next-in-line query has somewhere to go again.
     const publishedIds = await content.fetch<string[]>(`*[_type == "incident" && !(_id in path("drafts.**"))]._id`)

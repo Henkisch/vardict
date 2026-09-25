@@ -3,7 +3,7 @@ import {Scorebug} from '@/components/Scorebug'
 import {WorkflowPath} from '@/components/WorkflowPath'
 import {CALL_LABELS, formatClock, type LiveReferendum} from '@/lib/queries'
 import type {Phase} from '@/lib/run-status'
-import {SHOOTOUT_ROUNDS_TO_WIN, WINDOW_SECONDS} from 'workflows/shared'
+import {HUMAN_VOTE_WEIGHT, SHOOTOUT_ROUNDS_TO_WIN, WINDOW_SECONDS} from 'workflows/shared'
 
 type Copy = {headline: string; tone: string; next: string}
 
@@ -57,7 +57,7 @@ export function Verdict({round: ref, phase, action}: {round: LiveReferendum; pha
           </div>
           <Bars uphold={ref.uphold} overturn={ref.overturn} size="small" />
           <p className="text-sm text-muted">
-            {ref.humans} human and {ref.bots} simulated votes. Each human vote counts ×20.
+            {ref.humans} human and {ref.bots} simulated votes. Each human vote counts ×{HUMAN_VOTE_WEIGHT}.
           </p>
           <SlowerClock realSeconds={ref.incident.realDelaySeconds} votedSeconds={votedSeconds(ref)} />
         </div>

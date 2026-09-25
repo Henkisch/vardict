@@ -621,3 +621,12 @@ cached (`x-vercel-cache: HIT`) after the next deploy.
 - **"Red card doesn't stand, it's the new decision":** the verdict copy now tells the two apart: "The referee's call
   stands: No penalty" when overturning restores the referee's call, and "New decision: Red card" when it doesn't.
   The path strip's explanation had the same mistake.
+- **Extra time was unreachable (Henrik: "the logic now seems to be that extra time/sudden death isn't possible
+  then?"):** checked with numbers, not intuition. `scripts/crowd-odds.ts` replays each incident's seeded crowd and
+  shows where one human vote lands. At ×20, a lone vote landed outside 45-55% on every incident, so extra time
+  needed several humans voting against each other. At ×8, voting against the crowd's lean forces extra time on all
+  five, and extra time has a tie side too, so sudden death is reachable. Henrik: "x8 is good". Workflow v6 (RULES
+  carries the weight); a test that hard-coded the ×20 maths now reads it from RULES.
+- **After the last incident:** the verdict button said "Next incident" with nothing next, and the full-time screen
+  claimed "the people have upheld all five". Now it's "Full time: see the results", and the full-time screen says
+  "All five decisions are in", with a quiet "Or start a new season".

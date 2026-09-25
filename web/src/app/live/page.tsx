@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import {useEffect, useState, useSyncExternalStore} from 'react'
 
 import {Bars} from '@/components/Bars'
@@ -174,11 +175,16 @@ export default function LivePage() {
   const verdictAction = between ? (
     <StartButton onClick={press} busy={Boolean(starting)} message={startMessage} label={nextLabel} />
   ) : (
-    <StartButton
-      onClick={() => setAcknowledged(ref?._id)}
-      busy={false}
-      label={parked ? 'Back to the VAR room' : 'Next incident'}
-    />
+    !parked && state && !state.next ? (
+      // The last decision of the night: nothing is next, so the press goes to the results.
+      <FullTimeLink />
+    ) : (
+      <StartButton
+        onClick={() => setAcknowledged(ref?._id)}
+        busy={false}
+        label={parked ? 'Back to the VAR room' : 'Next incident'}
+      />
+    )
   )
 
   const incident = ref?.incident
@@ -239,9 +245,19 @@ export default function LivePage() {
             />
           ) : state ? (
             <section className="flex flex-1 flex-col items-center justify-center gap-4 py-16 text-center">
-              <p className="font-display text-4xl font-extrabold uppercase">Every call has been confirmed</p>
-              <p className="max-w-xl text-muted">The people have upheld all five. Democracy is complete, and slower.</p>
-              <StartButton onClick={pressCheck} busy={Boolean(starting)} message={startMessage} label="Start a new season" />
+              <p className="text-sm text-muted">Full time</p>
+              <p className="font-display text-5xl font-extrabold uppercase">All five decisions are in</p>
+              <p className="max-w-xl text-lg text-muted">The people have spoken. Democracy is complete, and slower.</p>
+              <FullTimeLink />
+              <button
+                type="button"
+                onClick={pressCheck}
+                disabled={Boolean(starting)}
+                className="text-sm text-muted underline underline-offset-4 hover:text-chalk disabled:cursor-progress"
+              >
+                {starting ? 'Starting a new season…' : 'Or start a new season'}
+              </button>
+              {startMessage && <p className="text-sm text-muted">{startMessage}</p>}
             </section>
           ) : (
             <p className="py-16 text-center text-muted">Connecting to the VAR room…</p>
@@ -305,6 +321,19 @@ function readEntered() {
   } catch {
     return false
   }
+}
+
+// Full time: the one press left goes to the results (a forward navigation, see PageTransition).
+function FullTimeLink() {
+  return (
+    <Link
+      href="/incidents"
+      transitionTypes={['nav-forward']}
+      className="inline-flex w-full items-center justify-center whitespace-nowrap rounded-lg bg-var px-10 py-3 font-display text-2xl font-extrabold uppercase text-ink transition-transform duration-150 hover:brightness-110 focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-chalk active:scale-[0.97] sm:w-auto sm:min-w-80"
+    >
+      Full time: see the results
+    </Link>
+  )
 }
 
 function StartButton({

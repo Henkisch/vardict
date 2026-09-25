@@ -3,9 +3,10 @@
 // engine's define-time machinery to the client for no reason. This module is the one place these numbers and
 // labels live; everything else imports from here instead of copying them.
 
-// A human vote counts this many bot votes. Real people are rare at a demo (Henrik, session 3): one human vote
-// is 25% of a 60-bot round. Quorum counts heads; the split counts weight. Shown on /live, /vote and the VAR Room.
-export const HUMAN_VOTE_WEIGHT = 20
+// A human vote counts this many bot votes. Real people are rare at a demo (Henrik, session 3). 8 since session 5:
+// at 20 a lone vote always landed outside 45-55%, so extra time never happened; at 8, voting against the crowd's
+// lean forces extra time on every incident (scripts/crowd-odds.ts checks it). Quorum counts heads; the split counts weight. Shown on /live, /vote and the VAR Room.
+export const HUMAN_VOTE_WEIGHT = 8
 
 // Sudden death (Henrik, session 4: five penalties was too long): one penalty decides it. Scored = upheld,
 // saved = back to the VAR room. The workflow still counts wins/losses, so this could go back up.
