@@ -529,3 +529,7 @@ cached (`x-vercel-cache: HIT`) after the next deploy.
   question), and the button is sized to its label. Then: "should stockley park be just VAR ROOM??" Yes. Judges get
   "VAR Room" at once, and it matches `/live` and the `varRoom` stage. "Stockley Park, miles from the stadium" stays
   as the tagline. `--title` only works for new apps; `app.title` in `sanity.cli.ts` renamed it on redeploy.
+- **Booth polish, round three (Henrik's marked-up screenshot):** plain words only on the rail (the real stage names
+  are gone, "The Sanity workflow"), every region on one outer edge with its content at one shared inset
+  (`--space-inset`), the redundant footer border removed, and Full wipe as a red outlined button that opens a red
+  warning box ("Wipe all run data?") with the consequences, a typed WIPE and "Wipe everything".

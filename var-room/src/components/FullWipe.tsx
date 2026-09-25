@@ -32,16 +32,19 @@ export function FullWipe() {
           <p className="small muted" aria-live="polite">
             {message ?? (HAS_OPERATOR_KEY ? 'Clean slate before a recording or judging.' : 'Needs SANITY_APP_OPERATOR_KEY.')}
           </p>
-          <button type="button" className="ghost" onClick={() => setOpen(true)} disabled={!HAS_OPERATOR_KEY}>
-            Full wipe…
+          <button type="button" className="danger-outline" onClick={() => setOpen(true)} disabled={!HAS_OPERATOR_KEY}>
+            Full wipe
           </button>
         </div>
       ) : (
-        <div className="wipe-confirm">
-          <p className="small">
-            Deletes <strong>every vote and every round</strong>, aborts a live run and clears all final calls, so the
-            democracy clock goes back to the real VAR delays. Incidents, matches, teams, laws and pundit lines stay.
-            Can&apos;t be undone.
+        <div className="wipe-confirm" role="alertdialog" aria-labelledby="wipe-title" aria-describedby="wipe-body">
+          <p id="wipe-title" className="wipe-title">
+            <span aria-hidden>⚠</span> Wipe all run data?
+          </p>
+          <p id="wipe-body" className="small">
+            Deletes <strong>every vote and every round</strong>, stops a match that&apos;s running and clears all final
+            calls, so the democracy clock goes back to the real VAR delays. Incidents, matches, teams, laws and pundit
+            lines stay. This can&apos;t be undone.
           </p>
           <div className="row">
             <input
@@ -50,9 +53,10 @@ export function FullWipe() {
               placeholder="Type WIPE"
               aria-label="Type WIPE to confirm"
               className="mono"
+              autoFocus
             />
             <button type="button" className="danger" onClick={wipe} disabled={typed !== 'WIPE' || busy}>
-              {busy ? 'Wiping…' : 'Wipe run data'}
+              {busy ? 'Wiping…' : 'Wipe everything'}
             </button>
             <button type="button" className="ghost" onClick={() => setOpen(false)}>
               Cancel

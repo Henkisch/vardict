@@ -37,6 +37,7 @@
   --space-12: 3rem;
 
   --radius: 6px;
+  --space-inset: var(--space-8);
   --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
   --dur-fast: 150ms;
   --dur-mid: 300ms;
@@ -666,32 +667,10 @@ input {
   line-height: 1;
 }
 
-/* Rail, plain words (Henrik): the label people read, the real stage name small underneath. */
-.rail {
-  align-items: flex-end;
-}
-.rail-name {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
+/* Rail, plain words only (Henrik). */
 .rail-stage {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius);
+  padding: var(--space-1) var(--space-3);
   font: 600 var(--text-sm) var(--font-body);
-}
-.rail-stage + .rail-stage::before {
-  top: 50%;
-  transform: translateY(-50%);
-}
-.rail-code {
-  font-size: 0.7rem;
-  font-weight: 400;
-  opacity: 0.75;
 }
 .rail-ends {
   display: flex;
@@ -699,4 +678,66 @@ input {
 }
 .rail-ends .rail-stage + .rail-stage::before {
   content: '/';
+}
+
+/* One edge everywhere (Henrik): every region is the full container width, and its content starts at the same
+   inset, so left and right edges line up down the page. */
+.review,
+.rail,
+.feed,
+.board {
+  padding-left: var(--space-inset);
+  padding-right: var(--space-inset);
+}
+.rail {
+  padding-top: var(--space-4);
+  padding-bottom: var(--space-4);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+}
+.booth-grid {
+  padding: 0;
+  gap: var(--space-6);
+}
+.wipe {
+  padding: 0 var(--space-inset);
+  border-top: 0;
+}
+.danger-outline {
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--color-overturn);
+  color: var(--color-overturn);
+  font-weight: 600;
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+.danger-outline:hover:not(:disabled) {
+  background: var(--color-overturn);
+  color: var(--color-ink);
+}
+.danger-outline:disabled {
+  opacity: 0.4;
+}
+.wipe-confirm {
+  max-width: none;
+  padding: var(--space-6);
+  background: var(--color-surface);
+}
+.wipe-title {
+  font: 800 var(--text-xl) / 1 var(--font-display);
+  text-transform: uppercase;
+  color: var(--color-overturn);
+}
+@media (max-width: 900px) {
+  :root {
+    --space-inset: var(--space-4);
+  }
+}
+.wipe {
+  padding: 0;
+}
+.wipe-row {
+  padding: 0 var(--space-inset);
+}
+.wipe-confirm {
+  padding: var(--space-6) var(--space-inset);
 }

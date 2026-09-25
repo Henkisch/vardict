@@ -11,7 +11,7 @@ type Instance = {
 // peoples-var v4 in the order a run walks it; upheld and overturned are the two ends.
 const FLOW = ['varRoom', 'referendum', 'extraTime', 'shootout']
 const ENDS = ['upheld', 'overturned']
-// Plain words first (Henrik); the real stage name sits small underneath.
+// Plain words only (Henrik): the stage names stay in code.
 const PLAIN: Record<string, string> = {
   varRoom: 'VAR room',
   referendum: 'Fans vote',
@@ -40,11 +40,8 @@ export function WorkflowRail() {
     const state = current ? (live ? 'current' : `ended ${name}`) : visits(name) ? 'visited' : ''
     return (
       <li key={name} className={`rail-stage ${state}`} aria-current={current && live ? 'step' : undefined}>
-        <span className="rail-plain">
-          {PLAIN[name]}
-          {visits(name) > 1 && <span className="rail-count">×{visits(name)}</span>}
-        </span>
-        <span className="rail-code mono">{name}</span>
+        {PLAIN[name]}
+        {visits(name) > 1 && <span className="rail-count">×{visits(name)}</span>}
       </li>
     )
   }
@@ -52,8 +49,7 @@ export function WorkflowRail() {
   return (
     <section className="rail" aria-label="Workflow">
       <p className="rail-name">
-        The workflow
-        <span className="rail-code mono">peoples-var</span>
+        The Sanity workflow
       </p>
       <ol className="rail-flow">
         {FLOW.map(stage)}
@@ -64,7 +60,7 @@ export function WorkflowRail() {
           </ol>
         </li>
       </ol>
-      <p className="rail-meta mono">
+      <p className="rail-meta">
         {shown ? `${shown._id.replace('dev.wf-instance.', '#')} · ${live ? 'running' : 'finished'}` : 'No match running'}
       </p>
     </section>
