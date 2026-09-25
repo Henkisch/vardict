@@ -630,3 +630,4 @@ cached (`x-vercel-cache: HIT`) after the next deploy.
 - **After the last incident:** the verdict button said "Next incident" with nothing next, and the full-time screen
   claimed "the people have upheld all five". Now it's "Full time: see the results", and the full-time screen says
   "All five decisions are in", with a quiet "Or start a new season".
+- **Full audit (Henrik set the goal: "walk through workflows, logics and data in detail"):** four read-only passes in parallel (workflow + runtime, /live + booth state machine, Sanity content, copy), merged into `plans/016-session5-audit.md`. The top claims were spot-checked in code before planning. Nothing fixed yet.
