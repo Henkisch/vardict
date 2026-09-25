@@ -13,6 +13,8 @@ type Props = {
   barRight?: React.ReactNode
   // A live moment (the vote) gets the red tab; the VAR room gets amber.
   live?: boolean
+  // The tab pulses while something is under way (the VAR check), so the step reads as running.
+  pulse?: boolean
   // The footage, and its shape (16:9 for one screen, wider for the monitor wall).
   media: React.ReactNode | ((stacked: boolean) => React.ReactNode)
   mediaRatio: number
@@ -27,7 +29,7 @@ type Props = {
 // The frame every step on /live shares (design.md). L1: the incident under review on the left rail (scorebug, title,
 // situation) beside the footage (above it on phones). L2: one lower-third under it. Then the strip that tells the
 // decision left to right: what the referee said, what the VAR says, and the fans' part (L3).
-export function MatchScene({incident, barLeft, barRight, live = false, media, mediaRatio, mediaStackedRatio, actionLabel, action}: Props) {
+export function MatchScene({incident, barLeft, barRight, live = false, pulse = false, media, mediaRatio, mediaStackedRatio, actionLabel, action}: Props) {
   const {homeTeam: home, awayTeam: away} = incident.match
   // The panel has auto height and the strip under it takes the rest of the screen (Henrik). The footage's height
   // limit is the whole frame minus the strip's own content, measured here, so it never outgrows the screen.
@@ -58,7 +60,7 @@ export function MatchScene({incident, barLeft, barRight, live = false, media, me
             {incident.situation && <p className="text-lg leading-snug text-muted">{incident.situation}</p>}
           </div>
           <div className="flex items-stretch gap-3">
-            <span className={`w-1.5 shrink-0 ${live ? 'bg-overturn' : 'bg-var'}`} aria-hidden />
+            <span className={`w-1.5 shrink-0 ${live ? 'bg-overturn' : 'bg-var'} ${pulse ? 'motion-safe:animate-pulse' : ''}`} aria-hidden />
             <div className="flex min-w-0 flex-col gap-1">
               <p className="font-display text-2xl font-extrabold uppercase leading-tight">{barLeft}</p>
               {barRight && <div className="text-muted">{barRight}</div>}

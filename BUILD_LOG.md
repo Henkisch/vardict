@@ -597,3 +597,4 @@ cached (`x-vercel-cache: HIT`) after the next deploy.
   stadium. Henrik: "this one's good".
 - **The waiting screen's match list shows results** ("Upheld · Penalty" / "Overturned · …" / Next up / To play),
   from each incident's `finalCall`.
+- **"I started the VAR check, yet the button remains LET THE FANS DECIDE":** working as intended (that press is step two), but the VAR room step looked too much like the screen before it. It now says "The VAR check is under way. Seen enough?" over the button, and the lower-third tab pulses while the check runs.

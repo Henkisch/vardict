@@ -33,6 +33,8 @@ export function VarRoomScene({incident, start}: Props) {
       media={(stacked) => <MonitorWall incident={incident} stacked={stacked} />}
       mediaRatio={WALL_RATIO}
       mediaStackedRatio={WALL_RATIO_STACKED}
+      actionLabel="The VAR check is under way. Seen enough?"
+      pulse
       action={start}
     />
   )
