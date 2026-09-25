@@ -587,3 +587,13 @@ cached (`x-vercel-cache: HIT`) after the next deploy.
   and it never drops to the 60 s sleepy poll.
 - Also caught from Henrik's two screenshots: the booth said Brighton was next while `/live` said Pickford.
   `/live`'s own next-in-line query had no match-date tie-break either.
+- **Workflow v5: longer windows (Henrik: "the user actually has time to view the video several times, also orient
+  themselves"):** 60 s regular, 30 s extra time, 15 s penalty (was 20/10/8). A human vote still closes the round
+  early, so the longer window only waits on people still watching. The runs already in flight kept v4. Two
+  definition tests had the old numbers hard-coded; they now read `WINDOW_SECONDS`. The crowd route's
+  `maxDuration` went from 90 to 120 s.
+- **Busy button (Henrik: "a bit difficult to tell if something is actually loading"):** the press no longer just
+  dims. It stays amber with a spinner and a sweep of light, and after 4 s a line says it's waiting for the
+  stadium. Henrik: "this one's good".
+- **The waiting screen's match list shows results** ("Upheld · Penalty" / "Overturned · …" / Next up / To play),
+  from each incident's `finalCall`.

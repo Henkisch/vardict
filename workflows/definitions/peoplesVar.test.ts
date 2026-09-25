@@ -1,6 +1,7 @@
 import {createBench, subjectField} from '@sanity/workflow-engine-test'
 import {describe, expect, test} from 'vitest'
 
+import {WINDOW_SECONDS} from '../shared'
 import {peoplesVar} from './peoplesVar'
 
 const incident = {_id: 'incident-diaz', _type: 'incident', title: 'Luis Díaz goal', varRecommendation: 'noGoal'}
@@ -44,7 +45,7 @@ describe('peoplesVar', () => {
     await kickOff()
     expect(await pendingEffects()).toEqual(['open-referendum'])
     const [effect] = await bench.listPendingEffects({instanceId: id})
-    expect(effect.params).toMatchObject({incidentId: expect.stringMatching(/:incident-diaz$/), round: 'regular', windowSeconds: 20, loop: 1})
+    expect(effect.params).toMatchObject({incidentId: expect.stringMatching(/:incident-diaz$/), round: 'regular', windowSeconds: WINDOW_SECONDS.referendum, loop: 1})
   })
 
   test('over 55% upholds in regular time and finalizes the call', async () => {
@@ -125,7 +126,7 @@ describe('peoplesVar', () => {
     }
   })
 
-  test('extra time waits for its kick-off, then opens a 10 s window', async () => {
+  test('extra time waits for its kick-off, then opens its window', async () => {
     const {recommend, kickOff, close, bench, id, pendingEffects} = await start()
     await recommend()
     await kickOff()
@@ -133,7 +134,7 @@ describe('peoplesVar', () => {
     expect(await pendingEffects()).toEqual(['open-referendum']) // extra time's ballot isn't open yet
     await kickOff()
     const pending = await bench.listPendingEffects({instanceId: id})
-    expect(pending.at(-1)?.params).toMatchObject({round: 'extraTime', windowSeconds: 10})
+    expect(pending.at(-1)?.params).toMatchObject({round: 'extraTime', windowSeconds: WINDOW_SECONDS.extraTime})
   })
 
   // Sudden death (session 4): SHOOTOUT_ROUNDS_TO_WIN is 1, so one penalty decides it.

@@ -43,12 +43,23 @@ export const LIVE_QUERY = `{
   // The pundit ticker's lines (Studio: Pundit lines), and the fixture list for the Enter the stadium intro.
   "pundits": *[_type == "punditLine"]{_id, text, pundit, trigger, "incident": incident._ref},
   "fixtures": *[_type == "incident"] | order(match->date asc){
-    _id, title, "home": match->homeTeam->name, "away": match->awayTeam->name, "competition": match->competition
+    _id, title, "home": match->homeTeam->name, "away": match->awayTeam->name, "competition": match->competition,
+    originalCall, varRecommendation, finalCall
   }
 }`
 
 export type PunditLine = {_id: string; text: string; pundit: string; trigger: string; incident?: string}
-export type Fixture = {_id: string; title: string; home: string; away: string; competition: string}
+export type Fixture = {
+  _id: string
+  title: string
+  home: string
+  away: string
+  competition: string
+  originalCall: string
+  varRecommendation: string
+  // Set once the fans decide: the VAR's call if upheld, the referee's if overturned (workflow v4).
+  finalCall?: string
+}
 
 export type Team = {name: string; shortName: string; primaryColor?: string}
 

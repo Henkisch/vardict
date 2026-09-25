@@ -232,7 +232,7 @@ export default function LivePage() {
             <WaitingScene
               incident={state.next}
               fixtures={state.fixtures}
-              start={<StartButton onClick={pressCheck} busy={Boolean(starting)} message={startMessage} label="Start the VAR check" />}
+              start={<StartButton onClick={pressCheck} busy={Boolean(starting)} message={startMessage} label="Start the VAR check" align="start" />}
             />
           ) : state ? (
             <section className="flex flex-1 flex-col items-center justify-center gap-4 py-16 text-center">
@@ -307,23 +307,48 @@ function StartButton({
   busy,
   message,
   label = 'Let the fans decide',
+  busyLabel = label === 'Start the VAR check' ? 'Starting the VAR check' : 'Opening the vote',
+  align = 'end',
 }: {
   onClick: () => void
   busy: boolean
   message?: string
   label?: string
+  busyLabel?: string
+  // Where the button and its status line sit on wider screens: right (the decision strip) or left (waiting).
+  align?: 'start' | 'end'
 }) {
+  // A press can take a few seconds (the server starts the run, then the screen polls for it). Busy stays amber
+  // with a spinner and a moving sweep so it reads as working, not disabled; after 4 s a line says what it's
+  // waiting for.
+  const [slow, setSlow] = useState(false)
+  useEffect(() => {
+    if (!busy) return
+    const id = setTimeout(() => setSlow(true), 4000)
+    return () => {
+      clearTimeout(id)
+      setSlow(false)
+    }
+  }, [busy])
   return (
-    <div className="flex flex-col items-center gap-2 sm:items-end">
+    <div className={`flex flex-col items-center gap-2 ${align === 'start' ? 'sm:items-start' : 'sm:items-end'}`}>
       <button
         type="button"
         onClick={onClick}
         disabled={busy}
-        className="w-full whitespace-nowrap rounded-lg bg-var px-10 py-3 font-display text-2xl font-extrabold uppercase text-ink sm:w-auto sm:min-w-80 hover:brightness-110 focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-chalk disabled:opacity-60"
+        aria-busy={busy || undefined}
+        className={`relative w-full overflow-hidden whitespace-nowrap rounded-lg bg-var px-10 py-3 font-display text-2xl font-extrabold uppercase text-ink transition-transform duration-150 hover:brightness-110 focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-chalk active:scale-[0.97] disabled:cursor-progress sm:w-auto sm:min-w-80 ${busy ? 'btn-busy' : ''}`}
       >
-        {busy ? 'Opening the vote…' : label}
+        <span className="relative flex items-center justify-center gap-3">
+          {busy && <span className="btn-spinner h-5 w-5 rounded-full border-[3px] border-ink/25 border-t-ink" aria-hidden />}
+          {busy ? `${busyLabel}…` : label}
+        </span>
       </button>
-      {message && <p className="text-sm text-muted">{message}</p>}
+      {message ? (
+        <p className="text-sm text-muted">{message}</p>
+      ) : (
+        busy && slow && <p className="text-sm text-muted" role="status">Waiting for the stadium to catch up…</p>
+      )}
     </div>
   )
 }

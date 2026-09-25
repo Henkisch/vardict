@@ -27,15 +27,28 @@ export function WaitingScene({incident, fixtures, start}: {incident: IncidentCar
         <div className="flex flex-col gap-2">
           <p className="text-sm text-muted">Tonight&apos;s decisions</p>
           <ol className="divide-y divide-line">
-            {fixtures.map((f, i) => (
-              <li key={f._id} className={`flex items-baseline gap-3 py-2.5 ${f._id === incident._id ? 'text-chalk' : 'text-muted'}`}>
-                <span className="w-4 font-display text-lg font-bold">{i + 1}</span>
-                <span className={`min-w-0 flex-1 font-display text-lg uppercase leading-tight ${f._id === incident._id ? 'font-extrabold' : 'font-bold'}`}>
-                  {f.title}
-                </span>
-                {f._id === incident._id && <span className="shrink-0 text-sm font-semibold text-var">Next up</span>}
-              </li>
-            ))}
+            {fixtures.map((f, i) => {
+              const next = f._id === incident._id
+              // Decided: the fans kept the VAR's call (upheld) or the referee's stands (overturned).
+              const upheld = f.finalCall !== undefined && f.finalCall === f.varRecommendation
+              return (
+                <li key={f._id} className={`flex items-baseline gap-3 py-2.5 ${next ? 'text-chalk' : 'text-muted'}`}>
+                  <span className="w-4 font-display text-lg font-bold">{i + 1}</span>
+                  <span className={`min-w-0 flex-1 font-display text-lg uppercase leading-tight ${next ? 'font-extrabold' : 'font-bold'}`}>
+                    {f.title}
+                  </span>
+                  {f.finalCall ? (
+                    <span className={`shrink-0 text-sm font-semibold ${upheld ? 'text-uphold' : 'text-overturn'}`}>
+                      {upheld ? 'Upheld' : 'Overturned'} · {CALL_LABELS[f.finalCall] ?? f.finalCall}
+                    </span>
+                  ) : next ? (
+                    <span className="shrink-0 text-sm font-semibold text-var">Next up</span>
+                  ) : (
+                    <span className="shrink-0 text-sm">To play</span>
+                  )}
+                </li>
+              )
+            })}
           </ol>
         </div>
       </section>

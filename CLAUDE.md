@@ -204,9 +204,9 @@ Rules (defaults, may change after the first test):
 
 | Rule | Value |
 | --- | --- |
-| Regular window | 20 s (was 30, shortened session 4) |
-| Extra-time window | 10 s (was 15) |
-| Shootout | 5 rounds of 8 s (was 10), best of 5 |
+| Regular window | 60 s (session 5, Henrik: time to watch the clip twice; was 20) |
+| Extra-time window | 30 s (was 10) |
+| Penalty | one sudden-death round of 15 s (was 8) |
 | Quorum | 20 votes per round, else the window extends once by 15 s |
 | Human vote weight | 1 human vote = 20 bot votes (Henrik, session 3: few real voters; one human = 25% of a 60-bot round). Quorum counts heads; the split counts weight. Shown on /live and /vote |
 | Loop cap | 3 trips to VarRoom, then Abandoned |
@@ -402,7 +402,7 @@ to the VAR room. Known issue: the first "Send to the people" took ~13 s before t
 **Workflow v4 (Henrik, session 4):** the fans' call is final. Over 55% keeps the VAR's call (`upheld`), under 45%
 overturns it (`overturned`, terminal: the on-field call becomes the final call), 45-55% goes to extra time and then
 one sudden-death penalty. A round with no human vote is no decision: back to `varRoom`. Loops and "abandoned" are
-gone. Windows are 20 s / 10 s / 8 s, and a human vote closes the round early (the rest of the seeded crowd votes
+gone. Windows are 60 s / 30 s / 15 s since workflow v5 (session 5), and a human vote closes the round early (the rest of the seeded crowd votes
 at once). Routes: one `/live` that follows the run (Henrik asked twice; kept, since per-step routes go stale).
 
 **Stockley Park (session 5), renamed "VAR Room" on screen and in the Dashboard (Henrik: judges get "VAR Room"

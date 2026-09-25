@@ -4,8 +4,8 @@ import {runCrowd} from 'workflows/runtime'
 
 import {crowdKey, getRuntime, paused, readJson} from '@/lib/runtime'
 
-// A round is at most 35 s (20 s + one 15 s extension) plus closing.
-export const maxDuration = 90
+// A round is at most 75 s (60 s + one 15 s extension) plus closing.
+export const maxDuration = 120
 
 // Runs one referendum's bot crowd, then closes the window. Internal: called by this server when a round opens.
 // Safe to repeat: waves are numbered on the referendum's counters, so a restarted crowd only adds missing waves.
