@@ -741,3 +741,17 @@ input {
 .wipe-confirm {
   padding: var(--space-6) var(--space-inset);
 }
+/* The two endings as one pair (Henrik): the slash sits inline, not in the arrow's slot. */
+.rail-ends {
+  gap: 0;
+  align-items: center;
+}
+.rail-ends .rail-stage {
+  padding-inline: var(--space-2);
+}
+.rail-ends .rail-stage + .rail-stage::before {
+  position: static;
+  transform: none;
+  margin-right: var(--space-2);
+  color: var(--color-ink-2);
+}
