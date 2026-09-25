@@ -7,8 +7,11 @@ import {ViewTransition} from 'react'
 import {OutcomeBadge} from '@/components/OutcomeBadge'
 import {PageTransition} from '@/components/PageTransition'
 import {Scorebug} from '@/components/Scorebug'
+import {NightSummary} from '@/components/NightSummary'
+import {PathChips} from '@/components/PathChips'
 import {SiteHeader} from '@/components/SiteHeader'
-import {incidentOutcome, isDecided, OUTCOME_LABEL} from '@/lib/outcome'
+import {groupRuns, incidentOutcome, isDecided, OUTCOME_LABEL} from '@/lib/outcome'
+import {runPath} from '@/lib/path'
 import {useLiveQuery} from '@/lib/live'
 import {CALL_LABELS, formatClock, type IncidentOverviewRow, type IncidentsOverview} from '@/lib/queries'
 
@@ -39,6 +42,12 @@ export default function IncidentsPage() {
             </div>
           </div>
         </section>
+
+        {overview && (
+          <div className="rounded-xl bg-pitch p-5 lg:px-8">
+            <NightSummary incidents={overview.incidents} />
+          </div>
+        )}
 
         <section className="grid gap-3 pb-6 xl:grid-cols-2">
           {overview?.incidents.map((incident) => (
@@ -88,6 +97,7 @@ function IncidentRow({incident}: {incident: IncidentOverviewRow}) {
             {incident.rounds.length > 0 && ` · ${incident.rounds.length} ${incident.rounds.length === 1 ? 'round' : 'rounds'}`}
             {incident.controlCase && ' · control case: the VAR was wrong'}
           </p>
+          <PathChips steps={runPath(groupRuns(incident.rounds).at(-1) ?? [])} />
         </div>
         <div className="flex shrink-0 flex-col gap-2 sm:items-end">
           <OutcomeBadge outcome={outcome} />

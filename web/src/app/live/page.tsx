@@ -8,6 +8,7 @@ import {Clip} from '@/components/Clip'
 import {EnterStadium} from '@/components/EnterStadium'
 import {KickOff} from '@/components/KickOff'
 import {MatchScene} from '@/components/MatchScene'
+import {NightSummary} from '@/components/NightSummary'
 import {PunditTicker} from '@/components/PunditTicker'
 import {PageTransition} from '@/components/PageTransition'
 import {SceneTransition} from '@/components/SceneTransition'
@@ -18,8 +19,8 @@ import {VarRoomScene} from '@/components/VarRoomScene'
 import {WaitingScene} from '@/components/WaitingScene'
 import {Verdict} from '@/components/Verdict'
 import {VoteButtons} from '@/components/VoteButtons'
-import {useCloseWhenCounting, useLiveState, useNow} from '@/lib/live'
-import {CALL_LABELS, HUMAN_VOTE_WEIGHT, roundLabel, type LiveState} from '@/lib/queries'
+import {useCloseWhenCounting, useLiveQuery, useLiveState, useNow} from '@/lib/live'
+import {CALL_LABELS, HUMAN_VOTE_WEIGHT, roundLabel, type IncidentsOverview, type LiveState} from '@/lib/queries'
 import {runPhase} from '@/lib/run-status'
 import {cue, setIntensity, startStadium} from '@/lib/stadium-audio'
 
@@ -289,6 +290,7 @@ export default function LivePage() {
               <p className="text-sm text-muted">Full time</p>
               <p className="font-display text-5xl font-extrabold uppercase">Every decision is in</p>
               <p className="max-w-xl text-lg text-muted">The people have spoken. Eventually.</p>
+              <FullTimeSummary />
               <FullTimeLink />
               <button
                 type="button"
@@ -363,6 +365,17 @@ function readEntered() {
   } catch {
     return false
   }
+}
+
+// The night in numbers on the full-time screen, from the same shared read as the results page.
+function FullTimeSummary() {
+  const {data} = useLiveQuery<IncidentsOverview>('/api/live?q=incidents', {intervalMs: 30_000})
+  if (!data) return null
+  return (
+    <div className="w-full max-w-5xl rounded-xl bg-pitch p-5 text-left">
+      <NightSummary incidents={data.incidents} />
+    </div>
+  )
 }
 
 // Full time: the one press left goes to the results (a forward navigation, see PageTransition).

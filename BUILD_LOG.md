@@ -665,3 +665,9 @@ cached (`x-vercel-cache: HIT`) after the next deploy.
   Setting them needs someone to watch each clip; it's a Studio field for Henrik. Focus isn't moved to the new
   scene's heading after a press (the announcement covers screen readers).
 - **Booth match day (Henrik):** a Match / Incident / Decision header row, and decided rows read "Upheld · Penalty" (green) or "Overturned · Red card" (red), like the waiting screen.
+- **The night in numbers (Henrik: "a final summary when all incidents have been walked through, which workflow
+  turns it took"):** each results card shows the path its run took through the Sanity workflow (VAR room › Fans
+  vote › Extra time › Overturned), and a summary (upheld, overturned, extra time, penalties, rounds nobody voted
+  in, rounds voted, workflow stages walked, the control-case verdict) sits on Results and on `/live`'s full-time
+  screen. Both come from one helper (`lib/path.ts`), so they can't disagree; checked against the real test run
+  (16 stages: 3+4+3+3+3). Henrik after the test run: "overall, it seems to be working very good!"
