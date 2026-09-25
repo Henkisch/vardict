@@ -539,3 +539,8 @@ cached (`x-vercel-cache: HIT`) after the next deploy.
   red), and the final call shown on decided cards. New `live` outcome: a round being voted used to read "Still being
   decided", the same as one waiting for a press. On the incident page the call that stands is ringed and marked
   "Stands", and the other one fades.
+- **/live frame, final pass (Henrik, screenshot by screenshot):** the footage wall is pinned level with the incident
+  text; the main panel has auto height; the referee/VAR/button strip sits on its own plate that grows to fill the
+  rest of the screen with its content centred. Because nothing stretches the panel any more, the footage's height
+  limit is measured from the whole frame minus the strip's content (`MatchScene`, `FitBox maxHeight`). Henrik:
+  "there we have it!"
