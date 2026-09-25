@@ -548,3 +548,6 @@ cached (`x-vercel-cache: HIT`) after the next deploy.
   breakpoint, `FitBox` compares both shapes in the space it has (side by side: main at 3/4 of the wall, stacked:
   main at full width over three) and picks whichever gives the main monitor more width. It measured stacked on a
   1377×868 window. The Monitors aren't re-mounted when the shape changes (same children, new grid classes).
+- **Step row on phones:** Henrik asked whether it needed a plate or centring. My call: no plate. Below md it becomes
+  a full-width three-part progress bar (amber line up to the current step, grey after, labels centred), with more
+  room above it. From md up it stays quiet inline text in the header.

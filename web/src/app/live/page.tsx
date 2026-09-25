@@ -180,7 +180,7 @@ export default function LivePage() {
             VAR, finally in the fans&apos; hands.
           </span>
         </p>
-        <div className="col-span-2 row-start-2 md:col-span-1 md:row-start-auto md:justify-self-center">
+        <div className="col-span-2 row-start-2 mt-3 md:col-span-1 md:row-start-auto md:mt-0 md:justify-self-center">
           {state && <StepIndicator step={step} detail={step === 'var-room' ? undefined : roundName} />}
         </div>
         <div className="col-start-2 row-start-1 flex items-center gap-5 justify-self-end text-sm text-muted md:col-start-3">
