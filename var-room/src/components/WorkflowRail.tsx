@@ -11,6 +11,15 @@ type Instance = {
 // peoples-var v4 in the order a run walks it; upheld and overturned are the two ends.
 const FLOW = ['varRoom', 'referendum', 'extraTime', 'shootout']
 const ENDS = ['upheld', 'overturned']
+// Plain words first (Henrik); the real stage name sits small underneath.
+const PLAIN: Record<string, string> = {
+  varRoom: 'VAR room',
+  referendum: 'Fans vote',
+  extraTime: 'Extra time',
+  shootout: 'Penalty',
+  upheld: 'Upheld',
+  overturned: 'Overturned',
+}
 
 // L4 (design.md): the live run as one thin rail of real stage names, read in real time from the private
 // `workflows` dataset. It names stages; it doesn't explain them.
@@ -31,8 +40,11 @@ export function WorkflowRail() {
     const state = current ? (live ? 'current' : `ended ${name}`) : visits(name) ? 'visited' : ''
     return (
       <li key={name} className={`rail-stage ${state}`} aria-current={current && live ? 'step' : undefined}>
-        {name}
-        {visits(name) > 1 && <span className="rail-count">×{visits(name)}</span>}
+        <span className="rail-plain">
+          {PLAIN[name]}
+          {visits(name) > 1 && <span className="rail-count">×{visits(name)}</span>}
+        </span>
+        <span className="rail-code mono">{name}</span>
       </li>
     )
   }
@@ -40,15 +52,20 @@ export function WorkflowRail() {
   return (
     <section className="rail" aria-label="Workflow">
       <p className="rail-name">
-        Workflow <span className="mono">peoples-var</span>
+        The workflow
+        <span className="rail-code mono">peoples-var</span>
       </p>
       <ol className="rail-flow">
         {FLOW.map(stage)}
         <li className="rail-fork" aria-hidden />
-        {ENDS.map(stage)}
+        <li>
+          <ol className="rail-ends" aria-label="Either ending">
+            {ENDS.map(stage)}
+          </ol>
+        </li>
       </ol>
       <p className="rail-meta mono">
-        {shown ? `${shown._id.replace('dev.wf-instance.', '#')} · ${live ? 'live' : 'done'}` : 'waiting for a run'}
+        {shown ? `${shown._id.replace('dev.wf-instance.', '#')} · ${live ? 'running' : 'finished'}` : 'No match running'}
       </p>
     </section>
   )
