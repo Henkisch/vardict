@@ -34,7 +34,7 @@ export default function App() {
         <header className="chrome">
           <p className="wordmark">
             VAR <span className="accent">Room</span>
-            <span className="chrome-note">Stockley Park, miles from the stadium. It&apos;s shown on /live</span>
+            <span className="chrome-note">The officials&apos; booth. The stadium is on /live</span>
           </p>
           <p className="chrome-status">
             <span className="rec">REC</span> <WallClock />

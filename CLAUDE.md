@@ -91,7 +91,7 @@ organization dashboard, not on a public URL. So:
 
 | Part | Built with | Audience | Job |
 | --- | --- | --- | --- |
-| VAR Room (Dashboard app "VAR Room"; Stockley Park is the joke in its tagline) | App SDK | Henrik only (org member) | The officials' booth (session 5): live `peoples-var` graph from the private `workflows` dataset, the same one step-by-step button as /live, a live feed of bot waves and fans' votes as they land, the match-day list, and a Full wipe |
+| VAR Room (Dashboard app "VAR Room") | App SDK | Henrik only (org member) | The officials' booth (session 5): live `peoples-var` graph from the private `workflows` dataset, the same one step-by-step button as /live, a live feed of bot waves and fans' votes as they land, the match-day list, and a Full wipe |
 | /vote | Next.js | Public, phones | Redirects to `/live` - voting happens there (Henrik, session 3: one page is both the big screen and where you vote) |
 | /live | Next.js | Public, big screen | "Send to the people" button (starts a referendum, see Judge testing), clip with the situation line under it, VAR recommendation, live bars, countdown, round, democracy clock, QR code to /vote |
 | /incidents | Next.js | Public | Results overview: every incident's fixture, VAR call and outcome, plus the shared democracy clock (plan 010) |
