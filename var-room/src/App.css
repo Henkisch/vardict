@@ -308,60 +308,6 @@ button:disabled {
 .rail-meta {
   margin-left: auto;
 }
-.rail-flow {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-}
-.rail-stage {
-  position: relative;
-  padding: var(--space-1) var(--space-3);
-  border: 1px solid transparent;
-  border-radius: 999px;
-  font: 400 var(--text-sm) var(--font-mono);
-  color: var(--color-ink-2);
-  opacity: 0.6;
-  transition: opacity var(--dur-mid) var(--ease-out);
-}
-.rail-stage + .rail-stage::before {
-  content: '→';
-  position: absolute;
-  left: calc(-1 * var(--space-2) - 0.3em);
-  color: var(--color-rule);
-}
-.rail-fork {
-  width: var(--space-4);
-  height: 1px;
-  background: var(--color-rule);
-}
-.rail-stage.visited {
-  opacity: 1;
-  color: var(--color-ink);
-}
-.rail-stage.current {
-  opacity: 1;
-  color: var(--color-accent);
-  border-color: var(--color-accent);
-  animation: arrive var(--dur-slow) var(--ease-out);
-}
-.rail-stage.ended {
-  opacity: 1;
-  color: var(--color-ink);
-  border-color: var(--color-rule);
-}
-.rail-stage.ended.upheld {
-  color: var(--color-uphold);
-  border-color: var(--color-uphold);
-}
-.rail-stage.ended.overturned {
-  color: var(--color-overturn);
-  border-color: var(--color-overturn);
-}
-.rail-count {
-  margin-left: var(--space-1);
-  color: var(--color-ink-2);
-}
 @keyframes arrive {
   from {
     opacity: 0;
@@ -667,18 +613,6 @@ input {
   line-height: 1;
 }
 
-/* Rail, plain words only (Henrik). */
-.rail-stage {
-  padding: var(--space-1) var(--space-3);
-  font: 600 var(--text-sm) var(--font-body);
-}
-.rail-ends {
-  display: flex;
-  gap: var(--space-1);
-}
-.rail-ends .rail-stage + .rail-stage::before {
-  content: '/';
-}
 
 /* One edge everywhere (Henrik): every region is the full container width, and its content starts at the same
    inset, so left and right edges line up down the page. */
@@ -741,17 +675,67 @@ input {
 .wipe-confirm {
   padding: var(--space-6) var(--space-inset);
 }
-/* The two endings as one pair (Henrik): the slash sits inline, not in the arrow's slot. */
-.rail-ends {
-  gap: 0;
+
+/* The workflow as a breadcrumb (Henrik): real separators, one pill for where the run is. */
+.crumbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) 0;
+}
+.crumbs-item {
+  display: flex;
   align-items: center;
 }
-.rail-ends .rail-stage {
-  padding-inline: var(--space-2);
+.crumb-sep {
+  padding: 0 var(--space-3);
+  color: var(--color-rule);
+  font-size: var(--text-lg);
+  line-height: 1;
 }
-.rail-ends .rail-stage + .rail-stage::before {
-  position: static;
-  transform: none;
-  margin-right: var(--space-2);
+.crumb-ends {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.crumb-or {
+  font-size: var(--text-sm);
   color: var(--color-ink-2);
+}
+.crumb {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-3);
+  border-radius: 999px;
+  font: 600 var(--text-sm) / 1.2 var(--font-body);
+  white-space: nowrap;
+  transition: background var(--dur-mid) var(--ease-out), color var(--dur-mid) var(--ease-out);
+}
+.crumb.ahead {
+  color: var(--color-ink-2);
+  opacity: 0.55;
+}
+.crumb.done {
+  color: var(--color-ink);
+}
+.crumb.current {
+  background: var(--color-accent);
+  color: var(--color-accent-ink);
+}
+.crumb.reached {
+  color: var(--color-ink);
+  background: var(--color-paper-3);
+}
+.crumb.reached.upheld {
+  background: var(--color-uphold);
+  color: var(--color-paper);
+}
+.crumb.reached.overturned {
+  background: var(--color-overturn);
+  color: var(--color-ink);
+}
+.crumb-count {
+  font-weight: 400;
+  opacity: 0.75;
 }

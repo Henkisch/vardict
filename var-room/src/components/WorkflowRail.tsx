@@ -35,34 +35,42 @@ export function WorkflowRail() {
   // An aborted run (a wipe, or an operator pick) has nothing to show: the rail goes back to idle.
   const shown = data && !data.abortedAt ? data : undefined
   const visits = (name: string) => shown?.stages.filter((s) => s.name === name).length ?? 0
-  const stage = (name: string) => {
-    const current = shown?.currentStage === name
-    const state = current ? (live ? 'current' : `ended ${name}`) : visits(name) ? 'visited' : ''
-    return (
-      <li key={name} className={`rail-stage ${state}`} aria-current={current && live ? 'step' : undefined}>
-        {PLAIN[name]}
-        {visits(name) > 1 && <span className="rail-count">×{visits(name)}</span>}
-      </li>
-    )
-  }
+  // Breadcrumb states: where the run is (current), where it has been (done), where it may still go (ahead).
+  const state = (name: string) =>
+    shown?.currentStage === name ? (live ? 'current' : `reached ${name}`) : visits(name) ? 'done' : 'ahead'
+  const crumb = (name: string) => (
+    <span className={`crumb ${state(name)}`} aria-current={shown?.currentStage === name && live ? 'step' : undefined}>
+      {PLAIN[name]}
+      {visits(name) > 1 && <span className="crumb-count">×{visits(name)}</span>}
+    </span>
+  )
 
   return (
     <section className="rail" aria-label="Workflow">
-      <p className="rail-name">
-        The Sanity workflow
-      </p>
-      <ol className="rail-flow">
-        {FLOW.map(stage)}
-        <li className="rail-fork" aria-hidden />
-        <li>
-          <ol className="rail-ends" aria-label="Either ending">
-            {ENDS.map(stage)}
-          </ol>
+      <p className="rail-name">The Sanity workflow</p>
+      <ol className="crumbs">
+        {FLOW.map((name, i) => (
+          <li key={name} className="crumbs-item">
+            {i > 0 && (
+              <span className="crumb-sep" aria-hidden>
+                ›
+              </span>
+            )}
+            {crumb(name)}
+          </li>
+        ))}
+        <li className="crumbs-item">
+          <span className="crumb-sep" aria-hidden>
+            ›
+          </span>
+          <span className="crumb-ends">
+            {crumb(ENDS[0])}
+            <span className="crumb-or">or</span>
+            {crumb(ENDS[1])}
+          </span>
         </li>
       </ol>
-      <p className="rail-meta">
-        {shown ? `${shown._id.replace('dev.wf-instance.', '#')} · ${live ? 'running' : 'finished'}` : 'No match running'}
-      </p>
+      <p className="rail-meta">{shown ? (live ? 'Match running' : 'Match finished') : 'No match running'}</p>
     </section>
   )
 }
