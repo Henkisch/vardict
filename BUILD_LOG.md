@@ -694,3 +694,8 @@ cached (`x-vercel-cache: HIT`) after the next deploy.
   video, screenshots, cover, tags, agent session).
 - Checked: the public dataset URL returns 5 incidents; `/incidents` and the Díaz page answer 200; 62 tests
   (8 crowd, 13 definition, 41 runtime).
+- **The pitch was backwards (Henrik: "submission starts off wrong").** "Football fixed VAR" had it the wrong way
+  round, and the real complaint isn't speed: VAR promised right decisions, didn't deliver, and fans are no happier
+  than before it. Three rounds of options later: "VAR was supposed to end the arguments. It didn't. So VARdict hands
+  the final call to the people. Power to the people." Changed on the intro screen, the page description, README,
+  the brief and the draft. Henrik read the rest: "submission feels good enough".
