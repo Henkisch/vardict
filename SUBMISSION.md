@@ -5,7 +5,7 @@ publish Oct 3 evening, freeze before Oct 4 23:59 PDT (08:59 Oct 5 in Sweden).
 
 Before publishing:
 - [ ] Rotate the session-1 project tokens (printed by MCP create_project in the transcript)
-- [ ] Make https://github.com/Henkisch/vardict public (check git history for secrets first)
+- [x] Repo https://github.com/Henkisch/vardict is public; history scanned Sep 28, no token or operator key in it
 - [ ] Full wipe in the VAR Room before judging (plan 016 #11), then one clean run so the results aren't empty?
 - [ ] Clip keySeconds set in Studio (replay + zoom monitors aim at the midpoint until then)
 - [ ] Demo video recorded and embedded
@@ -86,7 +86,7 @@ voting. Wait a minute and it's yours.
 
 ## Code
 
-<!-- TODO: make https://github.com/Henkisch/vardict public, then {% embed https://github.com/Henkisch/vardict %} -->
+{% embed https://github.com/Henkisch/vardict %}
 
 A pnpm monorepo:
 - `studio`: Sanity Studio, with the schema and a custom input that previews the clip at its start and end.
