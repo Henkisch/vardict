@@ -699,3 +699,8 @@ cached (`x-vercel-cache: HIT`) after the next deploy.
   than before it. Three rounds of options later: "VAR was supposed to end the arguments. It didn't. So VARdict hands
   the final call to the people. Power to the people." Changed on the intro screen, the page description, README,
   the brief and the draft. Henrik read the rest: "submission feels good enough".
+- **First DEV draft.** Wrong claim from session 6: DEV drafts have no preview link to share, so Henrik pasted the
+  rendered text back instead. It showed stray line breaks where the Markdown was hard-wrapped at 120 characters
+  (DEV keeps some of them), and a credit link broken in the paste. `SUBMISSION.md` is now one line per paragraph,
+  carries Henrik's DEV edits (title, tags, "Sanity Project Details" section), and the paste copy leaves out the
+  checklist comment.
