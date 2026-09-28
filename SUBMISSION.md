@@ -108,7 +108,7 @@ Every voting stage waits for a person to press, and the final call is written ba
 
 ## My Build Process
 
-I built VARdict with **Claude Code** over five long sessions: I steered, often from my phone, and the agent did the typing, research, testing and deploying. From the first hour I kept a brief (`CLAUDE.md`) with one rule in bold, **"Verify, don't assume"**, and a build log that had to include the failures. This section is written from that log.
+I built VARdict with **Claude Code** over a week and a half of long sessions: I steered, often from my phone, and the agent did the typing, research, testing and deploying. From the first hour I kept a brief (`CLAUDE.md`) with one rule in bold, **"Verify, don't assume"**, and a build log that had to include the failures. This section is written from that log.
 
 ### Day one: the plan meets the platform
 
