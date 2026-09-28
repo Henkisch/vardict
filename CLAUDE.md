@@ -506,5 +506,5 @@ Rules: https://dev.to/challenges/sanity-2026-09-16 ("How To Participate").
 - Agent session (optional, encouraged): upload through DEV's Agent Sessions uploader, curate/slice the parts worth
   showing, check for keys and sensitive data, then press **Make Public** (uploads are unlisted by default, and judges
   can't open them otherwise).
-  **Session 1's transcript contains the original project tokens (printed by MCP `create_project`). Rotate
-  them before publishing.**
+  Session 1's transcript contains the original project tokens (printed by MCP `create_project`). **Rotated
+  Sep 28:** both old tokens are deleted in Sanity, so the transcript is safe to publish.
