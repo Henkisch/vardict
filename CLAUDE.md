@@ -15,7 +15,7 @@ The VAR room makes a decision, but the decision only stands if the public confir
 The joke answers VAR's two biggest criticisms: it's often wrong, so we add the crowd (who are wronger),
 and it takes too long, so we make it take much longer.
 
-Pitch: "Football fixed VAR. We fixed it with democracy. Now it's slower and less accurate."
+Pitch: "VAR was supposed to end the arguments. It didn't. So VARdict hands the final call to the people." (Henrik, session 7: VAR promised right decisions, didn't deliver, fans are no happier; so the people decide, slower and no more right)
 
 ## How we work together
 

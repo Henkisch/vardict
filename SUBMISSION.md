@@ -20,10 +20,11 @@ Before publishing:
 
 ## What I Built
 
-**VARdict. Football fixed VAR. We fixed it with democracy. Now it's slower and less accurate.**
+**VAR was supposed to end the arguments. It didn't. So VARdict hands the final call to the people.**
 
-VAR gets two complaints: it's often wrong, and it takes forever. VARdict answers both, in the wrong direction. The
-VAR room makes its call, but the call only stands if the stadium confirms it in a live vote:
+VAR promised the right decision and never quite delivered: the calls are still argued about, only now they take
+longer, and fans are no happier than before it. VARdict makes it slower, and no more right. The VAR room makes its
+call, but the call only stands if the people confirm it in a live vote:
 
 - **Over 55% uphold:** the VAR's call stands.
 - **Under 45%:** the fans overturn it, and their call is final. Sometimes that's the referee's original call, and
