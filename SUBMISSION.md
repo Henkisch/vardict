@@ -4,7 +4,7 @@ Henrik edits and publishes. Plan: paste into an unpublished DEV draft ~Sep 28 to
 publish Oct 3 evening, freeze before Oct 4 23:59 PDT (08:59 Oct 5 in Sweden).
 
 Before publishing:
-- [ ] Rotate the session-1 project tokens (printed by MCP create_project in the transcript)
+- [x] Session-1 project tokens rotated Sep 28 (old ones deleted in Sanity)
 - [x] Repo https://github.com/Henkisch/vardict is public; history scanned Sep 28, no token or operator key in it
 - [ ] Full wipe in the VAR Room before judging (plan 016 #11), then one clean run so the results aren't empty?
 - [ ] Clip keySeconds set in Studio (replay + zoom monitors aim at the midpoint until then)
