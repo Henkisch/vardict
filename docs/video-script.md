@@ -21,7 +21,7 @@ The crowd is seeded, so every take ends the same way. A human vote ends the roun
 - [ ] Full wipe in the VAR Room, so Maupay is next and the results are empty
 - [ ] Browser: bookmarks bar hidden, notifications off, zoom so `/live` fills the screen without scrolling
 - [ ] `/live`: press **Enter the stadium** first (it unlocks the sound)
-- [ ] Record system audio (crowd, whistle, roar)
+- [ ] Record silent: the sound goes on in the edit (see Sound)
 - [ ] Two recordings of the same run: the VAR Room and `/live` in separate windows or on two screens. Or
       record them in separate runs (wipe in between): the seed gives the same result each time
 
@@ -42,12 +42,24 @@ The crowd is seeded, so every take ends the same way. A human vote ends the roun
 | 11 | 3 s | Stadium | The path strip on the verdict screen | |
 | 12 | 3 s | End card | "Power to the people." + live-vardict.vercel.app/live | |
 
+## Sound (added in the edit)
+
+The app's own sounds, in `web/public/sounds/` (licences and credits in the post):
+
+| File | Where |
+|---|---|
+| `crowd-bed.mp3` | Looped under the whole video |
+| `whistle.mp3` | The booth → stadium cuts (beats 4, 6, 8) |
+| `crowd-ooh.mp3` | "Too close" (beat 7) |
+| `crowd-roar.mp3` | The verdict (beat 9) |
+
+Duck the bed a little under the whistle and the roar.
+
 ## Editing
 
 - **Cut on the click.** The VAR Room shot ends the moment the button is pressed, and the stadium shot starts
   mid-reaction. Cut out the kick-off countdown and the "counting" waits.
-- **One continuous crowd bed** under every shot, so the cuts don't feel choppy. The whistle on the booth →
-  stadium cuts.
+- **One continuous crowd bed** under every shot, so the cuts don't feel choppy.
 - **Two worlds:** the booth is calm and grey, the stadium loud and floodlit. The contrast makes each cut read as
   "the booth decides, the crowd reacts".
 - **Captions only on beats 5, 7 and 9.** The screens say the rest.
