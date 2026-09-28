@@ -20,7 +20,7 @@ Before publishing:
 
 ## What I Built
 
-**VAR was supposed to end the arguments. It didn't. So VARdict hands the final call to the people.**
+**VAR was supposed to end the arguments. It didn't. So VARdict hands the final call to the people. Power to the people.**
 
 VAR promised the right decision and never quite delivered: the calls are still argued about, only now they take
 longer, and fans are no happier than before it. VARdict makes it slower, and no more right. The VAR room makes its

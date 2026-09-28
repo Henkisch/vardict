@@ -7,7 +7,7 @@ const condensed = Barlow_Condensed({variable: '--font-condensed', subsets: ['lat
 
 export const metadata: Metadata = {
   title: {default: 'VARdict', template: '%s · VARdict'},
-  description: 'VAR was supposed to end the arguments. It didn’t. So VARdict hands the final call to the people.',
+  description: 'VAR was supposed to end the arguments. It didn’t. So VARdict hands the final call to the people. Power to the people.',
 }
 
 export const viewport: Viewport = {themeColor: '#0b0f0c'}

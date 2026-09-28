@@ -2,7 +2,7 @@
 
 An entry for the [Sanity Challenge on DEV](https://dev.to/challenges/sanity-2026-09-16), Path Two: Vibe-Code
 Something Strange. The VAR room makes a decision, but it only stands if the public confirms it by live vote.
-"VAR was supposed to end the arguments. It didn't. So VARdict hands the final call to the people."
+"VAR was supposed to end the arguments. It didn't. So VARdict hands the final call to the people. Power to the people."
 
 Live: [/live](https://live-vardict.vercel.app/live) (big screen + "Send to the people"),
 [/vote](https://live-vardict.vercel.app/vote) (phone voting), [/incidents](https://live-vardict.vercel.app/incidents)

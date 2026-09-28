@@ -21,6 +21,7 @@ export function EnterStadium({fixtures, onEnter}: {fixtures: Fixture[]; onEnter:
           </h1>
           <p className="mt-2 text-2xl">VAR was supposed to end the arguments. It didn&apos;t.</p>
           <p className="text-lg text-muted">So VARdict hands the final call to the people.</p>
+          <p className="mt-1 text-xl font-bold uppercase tracking-wide">Power to the people.</p>
         </div>
         <p className="max-w-xl text-lg text-muted">
           Five real Premier League VAR decisions. The VAR room makes its call, then you and a simulated crowd keep it
