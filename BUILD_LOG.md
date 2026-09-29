@@ -704,3 +704,12 @@ cached (`x-vercel-cache: HIT`) after the next deploy.
   (DEV keeps some of them), and a credit link broken in the paste. `SUBMISSION.md` is now one line per paragraph,
   carries Henrik's DEV edits (title, tags, "Sanity Project Details" section), and the paste copy leaves out the
   checklist comment.
+- **Published (Sep 29):** https://dev.to/henkisch/vardict-uphold-or-overturn-a-var-rooms-decision-10n. Cover in
+  VAR orange (the first dark version melted into the dark screenshots: my advice, my mistake). A 35-second video cut
+  between the VAR Room and the stadium (`docs/video-script.md`), sound added in the edit; iMovie's transitions
+  ruined the feel, so hard cuts. Agent sessions linked, not embedded: embedding a 676-message session broke the post.
+- **DEV's session scrubber:** the public "Day one" page still showed the two session-1 tokens (already deleted, so
+  harmless) and Henrik's email. Two more "tokens" turned out to be fragments of an encoded blob and a lockfile hash:
+  a false alarm raised before looking at the context.
+- **Paste losses:** twice a `]` vanished when pasting links into DEV (`[CC0(`, `[From "automagically"…(`), breaking
+  them. Only reading the published page caught it.
