@@ -56,6 +56,8 @@ Real people are rare at a demo, so a **simulated crowd** votes too, and I'm upfr
 
 ## Demo
 
+{% embed https://youtu.be/m6nnlgrm8aA %}
+
 - The stadium (big screen, also where you vote): **https://live-vardict.vercel.app/live**
 - Results: **https://live-vardict.vercel.app/incidents**, one page per incident, for example https://live-vardict.vercel.app/incidents/luis-diaz-tottenham-liverpool-2023
 
@@ -68,8 +70,6 @@ Real people are rare at a demo, so a **simulated crowd** votes too, and I'm upfr
 
 One match runs at a time, with a cap of 40 runs a day, so if the button says the VAR room is busy, someone else is voting. Wait a minute and it's yours.
 
-<!-- TODO: demo video (embed): /live on a big screen, my phone voting, the VAR Room console starting the check and
-     sending it to the people, one incident reaching the sudden-death penalty, the control-case result. -->
 <!-- TODO: screenshots: Enter the stadium, monitor wall, live vote + receipt, verdict with the workflow path,
      Results with the night in numbers, VAR Room console in the Dashboard. -->
 
