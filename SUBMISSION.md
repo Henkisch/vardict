@@ -169,7 +169,9 @@ Then I cut while playing: "we cant do 5 fkin penalties" became one sudden-death 
 
 ## Agent Session
 
-<!-- TODO: upload the curated Claude Code transcript at https://dev.to/agent_sessions/new, check it for keys and
-     tokens (rotate the session-1 project tokens first), press Make Public, embed here. -->
+Two Claude Code sessions, public on DEV:
+
+- [Day one: checking the plan against Sanity before building](https://dev.to/agent_sessions/vardict-day-one-checking-the-plan-against-sanity-before-building-yxlajq): the App SDK login, Scheduled Functions and Workflows findings from "Day one" above.
+- [From "automagically" to a step-by-step match](https://dev.to/agent_sessions/vardict-from-automagically-to-a-step-by-step-match-civrmf): the good part starts at "Im on my mac, but I want to take it from the beginning alll together."
 
 <!-- Cover image: TODO -->
